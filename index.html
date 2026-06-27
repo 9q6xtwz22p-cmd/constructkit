@@ -170,6 +170,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
         <h2>見積一覧</h2>
         <button class="btn-sm accent" onclick="estNewForm()">＋ 新規作成</button>
       </div>
+      <div style="padding:10px 16px;border-bottom:1px solid var(--rule)">
+        <input type="search" id="est-search" placeholder="🔍 顧客名・案件名で検索" oninput="renderEstList()" style="width:100%;padding:9px 12px;border:1.5px solid var(--rule);border-radius:9px;font-size:14px;font-family:inherit;outline:none;background:#fafafa;-webkit-appearance:none">
+      </div>
       <div id="est-list-body"><div class="empty-state"><div class="empty-ico">📄</div>まだ見積がありません</div></div>
     </div>
   </div>
@@ -229,6 +232,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
         </div>
         <div class="total-grand-box"><span class="lbl">合計（税込）</span><span class="val" id="est-grand">¥0</span></div>
       </div>
+      <div id="est-profit-box" style="display:none;padding:12px 16px;background:var(--green-soft);border-top:1px solid #bbf7d0">
+        <div class="total-line"><span class="lbl" style="color:#16a34a;font-weight:700">原価合計</span><span class="val" style="color:#16a34a" id="est-cost-val">¥0</span></div>
+        <div class="total-line" style="margin-bottom:0"><span class="lbl" style="color:#16a34a;font-weight:700">粗利</span><span class="val" style="color:#16a34a;font-weight:800" id="est-profit-val">¥0</span></div>
+      </div>
     </div>
   </div>
 </div>
@@ -241,6 +248,16 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       <div class="card-header">
         <h2>請求一覧</h2>
         <button class="btn-sm accent" onclick="invNewForm()">＋ 新規作成</button>
+      </div>
+      <div style="padding:10px 16px;border-bottom:1px solid var(--rule);display:flex;gap:8px">
+        <input type="search" id="inv-search" placeholder="🔍 顧客名で検索" oninput="renderInvList()" style="flex:1;padding:9px 12px;border:1.5px solid var(--rule);border-radius:9px;font-size:14px;font-family:inherit;outline:none;background:#fafafa;-webkit-appearance:none">
+        <select id="inv-filter" onchange="renderInvList()" style="padding:9px 10px;border:1.5px solid var(--rule);border-radius:9px;font-size:13px;font-family:inherit;outline:none;background:#fafafa;color:var(--ink);-webkit-appearance:none">
+          <option value="">すべて</option>
+          <option value="draft">下書き</option>
+          <option value="sent">送付済み</option>
+          <option value="paid">入金済み</option>
+          <option value="overdue">期限超過</option>
+        </select>
       </div>
       <div id="inv-list-body"><div class="empty-state"><div class="empty-ico">🧾</div>まだ請求がありません</div></div>
     </div>
@@ -304,6 +321,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
           <span class="val" id="inv-tax-val">¥0</span>
         </div>
         <div class="total-grand-box"><span class="lbl">請求合計（税込）</span><span class="val" id="inv-grand">¥0</span></div>
+      </div>
+      <div id="inv-profit-box" style="display:none;padding:12px 16px;background:var(--green-soft);border-top:1px solid #bbf7d0">
+        <div class="total-line"><span class="lbl" style="color:#16a34a;font-weight:700">原価合計</span><span class="val" style="color:#16a34a" id="inv-cost-val">¥0</span></div>
+        <div class="total-line" style="margin-bottom:0"><span class="lbl" style="color:#16a34a;font-weight:700">粗利</span><span class="val" style="color:#16a34a;font-weight:800" id="inv-profit-val">¥0</span></div>
       </div>
     </div>
   </div>
@@ -462,13 +483,17 @@ function showEstList() {
 }
 function renderEstList() {
   const el=document.getElementById('est-list-body');
-  if(!estimates.length){el.innerHTML='<div class="empty-state"><div class="empty-ico">📄</div>まだ見積がありません</div>';return;}
-  el.innerHTML=[...estimates].reverse().map(e=>`
+  const q=(document.getElementById('est-search')?.value||'').toLowerCase();
+  let list=[...estimates].reverse();
+  if(q) list=list.filter(e=>(e.client||'').toLowerCase().includes(q)||(e.project||'').toLowerCase().includes(q)||(e.num||'').toLowerCase().includes(q));
+  if(!list.length){el.innerHTML=q?'<div class="empty-state">検索結果がありません</div>':'<div class="empty-state"><div class="empty-ico">📄</div>まだ見積がありません</div>';return;}
+  el.innerHTML=list.map(e=>`
     <div class="activity-item" onclick="estEditForm('${e.id}')">
       <div class="activity-dot" style="background:var(--accent)"></div>
       <div class="activity-text"><strong>${e.client||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${e.num} · ${e.project||'—'} · ${e.date||''}</span></div>
       <div class="activity-right">
         <div style="font-size:13px;font-weight:700;color:var(--accent)">¥${commas(e.grand||0)}</div>
+        ${e.profit?`<div style="font-size:10px;color:var(--green)">粗利 ${e.profitRate||0}%</div>`:''}
         <button class="btn-sm" style="margin-top:4px;font-size:10px;padding:4px 8px" onclick="event.stopPropagation();printEst('${e.id}')">🖨 PDF</button>
       </div>
     </div>`).join('');
@@ -510,7 +535,7 @@ function estEditForm(id) {
   document.getElementById('est-items').innerHTML='';
   (est.items||[]).forEach(item=>{
     if(item.type==='section') estAddSection(item.name);
-    else estAddRow(item.name,item.unit,item.qty,item.price);
+    else estAddRow(item.name,item.unit,item.qty,item.price,item.cost||0);
   });
   estRecalc();
 }
@@ -520,10 +545,10 @@ function estAddSection(name='セクション名') {
   d.innerHTML=`<span style="color:#9ca3af;font-size:12px">▸</span><input type="text" value="${name}"/><button class="btn-del" onclick="this.parentElement.remove()">✕</button>`;
   w.appendChild(d);
 }
-function estAddRow(name='',unit='式',qty=1,price=0) {
+function estAddRow(name='',unit='式',qty=1,price=0,cost=0) {
   const w=document.getElementById('est-items'),d=document.createElement('div');
   d.setAttribute('data-item','est');
-  d.innerHTML=`<div class="item-row"><input class="item-name-input" type="text" value="${name}" placeholder="項目名" oninput="estRecalc()"><input class="item-num-input" type="number" value="${qty}" min="0" step="0.1" oninput="estRecalc()"><span class="item-amount">¥0</span><button class="btn-del" onclick="this.closest('[data-item]').remove();estRecalc()">✕</button></div><div class="item-detail"><select onchange="estRecalc()">${unitOpts(unit)}</select><span class="item-detail-label">×</span><input class="item-num-input" type="number" value="${price}" min="0" step="100" oninput="estRecalc()" placeholder="単価"><span class="item-detail-label">円</span></div>`;
+  d.innerHTML=`<div class="item-row"><input class="item-name-input" type="text" value="${name}" placeholder="項目名" oninput="estRecalc()"><input class="item-qty-input item-num-input" type="number" value="${qty}" min="0" step="0.1" oninput="estRecalc()"><span class="item-amount">¥0</span><button class="btn-del" onclick="this.closest('[data-item]').remove();estRecalc()">✕</button></div><div class="item-detail"><select onchange="estRecalc()">${unitOpts(unit)}</select><span class="item-detail-label">×</span><input class="item-price-input item-num-input" type="number" value="${price}" min="0" step="100" oninput="estRecalc()" placeholder="売価"><span class="item-detail-label">円</span><span class="item-detail-label" style="margin-left:6px;color:#9ca3af">仕入</span><input class="item-cost-input item-num-input" type="number" value="${cost||''}" min="0" step="100" oninput="estRecalc()" placeholder="0" style="width:60px;color:var(--ink-sub)"><span class="item-detail-label">円</span></div>`;
   w.appendChild(d); estRecalc();
 }
 function collectItems(containerId, secAttr) {
@@ -531,26 +556,36 @@ function collectItems(containerId, secAttr) {
   Array.from(document.getElementById(containerId).children).forEach(d=>{
     if(d.hasAttribute(secAttr)) items.push({type:'section',name:d.querySelector('input')?.value||''});
     else if(d.hasAttribute('data-item')){
-      const ns=d.querySelectorAll('input[type=number]');
-      items.push({type:'item',name:d.querySelector('.item-name-input')?.value||'',unit:d.querySelector('select')?.value||'式',qty:parseFloat(ns[0]?.value)||0,price:parseFloat(ns[1]?.value)||0});
+      items.push({type:'item',name:d.querySelector('.item-name-input')?.value||'',unit:d.querySelector('select')?.value||'式',qty:parseFloat(d.querySelector('.item-qty-input')?.value)||0,price:parseFloat(d.querySelector('.item-price-input')?.value)||0,cost:parseFloat(d.querySelector('.item-cost-input')?.value)||0});
     }
   });
   return items;
 }
 function estRecalc() {
   const items=document.querySelectorAll('#est-items [data-item]');
-  let sub=0;
-  items.forEach(d=>{const ns=d.querySelectorAll('input[type=number]');const t=(parseFloat(ns[0]?.value)||0)*(parseFloat(ns[1]?.value)||0);const c=d.querySelector('.item-amount');if(c)c.textContent='¥'+commas(t);sub+=t;});
+  let sub=0,costTotal=0;
+  items.forEach(d=>{
+    const qty=parseFloat(d.querySelector('.item-qty-input')?.value)||0;
+    const price=parseFloat(d.querySelector('.item-price-input')?.value)||0;
+    const cost=parseFloat(d.querySelector('.item-cost-input')?.value)||0;
+    const t=qty*price; const c=d.querySelector('.item-amount');if(c)c.textContent='¥'+commas(t);
+    sub+=t; costTotal+=qty*cost;
+  });
   const rate=parseFloat(document.getElementById('est-tax').value),tax=Math.round(sub*rate),grand=sub+tax;
   document.getElementById('est-sub').textContent='¥'+commas(sub);
   document.getElementById('est-tax-val').textContent='¥'+commas(tax);
   document.getElementById('est-grand').textContent='¥'+commas(grand);
   document.getElementById('est-stat-total').textContent='¥'+commas(grand);
   document.getElementById('est-rows').textContent=items.length;
+  const profitBox=document.getElementById('est-profit-box');
+  if(costTotal>0){const profit=sub-costTotal,pRate=sub>0?Math.round(profit/sub*100):0;document.getElementById('est-cost-val').textContent='¥'+commas(costTotal);document.getElementById('est-profit-val').textContent='¥'+commas(profit)+' ('+pRate+'%)';profitBox.style.display='block';}
+  else{profitBox.style.display='none';}
 }
 function saveEstimate() {
   const sub=parseNum('est-sub'),tax=parseNum('est-tax-val'),grand=parseNum('est-grand');
-  const obj={id:currentEstId||Date.now(),num:document.getElementById('est-num').textContent,client:document.getElementById('est-client').value,project:document.getElementById('est-project').value,date:document.getElementById('est-date').value,expiry:document.getElementById('est-expiry').value,address:document.getElementById('est-address').value,staff:document.getElementById('est-staff').value,notes:document.getElementById('est-notes').value,taxRate:parseFloat(document.getElementById('est-tax').value),items:collectItems('est-items','data-est-sec'),sub,tax,grand};
+  const costVal=document.getElementById('est-cost-val').textContent;const profitVal=document.getElementById('est-profit-val').textContent;
+  const costTotal=parseInt(costVal.replace(/[¥,]/g,''))||0;const profit=sub-costTotal;const profitRate=sub>0?Math.round(profit/sub*100):0;
+  const obj={id:currentEstId||Date.now(),num:document.getElementById('est-num').textContent,client:document.getElementById('est-client').value,project:document.getElementById('est-project').value,date:document.getElementById('est-date').value,expiry:document.getElementById('est-expiry').value,address:document.getElementById('est-address').value,staff:document.getElementById('est-staff').value,notes:document.getElementById('est-notes').value,taxRate:parseFloat(document.getElementById('est-tax').value),items:collectItems('est-items','data-est-sec'),sub,tax,grand,costTotal,profit,profitRate};
   if(currentEstId){const i=estimates.findIndex(e=>String(e.id)===String(currentEstId));if(i>=0)estimates[i]=obj;else estimates.push(obj);}
   else{estimates.push(obj);estCounter++;}
   persist(); setBadge('m-est-badge',estimates.length); updateDashboard(); showEstList();
@@ -570,8 +605,13 @@ function showInvList() {
 }
 function renderInvList() {
   const el=document.getElementById('inv-list-body');
-  if(!invoices.length){el.innerHTML='<div class="empty-state"><div class="empty-ico">🧾</div>まだ請求がありません</div>';return;}
-  el.innerHTML=[...invoices].reverse().map(i=>`
+  const q=(document.getElementById('inv-search')?.value||'').toLowerCase();
+  const f=document.getElementById('inv-filter')?.value||'';
+  let list=[...invoices].reverse();
+  if(q) list=list.filter(i=>(i.client||'').toLowerCase().includes(q)||(i.num||'').toLowerCase().includes(q));
+  if(f) list=list.filter(i=>i.status===f);
+  if(!list.length){el.innerHTML=(q||f)?'<div class="empty-state">検索結果がありません</div>':'<div class="empty-state"><div class="empty-ico">🧾</div>まだ請求がありません</div>';return;}
+  el.innerHTML=list.map(i=>`
     <div class="activity-item" onclick="invEditForm('${i.id}')">
       <div class="activity-dot" style="background:${S_COLOR[i.status]}"></div>
       <div class="activity-text"><strong>${i.client||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${i.num} · 期限 ${i.due||'—'}</span></div>
@@ -617,7 +657,7 @@ function invEditForm(id) {
   document.getElementById('inv-items').innerHTML='';
   (inv.items||[]).forEach(item=>{
     if(item.type==='section') invAddSection(item.name);
-    else invAddRow(item.name,item.unit,item.qty,item.price);
+    else invAddRow(item.name,item.unit,item.qty,item.price,item.cost||0);
   });
   invUpdateLabel(); invRecalc();
 }
@@ -627,10 +667,10 @@ function invAddSection(name='セクション名') {
   d.innerHTML=`<span style="color:#9ca3af;font-size:12px">▸</span><input type="text" value="${name}"/><button class="btn-del" onclick="this.parentElement.remove()">✕</button>`;
   w.appendChild(d);
 }
-function invAddRow(name='',unit='式',qty=1,price=0) {
+function invAddRow(name='',unit='式',qty=1,price=0,cost=0) {
   const w=document.getElementById('inv-items'),d=document.createElement('div');
   d.setAttribute('data-item','inv');
-  d.innerHTML=`<div class="item-row"><input class="item-name-input" type="text" value="${name}" placeholder="項目名" oninput="invRecalc()"><input class="item-num-input" type="number" value="${qty}" min="0" step="0.1" oninput="invRecalc()"><span class="item-amount">¥0</span><button class="btn-del" onclick="this.closest('[data-item]').remove();invRecalc()">✕</button></div><div class="item-detail"><select onchange="invRecalc()">${unitOpts(unit)}</select><span class="item-detail-label">×</span><input class="item-num-input" type="number" value="${price}" min="0" step="100" oninput="invRecalc()" placeholder="単価"><span class="item-detail-label">円</span></div>`;
+  d.innerHTML=`<div class="item-row"><input class="item-name-input" type="text" value="${name}" placeholder="項目名" oninput="invRecalc()"><input class="item-qty-input item-num-input" type="number" value="${qty}" min="0" step="0.1" oninput="invRecalc()"><span class="item-amount">¥0</span><button class="btn-del" onclick="this.closest('[data-item]').remove();invRecalc()">✕</button></div><div class="item-detail"><select onchange="invRecalc()">${unitOpts(unit)}</select><span class="item-detail-label">×</span><input class="item-price-input item-num-input" type="number" value="${price}" min="0" step="100" oninput="invRecalc()" placeholder="売価"><span class="item-detail-label">円</span><span class="item-detail-label" style="margin-left:6px;color:#9ca3af">仕入</span><input class="item-cost-input item-num-input" type="number" value="${cost||''}" min="0" step="100" oninput="invRecalc()" placeholder="0" style="width:60px;color:var(--ink-sub)"><span class="item-detail-label">円</span></div>`;
   w.appendChild(d); invRecalc();
 }
 function invUpdateLabel() {
@@ -640,13 +680,22 @@ function invUpdateLabel() {
 }
 function invRecalc() {
   const items=document.querySelectorAll('#inv-items [data-item]');
-  let sub=0;
-  items.forEach(d=>{const ns=d.querySelectorAll('input[type=number]');const t=(parseFloat(ns[0]?.value)||0)*(parseFloat(ns[1]?.value)||0);const c=d.querySelector('.item-amount');if(c)c.textContent='¥'+commas(t);sub+=t;});
+  let sub=0,costTotal=0;
+  items.forEach(d=>{
+    const qty=parseFloat(d.querySelector('.item-qty-input')?.value)||0;
+    const price=parseFloat(d.querySelector('.item-price-input')?.value)||0;
+    const cost=parseFloat(d.querySelector('.item-cost-input')?.value)||0;
+    const t=qty*price; const c=d.querySelector('.item-amount');if(c)c.textContent='¥'+commas(t);
+    sub+=t; costTotal+=qty*cost;
+  });
   const rate=parseFloat(document.getElementById('inv-tax').value),tax=Math.round(sub*rate),grand=sub+tax;
   document.getElementById('inv-sub').textContent='¥'+commas(sub);
   document.getElementById('inv-tax-val').textContent='¥'+commas(tax);
   document.getElementById('inv-grand').textContent='¥'+commas(grand);
   document.getElementById('inv-stat-total').textContent='¥'+commas(grand);
+  const profitBox=document.getElementById('inv-profit-box');
+  if(costTotal>0){const profit=sub-costTotal,pRate=sub>0?Math.round(profit/sub*100):0;document.getElementById('inv-cost-val').textContent='¥'+commas(costTotal);document.getElementById('inv-profit-val').textContent='¥'+commas(profit)+' ('+pRate+'%)';profitBox.style.display='block';}
+  else{profitBox.style.display='none';}
 }
 function saveInvoice() {
   const sub=parseNum('inv-sub'),tax=parseNum('inv-tax-val'),grand=parseNum('inv-grand');
