@@ -162,7 +162,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 <body>
 
 <div class="topbar">
-  <div style="flex:1"></div>
+  <div style="flex:1;display:flex;align-items:center">
+    <button onclick="openHelp()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-sub);padding:4px 8px;border-radius:50%;line-height:1" title="使い方">？</button>
+  </div>
   <img src="2044D66D-EA6B-4314-9CA7-8F4B3C0A6E94.PNG" alt="まとめる現場" style="height:66px;width:auto;object-fit:contain;position:absolute;left:50%;transform:translateX(-50%)">
   <div style="flex:1;display:flex;justify-content:flex-end" id="topbar-actions"></div>
 </div>
@@ -481,6 +483,69 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       <button class="btn-sm" onclick="closePicker()">✕ 閉じる</button>
     </div>
     <div id="picker-body"></div>
+  </div>
+</div>
+
+<!-- HELP MODAL -->
+<div class="modal-backdrop" id="help-modal">
+  <div class="modal-sheet" style="max-height:85vh;overflow-y:auto">
+    <div class="modal-header" style="position:sticky;top:0;background:var(--surface);z-index:1;padding-bottom:12px">
+      <h3 style="font-size:15px;font-weight:700">📖 使い方ガイド</h3>
+      <button class="btn-sm" onclick="closeHelp()">✕ 閉じる</button>
+    </div>
+    <div style="padding:0 4px">
+
+      <div style="background:var(--accent-soft);border-radius:10px;padding:14px;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:6px">基本の流れ</div>
+        <div style="font-size:12px;color:var(--ink);line-height:1.8">
+          🏗 案件を作る　→　📄 見積を作る　→　🧾 請求書を送る
+        </div>
+      </div>
+
+      <div style="margin-bottom:18px">
+        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">🏗 案件管理</div>
+        <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
+          • 現場（工事案件）を登録して管理します<br>
+          • 材料・費用のトラッキングができます<br>
+          • 工程表（ガントチャート）で進捗を可視化<br>
+          • 着工前・施工中・完工の写真を保存できます<br>
+          • 「関連見積」で案件に見積を紐づけられます
+        </div>
+      </div>
+
+      <div style="margin-bottom:18px">
+        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">📄 見積</div>
+        <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
+          • 「📂 案件から読み込む」で現場情報を自動入力<br>
+          • 「👥 選択」で登録済み顧客を呼び出せます<br>
+          • 明細に仕入単価を入力すると粗利が自動計算<br>
+          • 「🖨」ボタンでA4サイズの見積書を印刷・PDF保存<br>
+          • 「📊」ボタンでExcelにエクスポートできます
+        </div>
+      </div>
+
+      <div style="margin-bottom:18px">
+        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">🧾 請求</div>
+        <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
+          • 見積から明細を転記して請求書を作れます<br>
+          • ステータス管理：下書き→送付済み→入金済み<br>
+          • 「🖨」ボタンで請求書を印刷・PDF保存<br>
+          • 「📊」ボタンでExcelにエクスポートできます
+        </div>
+      </div>
+
+      <div style="margin-bottom:18px">
+        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">👥 顧客管理</div>
+        <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
+          • 顧客情報（会社名・担当者・電話・住所）を登録<br>
+          • 見積・請求フォームから「👥 選択」で呼び出せます
+        </div>
+      </div>
+
+      <div style="background:var(--green-soft);border-radius:10px;padding:14px;font-size:12px;color:var(--ink);line-height:1.8">
+        💾 データはすべてこのデバイスに自動保存されます
+      </div>
+    </div>
   </div>
 </div>
 
@@ -872,6 +937,12 @@ function applyEstimate(id) {
 }
 function closePicker() {
   document.getElementById('picker-modal').classList.remove('open');
+}
+function openHelp() {
+  document.getElementById('help-modal').classList.add('open');
+}
+function closeHelp() {
+  document.getElementById('help-modal').classList.remove('open');
 }
 
 // ===== PRINT =====
