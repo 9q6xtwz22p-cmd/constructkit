@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ConstructKit</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+:root {
+  --bg: #f0f2f5; --surface: #fff; --accent: #4f7cff; --accent-soft: #eef1ff;
+  --green: #22c55e; --green-soft: #dcfce7; --orange: #f59e0b; --orange-soft: #fef3c7;
+  --red: #ef4444; --red-soft: #fef2f2; --ink: #111827; --ink-sub: #6b7280;
+  --rule: #e5e7eb; --radius: 12px; --shadow: 0 1px 4px rgba(0,0,0,0.08);
+  --bottom-nav-h: 64px; --top-bar-h: 56px;
+}
+body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; background: var(--bg); color: var(--ink); font-size: 14px; min-height: 100vh; padding-bottom: var(--bottom-nav-h); }
+.topbar { position: fixed; top: 0; left: 0; right: 0; height: var(--top-bar-h); background: var(--surface); border-bottom: 1px solid var(--rule); display: flex; align-items: center; padding: 0 16px; gap: 12px; z-index: 100; }
+.topbar-title { font-size: 16px; font-weight: 700; flex: 1; }
+.topbar-actions { display: flex; gap: 8px; }
+.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: var(--bottom-nav-h); background: var(--surface); border-top: 1px solid var(--rule); display: flex; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+.nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; color: var(--ink-sub); font-size: 10px; font-weight: 600; transition: color 0.15s; padding: 8px 0; position: relative; }
+.nav-item.active { color: var(--accent); }
+.nav-item .nav-ico { font-size: 22px; line-height: 1; }
+.nav-badge { position: absolute; top: 6px; right: calc(50% - 18px); background: var(--accent); color: #fff; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 20px; min-width: 16px; text-align: center; }
+.page { display: none; padding: calc(var(--top-bar-h) + 16px) 16px 16px; }
+.page.active { display: block; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; font-family: inherit; }
+.btn:active { transform: scale(0.95); }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-ghost { background: transparent; color: var(--ink-sub); border: 1px solid var(--rule); }
+.btn-danger { background: var(--red-soft); color: var(--red); border: none; }
+.btn-sm { padding: 7px 12px; font-size: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; border: 1.5px solid var(--rule); background: var(--surface); color: var(--ink); display: inline-flex; align-items: center; gap: 5px; transition: all 0.15s; font-family: inherit; }
+.btn-sm.accent { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+.btn-sm.danger { background: var(--red-soft); color: var(--red); border-color: transparent; }
+.btn-del { background: none; border: none; cursor: pointer; color: #d1d5db; font-size: 16px; width: 32px; height: 32px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; }
+.btn-del:active { color: var(--red); background: var(--red-soft); }
+.card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 14px; overflow: hidden; }
+.card-header { padding: 14px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--rule); }
+.card-header h2 { font-size: 14px; font-weight: 700; flex: 1; }
+.card-body { padding: 16px; }
+.stat-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 14px; }
+.stat-card { background: var(--surface); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 4px; }
+.stat-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-sub); }
+.stat-value { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
+.stat-sub { font-size: 10px; color: var(--ink-sub); }
+.form-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.form-field label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-sub); }
+.form-field input, .form-field select, .form-field textarea { padding: 12px 14px; border: 1.5px solid var(--rule); border-radius: 10px; font-size: 15px; font-family: inherit; color: var(--ink); background: #fafafa; transition: all 0.15s; outline: none; -webkit-appearance: none; width: 100%; }
+.form-field input:focus, .form-field select:focus, .form-field textarea:focus { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px rgba(79,124,255,0.12); }
+.form-field textarea { resize: vertical; min-height: 80px; }
+.item-row { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--rule); }
+.item-row:last-child { border-bottom: none; }
+.item-name-input { flex: 1; font-size: 14px; padding: 8px 10px; border: 1.5px solid transparent; border-radius: 8px; background: transparent; color: var(--ink); font-family: inherit; outline: none; }
+.item-name-input:focus { border-color: var(--accent); background: var(--accent-soft); }
+.item-num-input { width: 70px; font-size: 14px; padding: 8px 8px; border: 1.5px solid transparent; border-radius: 8px; background: transparent; color: var(--ink); font-family: inherit; outline: none; text-align: right; }
+.item-num-input:focus { border-color: var(--accent); background: var(--accent-soft); }
+.item-amount { font-size: 13px; font-weight: 700; min-width: 72px; text-align: right; color: var(--ink); flex-shrink: 0; }
+.item-detail { display: flex; gap: 6px; align-items: center; padding: 0 0 8px 10px; border-bottom: 1px solid var(--rule); }
+.item-detail select { font-size: 12px; padding: 5px 8px; border: 1.5px solid var(--rule); border-radius: 7px; background: var(--bg); color: var(--ink-sub); font-family: inherit; outline: none; -webkit-appearance: none; }
+.item-detail-label { font-size: 11px; color: var(--ink-sub); }
+.section-divider { display: flex; align-items: center; gap: 8px; padding: 10px 0 4px; }
+.section-divider input { flex: 1; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--ink-sub); background: transparent; border: none; outline: none; font-family: inherit; }
+.totals-box { padding: 16px; background: #fafafa; border-top: 1px solid var(--rule); }
+.total-line { display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 8px; }
+.total-line .lbl { color: var(--ink-sub); display: flex; align-items: center; gap: 6px; }
+.total-line .val { font-weight: 600; }
+.total-grand-box { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: var(--accent); border-radius: 12px; color: #fff; margin-top: 10px; }
+.total-grand-box .lbl { font-size: 13px; font-weight: 600; opacity: 0.85; }
+.total-grand-box .val { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+.tax-sel { font-size: 11px; border: 1px solid var(--rule); border-radius: 5px; padding: 2px 6px; background: var(--surface); cursor: pointer; outline: none; color: var(--ink-sub); font-family: inherit; }
+.badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+.badge-blue { background: var(--accent-soft); color: var(--accent); }
+.badge-orange { background: var(--orange-soft); color: #d97706; }
+.badge-green { background: var(--green-soft); color: #16a34a; }
+.badge-red { background: var(--red-soft); color: var(--red); }
+.badge-gray { background: var(--bg); color: var(--ink-sub); }
+.activity-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--rule); cursor: pointer; }
+.activity-item:last-child { border-bottom: none; }
+.activity-item:active { background: var(--bg); }
+.activity-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.activity-text { flex: 1; font-size: 13px; line-height: 1.5; min-width: 0; }
+.activity-right { text-align: right; flex-shrink: 0; }
+.quick-add { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 16px; border-bottom: 1px solid var(--rule); background: #fafafa; }
+.empty-state { padding: 40px 20px; text-align: center; color: var(--ink-sub); font-size: 13px; }
+.empty-ico { font-size: 36px; margin-bottom: 8px; }
+/* Modal */
+.modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: flex-end; }
+.modal-backdrop.open { display: flex; }
+.modal-sheet { background: var(--surface); border-radius: 16px 16px 0 0; padding: 16px; width: 100%; max-height: 70vh; overflow-y: auto; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+
+/* ===== PRINT ===== */
+#print-area { display: none; }
+@media print {
+  body > *:not(#print-area) { display: none !important; }
+  #print-area { display: block !important; font-family: 'Helvetica Neue', Arial, sans-serif; color: #000; font-size: 11px; }
+  @page { margin: 15mm 18mm; size: A4; }
+  .pdoc { max-width: 100%; }
+  .ph { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 2px solid #111; }
+  .ph-co { font-size: 10px; line-height: 1.9; color: #444; }
+  .ph-co-name { font-size: 15px; font-weight: 800; color: #000; margin-bottom: 2px; }
+  .ph-title { text-align: right; }
+  .ph-title h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+  .ph-title p { font-size: 11px; color: #555; margin-top: 2px; }
+  .pm { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; gap: 20px; }
+  .pm-client { border: 1.5px solid #ccc; border-radius: 6px; padding: 10px 14px; }
+  .pm-client-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #888; margin-bottom: 5px; }
+  .pm-client-name { font-size: 17px; font-weight: 700; }
+  .pm-client-sub { font-size: 10px; color: #555; margin-top: 2px; }
+  .pm-info { font-size: 10px; }
+  .pm-info table { border-collapse: collapse; }
+  .pm-info td { padding: 2px 6px 2px 0; }
+  .pm-info td:first-child { color: #888; white-space: nowrap; }
+  .pm-info td:last-child { font-weight: 600; }
+  .ptable { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 10px; }
+  .ptable th { background: #f2f2f2; padding: 7px 9px; text-align: left; font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: 0.3px; border-bottom: 2px solid #ddd; white-space: nowrap; }
+  .ptable th:not(:first-child) { text-align: right; }
+  .ptable td { padding: 7px 9px; border-bottom: 1px solid #eee; vertical-align: top; }
+  .ptable td:not(:first-child) { text-align: right; white-space: nowrap; }
+  .ptable .sec td { background: #f8f8f8; font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; color: #555; padding: 5px 9px; border-bottom: 1px solid #ddd; }
+  .ptotals { display: flex; justify-content: flex-end; margin-bottom: 18px; }
+  .ptotals-inner { min-width: 200px; font-size: 11px; }
+  .ptl { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #eee; }
+  .ptl:last-child { border: none; }
+  .ptl-lbl { color: #666; }
+  .ptl-val { font-weight: 600; }
+  .pgrand { display: flex; justify-content: space-between; background: #111; color: #fff; padding: 9px 13px; border-radius: 5px; margin-top: 6px; }
+  .pgrand .ptl-lbl { color: rgba(255,255,255,0.75); font-size: 11px; }
+  .pgrand .ptl-val { font-size: 15px; font-weight: 800; }
+  .pfooter { margin-top: 18px; padding-top: 14px; border-top: 1px solid #ddd; display: flex; gap: 20px; }
+  .pfooter-sec { flex: 1; }
+  .pfooter-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #888; margin-bottom: 4px; }
+  .pfooter-val { font-size: 10px; line-height: 1.8; color: #333; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-title" id="page-title">ダッシュボード</div>
+  <div class="topbar-actions" id="topbar-actions"></div>
+</div>
+
+<!-- PRINT AREA -->
+<div id="print-area"></div>
+
+<!-- ===== DASHBOARD ===== -->
+<div class="page active" id="page-dashboard">
+  <div class="stat-row">
+    <div class="stat-card"><div class="stat-label">見積</div><div class="stat-value" style="color:var(--accent)" id="dash-est-count">0</div><div class="stat-sub">件</div></div>
+    <div class="stat-card"><div class="stat-label">未払い</div><div class="stat-value" style="color:var(--orange)" id="dash-inv-unpaid">0</div><div class="stat-sub">件</div></div>
+    <div class="stat-card"><div class="stat-label">入金済み</div><div class="stat-value" style="color:var(--green);font-size:14px" id="dash-inv-total">¥0</div><div class="stat-sub">合計</div></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h2>最近の見積</h2><span class="badge badge-blue">見積</span></div>
+    <div id="dash-est-list"><div class="empty-state">まだ見積がありません</div></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h2>最近の請求</h2><span class="badge badge-orange">請求</span></div>
+    <div id="dash-inv-list"><div class="empty-state">まだ請求がありません</div></div>
+  </div>
+</div>
+
+<!-- ===== 見積 ===== -->
+<div class="page" id="page-estimate">
+  <!-- 一覧 -->
+  <div id="est-list-view">
+    <div class="card">
+      <div class="card-header">
+        <h2>見積一覧</h2>
+        <button class="btn-sm accent" onclick="estNewForm()">＋ 新規作成</button>
+      </div>
+      <div id="est-list-body"><div class="empty-state"><div class="empty-ico">📄</div>まだ見積がありません</div></div>
+    </div>
+  </div>
+  <!-- 編集 -->
+  <div id="est-edit-view" style="display:none">
+    <div class="stat-row">
+      <div class="stat-card"><div class="stat-label">番号</div><div class="stat-value" style="font-size:13px;letter-spacing:0" id="est-num">—</div><div class="stat-sub" id="est-date-sub">—</div></div>
+      <div class="stat-card"><div class="stat-label">行数</div><div class="stat-value" style="color:var(--accent)" id="est-rows">0</div><div class="stat-sub">行</div></div>
+      <div class="stat-card"><div class="stat-label">合計</div><div class="stat-value" style="color:var(--green);font-size:15px" id="est-stat-total">¥0</div><div class="stat-sub">税込</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <button class="btn-sm" onclick="showEstList()">← 一覧</button>
+        <h2 style="margin-left:8px">案件情報</h2>
+        <span class="badge badge-blue">基本</span>
+      </div>
+      <div class="card-body">
+        <div class="form-field"><label>顧客名</label>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="est-client" placeholder="株式会社〇〇" style="flex:1">
+            <button class="btn-sm" onclick="openPicker('est')" style="white-space:nowrap">👥 選択</button>
+          </div>
+        </div>
+        <div class="form-field"><label>案件名</label><input type="text" id="est-project" placeholder="〇〇リノベーション工事"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-field"><label>見積日</label><input type="date" id="est-date"></div>
+          <div class="form-field"><label>有効期限</label><input type="date" id="est-expiry"></div>
+        </div>
+        <div class="form-field"><label>現場住所</label><input type="text" id="est-address" placeholder="千葉県〇〇市…"></div>
+        <div class="form-field"><label>担当者</label><input type="text" id="est-staff" placeholder="担当者名"></div>
+        <div class="form-field"><label>備考</label><textarea id="est-notes" placeholder="支払条件・工期・特記事項など"></textarea></div>
+        <div id="est-delete-wrap" style="display:none;margin-top:4px">
+          <button class="btn btn-danger" style="width:100%;justify-content:center" onclick="deleteEstimate()">🗑 この見積を削除</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <h2>明細</h2>
+        <div style="display:flex;gap:6px">
+          <button class="btn-sm" onclick="estAddSection()">＋ 区分</button>
+          <button class="btn-sm accent" onclick="estAddRow()">＋ 追加</button>
+        </div>
+      </div>
+      <div class="quick-add">
+        <button class="btn-sm" onclick="estAddRow('LGS壁下地','m²',1,2800)">内装</button>
+        <button class="btn-sm" onclick="estAddRow('照明取付','箇所',1,8000)">設備</button>
+        <button class="btn-sm" onclick="estAddRow('現場管理費','式',1,30000)">管理費</button>
+        <button class="btn-sm" onclick="estAddRow('廃材処分費','式',1,15000)">廃材</button>
+      </div>
+      <div style="padding:0 16px" id="est-items"></div>
+      <div class="totals-box">
+        <div class="total-line"><span class="lbl">小計</span><span class="val" id="est-sub">¥0</span></div>
+        <div class="total-line">
+          <span class="lbl">消費税 <select class="tax-sel" id="est-tax" onchange="estRecalc()"><option value="0.10">10%</option><option value="0.08">8%</option><option value="0">非課税</option></select></span>
+          <span class="val" id="est-tax-val">¥0</span>
+        </div>
+        <div class="total-grand-box"><span class="lbl">合計（税込）</span><span class="val" id="est-grand">¥0</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 請求 ===== -->
+<div class="page" id="page-invoice">
+  <!-- 一覧 -->
+  <div id="inv-list-view">
+    <div class="card">
+      <div class="card-header">
+        <h2>請求一覧</h2>
+        <button class="btn-sm accent" onclick="invNewForm()">＋ 新規作成</button>
+      </div>
+      <div id="inv-list-body"><div class="empty-state"><div class="empty-ico">🧾</div>まだ請求がありません</div></div>
+    </div>
+  </div>
+  <!-- 編集 -->
+  <div id="inv-edit-view" style="display:none">
+    <div class="stat-row">
+      <div class="stat-card"><div class="stat-label">番号</div><div class="stat-value" style="font-size:13px;letter-spacing:0" id="inv-num">—</div><div class="stat-sub" id="inv-date-sub">—</div></div>
+      <div class="stat-card"><div class="stat-label">期限</div><div class="stat-value" style="color:var(--orange);font-size:13px;letter-spacing:0" id="inv-due-val">—</div><div class="stat-sub">支払期限</div></div>
+      <div class="stat-card"><div class="stat-label">請求額</div><div class="stat-value" style="color:var(--green);font-size:15px" id="inv-stat-total">¥0</div><div class="stat-sub">税込</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <button class="btn-sm" onclick="showInvList()">← 一覧</button>
+        <h2 style="margin-left:8px">請求情報</h2>
+        <span class="badge badge-orange">請求書</span>
+      </div>
+      <div class="card-body">
+        <div class="form-field"><label>請求先</label>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="inv-client" placeholder="株式会社〇〇" style="flex:1">
+            <button class="btn-sm" onclick="openPicker('inv')" style="white-space:nowrap">👥 選択</button>
+          </div>
+        </div>
+        <div class="form-field"><label>件名</label><input type="text" id="inv-project" placeholder="〇〇工事 請求"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-field"><label>請求日</label><input type="date" id="inv-date" oninput="invUpdateLabel()"></div>
+          <div class="form-field"><label>支払期限</label><input type="date" id="inv-due" oninput="invUpdateLabel()"></div>
+        </div>
+        <div class="form-field"><label>振込先</label><input type="text" id="inv-bank" placeholder="〇〇銀行 普通 1234567"></div>
+        <div class="form-field"><label>ステータス</label>
+          <select id="inv-status">
+            <option value="draft">下書き</option>
+            <option value="sent">送付済み</option>
+            <option value="paid">入金済み</option>
+            <option value="overdue">期限超過</option>
+          </select>
+        </div>
+        <div class="form-field"><label>備考</label><textarea id="inv-notes" placeholder="振込手数料はご負担ください、など"></textarea></div>
+        <div id="inv-delete-wrap" style="display:none;margin-top:4px">
+          <button class="btn btn-danger" style="width:100%;justify-content:center" onclick="deleteInvoice()">🗑 この請求を削除</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <h2>請求明細</h2>
+        <div style="display:flex;gap:6px">
+          <button class="btn-sm" onclick="invAddSection()">＋ 区分</button>
+          <button class="btn-sm accent" onclick="invAddRow()">＋ 追加</button>
+        </div>
+      </div>
+      <div class="quick-add">
+        <button class="btn-sm" onclick="openEstPicker()">📄 見積から転記</button>
+      </div>
+      <div style="padding:0 16px" id="inv-items"></div>
+      <div class="totals-box">
+        <div class="total-line"><span class="lbl">小計</span><span class="val" id="inv-sub">¥0</span></div>
+        <div class="total-line">
+          <span class="lbl">消費税 <select class="tax-sel" id="inv-tax" onchange="invRecalc()"><option value="0.10">10%</option><option value="0.08">8%</option><option value="0">非課税</option></select></span>
+          <span class="val" id="inv-tax-val">¥0</span>
+        </div>
+        <div class="total-grand-box"><span class="lbl">請求合計（税込）</span><span class="val" id="inv-grand">¥0</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 案件管理 ===== -->
+<div class="page" id="page-cases">
+  <div id="cases-list-view">
+    <div class="card">
+      <div class="card-header"><h2>現場一覧</h2><button class="btn-sm accent" onclick="showNewCaseForm()">＋ 新規現場</button></div>
+      <div id="cases-list"><div class="empty-state"><div class="empty-ico">🏗</div>現場がまだありません</div></div>
+    </div>
+  </div>
+  <div id="cases-new-view" style="display:none">
+    <div class="card">
+      <div class="card-header"><button class="btn-sm" onclick="showCasesList()">← 戻る</button><h2 style="margin-left:8px">新規現場登録</h2></div>
+      <div class="card-body">
+        <div class="form-field"><label>現場名</label><input type="text" id="case-name" placeholder="〇〇邸リノベーション"></div>
+        <div class="form-field"><label>顧客名</label><input type="text" id="case-client" placeholder="株式会社〇〇"></div>
+        <div class="form-field"><label>現場住所</label><input type="text" id="case-address" placeholder="千葉県〇〇市…"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-field"><label>着工日</label><input type="date" id="case-start"></div>
+          <div class="form-field"><label>完工予定日</label><input type="date" id="case-end"></div>
+        </div>
+        <div class="form-field"><label>ステータス</label>
+          <select id="case-status"><option value="active">進行中</option><option value="pending">着工前</option><option value="done">完工</option></select>
+        </div>
+        <div class="form-field"><label>備考</label><textarea id="case-notes" placeholder="特記事項など"></textarea></div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px" onclick="saveCase()">現場を登録</button>
+      </div>
+    </div>
+  </div>
+  <div id="cases-detail-view" style="display:none">
+    <div class="card">
+      <div class="card-header">
+        <button class="btn-sm" onclick="showCasesList()">← 一覧</button>
+        <h2 style="margin-left:8px" id="detail-case-name">—</h2>
+        <span class="badge" id="detail-case-badge">進行中</span>
+      </div>
+      <div style="padding:14px 16px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:6px">
+        <div style="font-size:12px;color:var(--ink-sub)" id="detail-case-client">—</div>
+        <div style="font-size:12px;color:var(--ink-sub)" id="detail-case-address">—</div>
+        <div style="font-size:12px;color:var(--ink-sub)" id="detail-case-period">—</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h2>材料・費用</h2><button class="btn-sm accent" onclick="caseAddItem()">＋ 追加</button></div>
+      <div class="quick-add">
+        <button class="btn-sm" onclick="caseAddItem('材木','本',1,0)">材木</button>
+        <button class="btn-sm" onclick="caseAddItem('石膏ボード','枚',1,0)">石膏ボード</button>
+        <button class="btn-sm" onclick="caseAddItem('クロス','m²',1,0)">クロス</button>
+        <button class="btn-sm" onclick="caseAddItem('塗料','L',1,0)">塗料</button>
+        <button class="btn-sm" onclick="caseAddItem('人工','人工',1,0)">人工</button>
+      </div>
+      <div style="padding:0 16px" id="case-items"></div>
+      <div class="totals-box"><div class="total-line"><span class="lbl">費用合計</span><span class="val" id="case-total">¥0</span></div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h2>現場メモ</h2></div>
+      <div class="card-body"><div class="form-field"><textarea id="case-memo" placeholder="進捗・連絡事項など" oninput="saveCaseMemo()"></textarea></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 顧客管理 ===== -->
+<div class="page" id="page-clients">
+  <div id="client-list-view">
+    <div class="card">
+      <div class="card-header"><h2>顧客一覧</h2><button class="btn-sm accent" onclick="clientNewForm()">＋ 新規登録</button></div>
+      <div id="client-list-body"><div class="empty-state"><div class="empty-ico">👥</div>まだ顧客が登録されていません</div></div>
+    </div>
+  </div>
+  <div id="client-edit-view" style="display:none">
+    <div class="card">
+      <div class="card-header">
+        <button class="btn-sm" onclick="showClientList()">← 一覧</button>
+        <h2 style="margin-left:8px" id="client-form-title">新規顧客登録</h2>
+      </div>
+      <div class="card-body">
+        <input type="hidden" id="client-id">
+        <div class="form-field"><label>会社名</label><input type="text" id="client-company" placeholder="株式会社〇〇"></div>
+        <div class="form-field"><label>担当者名</label><input type="text" id="client-name" placeholder="田中 太郎"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-field"><label>電話番号</label><input type="tel" id="client-tel" placeholder="090-0000-0000"></div>
+          <div class="form-field"><label>メール</label><input type="email" id="client-email" placeholder="info@example.com"></div>
+        </div>
+        <div class="form-field"><label>住所</label><input type="text" id="client-address" placeholder="千葉県〇〇市…"></div>
+        <div class="form-field"><label>備考</label><textarea id="client-notes" placeholder="メモなど"></textarea></div>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="saveClient()">保存</button>
+          <button class="btn btn-danger" id="client-del-btn" style="display:none" onclick="deleteClient()">削除</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 顧客選択モーダル（共通） -->
+<div class="modal-backdrop" id="picker-modal">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <h3 style="font-size:15px;font-weight:700" id="picker-title">選択</h3>
+      <button class="btn-sm" onclick="closePicker()">✕ 閉じる</button>
+    </div>
+    <div id="picker-body"></div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <div class="nav-item active" onclick="navigate('dashboard',this)" data-page="dashboard"><span class="nav-ico">🏠</span>ホーム</div>
+  <div class="nav-item" onclick="navigate('estimate',this)" data-page="estimate"><span class="nav-ico">📄</span>見積<span class="nav-badge" id="m-est-badge" style="display:none">0</span></div>
+  <div class="nav-item" onclick="navigate('invoice',this)" data-page="invoice"><span class="nav-ico">🧾</span>請求<span class="nav-badge" id="m-inv-badge" style="display:none">0</span></div>
+  <div class="nav-item" onclick="navigate('cases',this)" data-page="cases"><span class="nav-ico">📋</span>案件</div>
+  <div class="nav-item" onclick="navigate('clients',this)" data-page="clients"><span class="nav-ico">👥</span>顧客</div>
+</nav>
+
+<script>
+// ===== CONSTANTS =====
+const commas = n => Math.round(n).toLocaleString('ja-JP');
+const fmtDate = d => d.toISOString().split('T')[0];
+const units = ['式','m²','m','箇所','個','本','枚','回','人工','kg','L'];
+const unitOpts = sel => units.map(u => `<option${u===sel?' selected':''}>${u}</option>`).join('');
+const pageTitles = {dashboard:'ダッシュボード',estimate:'見積',invoice:'請求',cases:'案件管理',clients:'顧客管理'};
+const S_COLOR = {draft:'var(--ink-sub)',sent:'var(--orange)',paid:'var(--green)',overdue:'var(--red)'};
+const S_LABEL = {draft:'下書き',sent:'送付済み',paid:'入金済み',overdue:'期限超過'};
+const S_BADGE = {draft:'badge-gray',sent:'badge-orange',paid:'badge-green',overdue:'badge-red'};
+
+// ===== STATE =====
+let estimates=[], invoices=[], customers=[], cases=[];
+let currentEstId=null, currentInvId=null;
+let estCounter=1, invCounter=1, currentCaseIdx=null;
+let pickerTarget=''; // 'est' | 'inv' | 'est-copy'
+
+// ===== NAVIGATE =====
+function navigate(page, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  if(el) el.classList.add('active');
+  document.getElementById('page-title').textContent = pageTitles[page]||page;
+  document.getElementById('topbar-actions').innerHTML = '';
+  if(page==='dashboard') updateDashboard();
+  if(page==='cases') showCasesList();
+  if(page==='estimate') showEstList();
+  if(page==='invoice') showInvList();
+  if(page==='clients') showClientList();
+}
+
+// ===== ESTIMATE =====
+function showEstList() {
+  document.getElementById('est-list-view').style.display='block';
+  document.getElementById('est-edit-view').style.display='none';
+  document.getElementById('topbar-actions').innerHTML='';
+  renderEstList();
+}
+function renderEstList() {
+  const el=document.getElementById('est-list-body');
+  if(!estimates.length){el.innerHTML='<div class="empty-state"><div class="empty-ico">📄</div>まだ見積がありません</div>';return;}
+  el.innerHTML=[...estimates].reverse().map(e=>`
+    <div class="activity-item" onclick="estEditForm('${e.id}')">
+      <div class="activity-dot" style="background:var(--accent)"></div>
+      <div class="activity-text"><strong>${e.client||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${e.num} · ${e.project||'—'} · ${e.date||''}</span></div>
+      <div class="activity-right">
+        <div style="font-size:13px;font-weight:700;color:var(--accent)">¥${commas(e.grand||0)}</div>
+        <button class="btn-sm" style="margin-top:4px;font-size:10px;padding:4px 8px" onclick="event.stopPropagation();printEst('${e.id}')">🖨 PDF</button>
+      </div>
+    </div>`).join('');
+}
+function estNewForm() {
+  currentEstId=null;
+  document.getElementById('est-list-view').style.display='none';
+  document.getElementById('est-edit-view').style.display='block';
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-primary" onclick="saveEstimate()" style="padding:8px 14px;font-size:13px">保存</button>`;
+  document.getElementById('est-delete-wrap').style.display='none';
+  const t=new Date(), e=new Date(t); e.setMonth(e.getMonth()+1);
+  document.getElementById('est-num').textContent='Q-'+t.getFullYear()+String(t.getMonth()+1).padStart(2,'0')+'-'+String(estCounter).padStart(3,'0');
+  document.getElementById('est-date-sub').textContent='作成日: '+fmtDate(t);
+  ['est-client','est-project','est-address','est-staff','est-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('est-date').value=fmtDate(t);
+  document.getElementById('est-expiry').value=fmtDate(e);
+  document.getElementById('est-tax').value='0.10';
+  document.getElementById('est-items').innerHTML='';
+  estRecalc();
+}
+function estEditForm(id) {
+  const est=estimates.find(e=>String(e.id)===String(id));
+  if(!est)return;
+  currentEstId=id;
+  document.getElementById('est-list-view').style.display='none';
+  document.getElementById('est-edit-view').style.display='block';
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-ghost" onclick="printEst('${id}')" style="padding:8px 12px;font-size:13px">🖨</button><button class="btn btn-primary" onclick="saveEstimate()" style="padding:8px 14px;font-size:13px">保存</button>`;
+  document.getElementById('est-delete-wrap').style.display='block';
+  document.getElementById('est-num').textContent=est.num;
+  document.getElementById('est-date-sub').textContent='作成日: '+(est.date||'');
+  document.getElementById('est-client').value=est.client||'';
+  document.getElementById('est-project').value=est.project||'';
+  document.getElementById('est-date').value=est.date||'';
+  document.getElementById('est-expiry').value=est.expiry||'';
+  document.getElementById('est-address').value=est.address||'';
+  document.getElementById('est-staff').value=est.staff||'';
+  document.getElementById('est-notes').value=est.notes||'';
+  document.getElementById('est-tax').value=String(est.taxRate||0.10);
+  document.getElementById('est-items').innerHTML='';
+  (est.items||[]).forEach(item=>{
+    if(item.type==='section') estAddSection(item.name);
+    else estAddRow(item.name,item.unit,item.qty,item.price);
+  });
+  estRecalc();
+}
+function estAddSection(name='セクション名') {
+  const w=document.getElementById('est-items'),d=document.createElement('div');
+  d.className='section-divider'; d.setAttribute('data-est-sec','1');
+  d.innerHTML=`<span style="color:#9ca3af;font-size:12px">▸</span><input type="text" value="${name}"/><button class="btn-del" onclick="this.parentElement.remove()">✕</button>`;
+  w.appendChild(d);
+}
+function estAddRow(name='',unit='式',qty=1,price=0) {
+  const w=document.getElementById('est-items'),d=document.createElement('div');
+  d.setAttribute('data-item','est');
+  d.innerHTML=`<div class="item-row"><input class="item-name-input" type="text" value="${name}" placeholder="項目名" oninput="estRecalc()"><input class="item-num-input" type="number" value="${qty}" min="0" step="0.1" oninput="estRecalc()"><span class="item-amount">¥0</span><button class="btn-del" onclick="this.closest('[data-item]').remove();estRecalc()">✕</button></div><div class="item-detail"><select onchange="estRecalc()">${unitOpts(unit)}</select><span class="item-detail-label">×</span><input class="item-num-input" type="number" value="${price}" min="0" step="100" oninput="estRecalc()" placeholder="単価"><span class="item-detail-label">円</span></div>`;
+  w.appendChild(d); estRecalc();
+}
+function collectItems(containerId, secAttr) {
+  const items=[];
+  Array.from(document.getElementById(containerId).children).forEach(d=>{
+    if(d.hasAttribute(secAttr)) items.push({type:'section',name:d.querySelector('input')?.value||''});
+    else if(d.hasAttribute('data-item')){
+      const ns=d.querySelectorAll('input[type=number]');
+      items.push({type:'item',name:d.querySelector('.item-name-input')?.value||'',unit:d.querySelector('select')?.value||'式',qty:parseFloat(ns[0]?.value)||0,price:parseFloat(ns[1]?.value)||0});
+    }
+  });
+  return items;
+}
+function estRecalc() {
+  const items=document.querySelectorAll('#est-items [data-item]');
+  let sub=0;
+  items.forEach(d=>{const ns=d.querySelectorAll('input[type=number]');const t=(parseFloat(ns[0]?.value)||0)*(parseFloat(ns[1]?.value)||0);const c=d.querySelector('.item-amount');if(c)c.textContent='¥'+commas(t);sub+=t;});
+  const rate=parseFloat(document.getElementById('est-tax').value),tax=Math.round(sub*rate),grand=sub+tax;
+  document.getElementById('est-sub').textContent='¥'+commas(sub);
+  document.getElementById('est-tax-val').textContent='¥'+commas(tax);
+  document.getElementById('est-grand').textContent='¥'+commas(grand);
+  document.getElementById('est-stat-total').textContent='¥'+commas(grand);
+  document.getElementById('est-rows').textContent=items.length;
+}
+function saveEstimate() {
+  const sub=parseNum('est-sub'),tax=parseNum('est-tax-val'),grand=parseNum('est-grand');
+  const obj={id:currentEstId||Date.now(),num:document.getElementById('est-num').textContent,client:document.getElementById('est-client').value,project:document.getElementById('est-project').value,date:document.getElementById('est-date').value,expiry:document.getElementById('est-expiry').value,address:document.getElementById('est-address').value,staff:document.getElementById('est-staff').value,notes:document.getElementById('est-notes').value,taxRate:parseFloat(document.getElementById('est-tax').value),items:collectItems('est-items','data-est-sec'),sub,tax,grand};
+  if(currentEstId){const i=estimates.findIndex(e=>String(e.id)===String(currentEstId));if(i>=0)estimates[i]=obj;else estimates.push(obj);}
+  else{estimates.push(obj);estCounter++;}
+  persist(); setBadge('m-est-badge',estimates.length); updateDashboard(); showEstList();
+}
+function deleteEstimate() {
+  if(!confirm('この見積を削除しますか？'))return;
+  estimates=estimates.filter(e=>String(e.id)!==String(currentEstId));
+  currentEstId=null; persist(); setBadge('m-est-badge',estimates.length); updateDashboard(); showEstList();
+}
+
+// ===== INVOICE =====
+function showInvList() {
+  document.getElementById('inv-list-view').style.display='block';
+  document.getElementById('inv-edit-view').style.display='none';
+  document.getElementById('topbar-actions').innerHTML='';
+  renderInvList();
+}
+function renderInvList() {
+  const el=document.getElementById('inv-list-body');
+  if(!invoices.length){el.innerHTML='<div class="empty-state"><div class="empty-ico">🧾</div>まだ請求がありません</div>';return;}
+  el.innerHTML=[...invoices].reverse().map(i=>`
+    <div class="activity-item" onclick="invEditForm('${i.id}')">
+      <div class="activity-dot" style="background:${S_COLOR[i.status]}"></div>
+      <div class="activity-text"><strong>${i.client||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${i.num} · 期限 ${i.due||'—'}</span></div>
+      <div class="activity-right">
+        <div style="font-size:13px;font-weight:700;color:${S_COLOR[i.status]}">¥${commas(i.grand||0)}</div>
+        <span class="badge ${S_BADGE[i.status]}" style="font-size:10px">${S_LABEL[i.status]}</span>
+      </div>
+    </div>`).join('');
+}
+function invNewForm() {
+  currentInvId=null;
+  document.getElementById('inv-list-view').style.display='none';
+  document.getElementById('inv-edit-view').style.display='block';
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-primary" onclick="saveInvoice()" style="padding:8px 14px;font-size:13px">保存</button>`;
+  document.getElementById('inv-delete-wrap').style.display='none';
+  const t=new Date(),d=new Date(t); d.setMonth(d.getMonth()+1);
+  document.getElementById('inv-num').textContent='INV-'+t.getFullYear()+String(t.getMonth()+1).padStart(2,'0')+'-'+String(invCounter).padStart(3,'0');
+  ['inv-client','inv-project','inv-bank','inv-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('inv-date').value=fmtDate(t);
+  document.getElementById('inv-due').value=fmtDate(d);
+  document.getElementById('inv-status').value='draft';
+  document.getElementById('inv-tax').value='0.10';
+  document.getElementById('inv-items').innerHTML='';
+  invUpdateLabel(); invRecalc();
+}
+function invEditForm(id) {
+  const inv=invoices.find(i=>String(i.id)===String(id));
+  if(!inv)return;
+  currentInvId=id;
+  document.getElementById('inv-list-view').style.display='none';
+  document.getElementById('inv-edit-view').style.display='block';
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-ghost" onclick="printInv('${id}')" style="padding:8px 12px;font-size:13px">🖨</button><button class="btn btn-primary" onclick="saveInvoice()" style="padding:8px 14px;font-size:13px">保存</button>`;
+  document.getElementById('inv-delete-wrap').style.display='block';
+  document.getElementById('inv-num').textContent=inv.num;
+  document.getElementById('inv-client').value=inv.client||'';
+  document.getElementById('inv-project').value=inv.project||'';
+  document.getElementById('inv-date').value=inv.date||'';
+  document.getElementById('inv-due').value=inv.due||'';
+  document.getElementById('inv-bank').value=inv.bank||'';
+  document.getElementById('inv-status').value=inv.status||'draft';
+  document.getElementById('inv-notes').value=inv.notes||'';
+  document.getElementById('inv-tax').value=String(inv.taxRate||0.10);
+  document.getElementById('inv-items').innerHTML='';
+  (inv.items||[]).forEach(item=>{
+    if(item.type==='section') invAddSection(item.name);
+    else invAddRow(item.name,item.unit,item.qty,item.price);
+  });
+  invUpdateLabel(); invRecalc();
+}
+function invAddSection(name='セクション名') {
+  const w=document.getElementById('inv-items'),d=document.createElement('div');
+  d.className='section-divider'; d.setAttribute('data-inv-sec','1');
+  d.innerHTML=`<span style="color:#9ca3af;font-size:12px">▸</span><input type="text" value="${name}"/><button class="btn-del" onclick="this.parentElement.remove()">✕</button>`;
+  w.appendChild(d);
+}
+function invAddRow(name='',unit='式',qty=1,price=0) {
+  const w=document.getElementById('inv-items'),d=document.createElement('div');
+  d.setAttribute('data-item','inv');
+  d.innerHTML=`<div class="item-row"><input class="item-name-input" type="text" value="${name}" placeholder="項目名" oninput="invRecalc()"><input class="item-num-input" type="number" value="${qty}" min="0" step="0.1" oninput="invRecalc()"><span class="item-amount">¥0</span><button class="btn-del" onclick="this.closest('[data-item]').remove();invRecalc()">✕</button></div><div class="item-detail"><select onchange="invRecalc()">${unitOpts(unit)}</select><span class="item-detail-label">×</span><input class="item-num-input" type="number" value="${price}" min="0" step="100" oninput="invRecalc()" placeholder="単価"><span class="item-detail-label">円</span></div>`;
+  w.appendChild(d); invRecalc();
+}
+function invUpdateLabel() {
+  const d=document.getElementById('inv-date').value,due=document.getElementById('inv-due').value;
+  document.getElementById('inv-date-sub').textContent=d?'請求日: '+d:'—';
+  document.getElementById('inv-due-val').textContent=due||'—';
+}
+function invRecalc() {
+  const items=document.querySelectorAll('#inv-items [data-item]');
+  let sub=0;
+  items.forEach(d=>{const ns=d.querySelectorAll('input[type=number]');const t=(parseFloat(ns[0]?.value)||0)*(parseFloat(ns[1]?.value)||0);const c=d.querySelector('.item-amount');if(c)c.textContent='¥'+commas(t);sub+=t;});
+  const rate=parseFloat(document.getElementById('inv-tax').value),tax=Math.round(sub*rate),grand=sub+tax;
+  document.getElementById('inv-sub').textContent='¥'+commas(sub);
+  document.getElementById('inv-tax-val').textContent='¥'+commas(tax);
+  document.getElementById('inv-grand').textContent='¥'+commas(grand);
+  document.getElementById('inv-stat-total').textContent='¥'+commas(grand);
+}
+function saveInvoice() {
+  const sub=parseNum('inv-sub'),tax=parseNum('inv-tax-val'),grand=parseNum('inv-grand');
+  const obj={id:currentInvId||Date.now(),num:document.getElementById('inv-num').textContent,client:document.getElementById('inv-client').value,project:document.getElementById('inv-project').value,date:document.getElementById('inv-date').value,due:document.getElementById('inv-due').value,bank:document.getElementById('inv-bank').value,status:document.getElementById('inv-status').value,notes:document.getElementById('inv-notes').value,taxRate:parseFloat(document.getElementById('inv-tax').value),items:collectItems('inv-items','data-inv-sec'),sub,tax,grand};
+  if(currentInvId){const i=invoices.findIndex(x=>String(x.id)===String(currentInvId));if(i>=0)invoices[i]=obj;else invoices.push(obj);}
+  else{invoices.push(obj);invCounter++;}
+  persist(); setBadge('m-inv-badge',invoices.length); updateDashboard(); showInvList();
+}
+function deleteInvoice() {
+  if(!confirm('この請求を削除しますか？'))return;
+  invoices=invoices.filter(i=>String(i.id)!==String(currentInvId));
+  currentInvId=null; persist(); setBadge('m-inv-badge',invoices.length); updateDashboard(); showInvList();
+}
+
+// ===== CUSTOMERS =====
+function showClientList() {
+  document.getElementById('client-list-view').style.display='block';
+  document.getElementById('client-edit-view').style.display='none';
+  renderClientList();
+}
+function renderClientList() {
+  const el=document.getElementById('client-list-body');
+  if(!customers.length){el.innerHTML='<div class="empty-state"><div class="empty-ico">👥</div>まだ顧客が登録されていません</div>';return;}
+  el.innerHTML=customers.map(c=>`
+    <div class="activity-item" onclick="clientEditForm('${c.id}')">
+      <div style="width:36px;height:36px;border-radius:50%;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">👤</div>
+      <div class="activity-text"><strong>${c.company||c.name||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${c.name||''} ${c.tel?'· '+c.tel:''}</span></div>
+      <div style="color:var(--ink-sub);font-size:14px">›</div>
+    </div>`).join('');
+}
+function clientNewForm() {
+  document.getElementById('client-list-view').style.display='none';
+  document.getElementById('client-edit-view').style.display='block';
+  document.getElementById('client-form-title').textContent='新規顧客登録';
+  document.getElementById('client-id').value='';
+  document.getElementById('client-del-btn').style.display='none';
+  ['client-company','client-name','client-tel','client-email','client-address','client-notes'].forEach(id=>document.getElementById(id).value='');
+}
+function clientEditForm(id) {
+  const c=customers.find(x=>String(x.id)===String(id));
+  if(!c)return;
+  document.getElementById('client-list-view').style.display='none';
+  document.getElementById('client-edit-view').style.display='block';
+  document.getElementById('client-form-title').textContent=c.company||c.name||'顧客詳細';
+  document.getElementById('client-id').value=c.id;
+  document.getElementById('client-company').value=c.company||'';
+  document.getElementById('client-name').value=c.name||'';
+  document.getElementById('client-tel').value=c.tel||'';
+  document.getElementById('client-email').value=c.email||'';
+  document.getElementById('client-address').value=c.address||'';
+  document.getElementById('client-notes').value=c.notes||'';
+  document.getElementById('client-del-btn').style.display='inline-flex';
+}
+function saveClient() {
+  const eid=document.getElementById('client-id').value;
+  const obj={id:eid||Date.now(),company:document.getElementById('client-company').value,name:document.getElementById('client-name').value,tel:document.getElementById('client-tel').value,email:document.getElementById('client-email').value,address:document.getElementById('client-address').value,notes:document.getElementById('client-notes').value};
+  if(eid){const i=customers.findIndex(c=>String(c.id)===String(eid));if(i>=0)customers[i]=obj;else customers.push(obj);}
+  else customers.push(obj);
+  persist(); showClientList();
+}
+function deleteClient() {
+  if(!confirm('この顧客を削除しますか？'))return;
+  const eid=document.getElementById('client-id').value;
+  customers=customers.filter(c=>String(c.id)!==String(eid));
+  persist(); showClientList();
+}
+
+// ===== PICKER MODAL =====
+function openPicker(target) {
+  pickerTarget=target;
+  document.getElementById('picker-title').textContent='顧客を選択';
+  const el=document.getElementById('picker-body');
+  if(!customers.length){
+    el.innerHTML='<div class="empty-state">顧客が登録されていません。<br>顧客タブから先に登録してください。</div>';
+  } else {
+    el.innerHTML=customers.map(c=>`
+      <div class="activity-item" onclick="applyCustomer('${c.id}')">
+        <div style="width:36px;height:36px;border-radius:50%;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:18px">👤</div>
+        <div class="activity-text"><strong>${c.company||c.name||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${c.address||''}</span></div>
+      </div>`).join('');
+  }
+  document.getElementById('picker-modal').classList.add('open');
+}
+function openEstPicker() {
+  pickerTarget='est-copy';
+  document.getElementById('picker-title').textContent='見積を選択して転記';
+  const el=document.getElementById('picker-body');
+  if(!estimates.length){
+    el.innerHTML='<div class="empty-state">保存された見積がありません。<br>先に見積を作成・保存してください。</div>';
+  } else {
+    el.innerHTML=[...estimates].reverse().map(e=>`
+      <div class="activity-item" onclick="applyEstimate('${e.id}')">
+        <div class="activity-dot" style="background:var(--accent)"></div>
+        <div class="activity-text"><strong>${e.num}</strong><br><span style="color:var(--ink-sub);font-size:11px">${e.client||'—'} · ¥${commas(e.grand||0)}</span></div>
+      </div>`).join('');
+  }
+  document.getElementById('picker-modal').classList.add('open');
+}
+function applyCustomer(id) {
+  const c=customers.find(x=>String(x.id)===String(id));
+  if(!c)return;
+  if(pickerTarget==='est'){
+    document.getElementById('est-client').value=c.company||c.name||'';
+    if(!document.getElementById('est-address').value) document.getElementById('est-address').value=c.address||'';
+  } else if(pickerTarget==='inv'){
+    document.getElementById('inv-client').value=c.company||c.name||'';
+  }
+  closePicker();
+}
+function applyEstimate(id) {
+  const est=estimates.find(e=>String(e.id)===String(id));
+  if(!est)return;
+  document.getElementById('inv-items').innerHTML='';
+  (est.items||[]).forEach(item=>{
+    if(item.type==='section') invAddSection(item.name);
+    else invAddRow(item.name,item.unit,item.qty,item.price);
+  });
+  document.getElementById('inv-client').value=est.client||'';
+  document.getElementById('inv-project').value=(est.project||'')+'　請求';
+  document.getElementById('inv-tax').value=String(est.taxRate||0.10);
+  invUpdateLabel(); invRecalc();
+  closePicker();
+}
+function closePicker() {
+  document.getElementById('picker-modal').classList.remove('open');
+}
+
+// ===== PRINT =====
+function buildPrintHTML(type, data) {
+  const co=JSON.parse(localStorage.getItem('ck_company')||'{}');
+  const taxLbl=data.taxRate===0?'非課税':(data.taxRate===0.08?'消費税 8%':'消費税 10%');
+  const rows=(data.items||[]).map(item=>{
+    if(item.type==='section') return `<tr class="sec"><td colspan="5">${item.name}</td></tr>`;
+    const amt=Math.round((item.qty||0)*(item.price||0));
+    return `<tr><td>${item.name}</td><td style="text-align:right">${item.qty}</td><td style="text-align:right">${item.unit}</td><td style="text-align:right">¥${commas(item.price||0)}</td><td style="text-align:right">¥${commas(amt)}</td></tr>`;
+  }).join('');
+  const infoRows=type==='estimate'
+    ?`<tr><td>見積番号</td><td>${data.num}</td></tr><tr><td>見積日</td><td>${data.date||'—'}</td></tr><tr><td>有効期限</td><td>${data.expiry||'—'}</td></tr>${data.staff?`<tr><td>担当者</td><td>${data.staff}</td></tr>`:''}`
+    :`<tr><td>請求番号</td><td>${data.num}</td></tr><tr><td>請求日</td><td>${data.date||'—'}</td></tr><tr><td>支払期限</td><td>${data.due||'—'}</td></tr>`;
+  const footerHTML=(type==='invoice'&&data.bank?`<div class="pfooter-sec"><div class="pfooter-lbl">振込先</div><div class="pfooter-val">${data.bank}</div></div>`:'')+
+    (data.notes?`<div class="pfooter-sec"><div class="pfooter-lbl">備考</div><div class="pfooter-val">${data.notes}</div></div>`:'');
+  return `<div class="pdoc">
+  <div class="ph">
+    <div class="ph-co"><div class="ph-co-name">${co.name||''}</div>${co.address?`<div>${co.address}</div>`:''} ${co.tel?`<div>TEL: ${co.tel}</div>`:''} ${co.email?`<div>${co.email}</div>`:''}</div>
+    <div class="ph-title"><h1>${type==='estimate'?'御見積書':'請求書'}</h1><p>${data.num}</p></div>
+  </div>
+  <div class="pm">
+    <div class="pm-client">
+      <div class="pm-client-lbl">宛先</div>
+      <div class="pm-client-name">${data.client||'—'} 御中</div>
+      ${type==='estimate'&&data.address?`<div class="pm-client-sub">${data.address}</div>`:''}
+    </div>
+    <div class="pm-info"><table><tbody>${infoRows}</tbody></table></div>
+  </div>
+  <table class="ptable">
+    <thead><tr><th>項目</th><th style="text-align:right">数量</th><th style="text-align:right">単位</th><th style="text-align:right">単価</th><th style="text-align:right">金額</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="ptotals"><div class="ptotals-inner">
+    <div class="ptl"><span class="ptl-lbl">小計</span><span class="ptl-val">¥${commas(data.sub||0)}</span></div>
+    <div class="ptl"><span class="ptl-lbl">${taxLbl}</span><span class="ptl-val">¥${commas(data.tax||0)}</span></div>
+    <div class="pgrand"><span class="ptl-lbl">${type==='estimate'?'合計（税込）':'請求合計（税込）'}</span><span class="ptl-val">¥${commas(data.grand||0)}</span></div>
+  </div></div>
+  ${footerHTML?`<div class="pfooter">${footerHTML}</div>`:''}
+  </div>`;
+}
+function printEst(id) {
+  const est=estimates.find(e=>String(e.id)===String(id));
+  if(!est)return;
+  document.getElementById('print-area').innerHTML=buildPrintHTML('estimate',est);
+  window.print();
+}
+function printInv(id) {
+  const inv=invoices.find(i=>String(i.id)===String(id));
+  if(!inv)return;
+  document.getElementById('print-area').innerHTML=buildPrintHTML('invoice',inv);
+  window.print();
+}
+
+// ===== CASES =====
+function showCasesList() {
+  document.getElementById('cases-list-view').style.display='block';
+  document.getElementById('cases-new-view').style.display='none';
+  document.getElementById('cases-detail-view').style.display='none';
+  renderCasesList();
+}
+function showNewCaseForm() {
+  document.getElementById('cases-list-view').style.display='none';
+  document.getElementById('cases-new-view').style.display='block';
+  document.getElementById('cases-detail-view').style.display='none';
+  document.getElementById('case-start').value=fmtDate(new Date());
+}
+function showCaseDetail(idx) {
+  currentCaseIdx=idx; const c=cases[idx];
+  document.getElementById('cases-list-view').style.display='none';
+  document.getElementById('cases-new-view').style.display='none';
+  document.getElementById('cases-detail-view').style.display='block';
+  document.getElementById('detail-case-name').textContent=c.name;
+  document.getElementById('detail-case-client').textContent='👤 '+(c.client||'—');
+  document.getElementById('detail-case-address').textContent='📍 '+(c.address||'—');
+  document.getElementById('detail-case-period').textContent='📅 '+(c.start||'—')+' 〜 '+(c.end||'—');
+  const badge=document.getElementById('detail-case-badge');
+  const sC={active:'badge-blue',pending:'badge-orange',done:'badge-green'};
+  const sL={active:'進行中',pending:'着工前',done:'完工'};
+  badge.className='badge '+(sC[c.status]||'badge-blue'); badge.textContent=sL[c.status]||'—';
+  document.getElementById('case-memo').value=c.memo||'';
+  document.getElementById('case-items').innerHTML='';
+  (c.items||[]).forEach(item=>caseAddItem(item.name,item.unit,item.qty,item.price));
+  caseRecalc();
+}
+function saveCase() {
+  const obj={id:Date.now(),name:document.getElementById('case-name').value||'無題の現場',client:document.getElementById('case-client').value,address:document.getElementById('case-address').value,start:document.getElementById('case-start').value,end:document.getElementById('case-end').value,status:document.getElementById('case-status').value,notes:document.getElementById('case-notes').value,items:[],memo:''};
+  cases.push(obj); persist();
+  ['case-name','case-client','case-address','case-notes'].forEach(id=>document.getElementById(id).value='');
+  showCasesList();
+}
+function renderCasesList() {
+  const el=document.getElementById('cases-list');
+  if(!cases.length){el.innerHTML='<div class="empty-state"><div class="empty-ico">🏗</div>現場がまだありません</div>';return;}
+  const sC={active:'var(--accent)',pending:'var(--orange)',done:'var(--green)'};
+  const sL={active:'進行中',pending:'着工前',done:'完工'};
+  el.innerHTML=cases.map((c,i)=>`
+    <div class="activity-item" onclick="showCaseDetail(${i})">
+      <div class="activity-dot" style="background:${sC[c.status]||'var(--accent)'}"></div>
+      <div class="activity-text"><strong>${c.name}</strong><br><span style="color:var(--ink-sub);font-size:11px">${c.client||'—'} · ${c.start||'—'}</span></div>
+      <div style="font-size:11px;font-weight:700;color:${sC[c.status]}">${sL[c.status]||'—'} ›</div>
+    </div>`).join('');
+}
+function caseAddItem(name='',unit='式',qty=1,price=0) {
+  const w=document.getElementById('case-items'),d=document.createElement('div');
+  d.setAttribute('data-case-item','1');
+  d.innerHTML=`<div class="item-row"><input class="item-name-input" type="text" value="${name}" placeholder="材料名・作業名" oninput="caseRecalc()"><input class="item-num-input" type="number" value="${qty}" min="0" step="0.1" oninput="caseRecalc()"><span class="item-amount">¥0</span><button class="btn-del" onclick="this.closest('[data-case-item]').remove();caseRecalc()">✕</button></div><div class="item-detail"><select onchange="caseRecalc()">${unitOpts(unit)}</select><span class="item-detail-label">×</span><input class="item-num-input" type="number" value="${price}" min="0" step="100" oninput="caseRecalc()" placeholder="単価"><span class="item-detail-label">円</span></div>`;
+  w.appendChild(d); caseRecalc();
+}
+function caseRecalc() {
+  const items=document.querySelectorAll('#case-items [data-case-item]');
+  let sub=0;
+  items.forEach(d=>{const ns=d.querySelectorAll('input[type=number]');const t=(parseFloat(ns[0]?.value)||0)*(parseFloat(ns[1]?.value)||0);const c=d.querySelector('.item-amount');if(c)c.textContent='¥'+commas(t);sub+=t;});
+  document.getElementById('case-total').textContent='¥'+commas(sub); saveCaseItems();
+}
+function saveCaseItems() {
+  if(currentCaseIdx===null)return;
+  const items=[];
+  document.querySelectorAll('#case-items [data-case-item]').forEach(d=>{const ns=d.querySelectorAll('input[type=number]');const sel=d.querySelector('select');items.push({name:d.querySelector('.item-name-input')?.value||'',unit:sel?.value||'式',qty:parseFloat(ns[0]?.value)||0,price:parseFloat(ns[1]?.value)||0});});
+  cases[currentCaseIdx].items=items; persist();
+}
+function saveCaseMemo() {
+  if(currentCaseIdx===null)return;
+  cases[currentCaseIdx].memo=document.getElementById('case-memo').value; persist();
+}
+
+// ===== STORAGE & DASHBOARD =====
+function persist() {
+  localStorage.setItem('ck_estimates',JSON.stringify(estimates));
+  localStorage.setItem('ck_invoices',JSON.stringify(invoices));
+  localStorage.setItem('ck_customers',JSON.stringify(customers));
+  localStorage.setItem('ck_cases',JSON.stringify(cases));
+  localStorage.setItem('ck_est_counter',estCounter);
+  localStorage.setItem('ck_inv_counter',invCounter);
+}
+function load() {
+  try{const e=localStorage.getItem('ck_estimates');if(e)estimates=JSON.parse(e);}catch(e){}
+  try{const i=localStorage.getItem('ck_invoices');if(i)invoices=JSON.parse(i);}catch(e){}
+  try{const c=localStorage.getItem('ck_customers');if(c)customers=JSON.parse(c);}catch(e){}
+  try{const ca=localStorage.getItem('ck_cases');if(ca)cases=JSON.parse(ca);}catch(e){}
+  const ec=localStorage.getItem('ck_est_counter');if(ec)estCounter=parseInt(ec);
+  const ic=localStorage.getItem('ck_inv_counter');if(ic)invCounter=parseInt(ic);
+}
+function updateDashboard() {
+  document.getElementById('dash-est-count').textContent=estimates.length;
+  document.getElementById('dash-inv-unpaid').textContent=invoices.filter(i=>i.status!=='paid').length;
+  document.getElementById('dash-est-list').innerHTML=!estimates.length?'<div class="empty-state">まだ見積がありません</div>'
+    :[...estimates].reverse().slice(0,4).map(e=>`<div class="activity-item" onclick="goToEst('${e.id}')"><div class="activity-dot" style="background:var(--accent)"></div><div class="activity-text"><strong>${e.client||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${e.num} · ${e.date||''}</span></div><div class="activity-right" style="font-size:13px;font-weight:700;color:var(--accent)">¥${commas(e.grand||0)}</div></div>`).join('');
+  document.getElementById('dash-inv-list').innerHTML=!invoices.length?'<div class="empty-state">まだ請求がありません</div>'
+    :[...invoices].reverse().slice(0,4).map(i=>`<div class="activity-item" onclick="goToInv('${i.id}')"><div class="activity-dot" style="background:${S_COLOR[i.status]}"></div><div class="activity-text"><strong>${i.client||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${i.num} · 期限 ${i.due||'—'}</span></div><div class="activity-right"><div style="font-size:13px;font-weight:700;color:${S_COLOR[i.status]}">¥${commas(i.grand||0)}</div><div style="font-size:11px;color:${S_COLOR[i.status]}">${S_LABEL[i.status]}</div></div></div>`).join('');
+  const paid=invoices.filter(i=>i.status==='paid').reduce((s,i)=>s+(i.grand||0),0);
+  document.getElementById('dash-inv-total').textContent='¥'+commas(paid);
+}
+function goToEst(id){const n=document.querySelector('[data-page="estimate"]');navigate('estimate',n);estEditForm(id);}
+function goToInv(id){const n=document.querySelector('[data-page="invoice"]');navigate('invoice',n);invEditForm(id);}
+
+// ===== UTILS =====
+function parseNum(id){return parseInt(document.getElementById(id).textContent.replace(/[¥,]/g,''))||0;}
+function setBadge(id,count){const el=document.getElementById(id);el.textContent=count;el.style.display=count>0?'block':'none';}
+
+window.onload=()=>{
+  load();
+  updateDashboard();
+  setBadge('m-est-badge',estimates.length);
+  setBadge('m-inv-badge',invoices.length);
+};
+</script>
+</body>
+</html>
