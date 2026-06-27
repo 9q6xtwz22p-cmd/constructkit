@@ -213,6 +213,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
         <span class="badge badge-blue">基本</span>
       </div>
       <div class="card-body">
+        <div class="form-field" style="margin-bottom:8px">
+          <button class="btn-sm" onclick="openCasePickerForEst()" style="width:100%;justify-content:center;padding:8px">📂 案件から読み込む</button>
+        </div>
         <div class="form-field"><label>顧客名</label>
           <div style="display:flex;gap:8px">
             <input type="text" id="est-client" placeholder="株式会社〇〇" style="flex:1">
@@ -996,6 +999,27 @@ function saveCaseMemo() {
 function deleteCase() {
   if(!confirm('この現場を削除しますか？\n写真・工程表・費用データもすべて削除されます。'))return;
   cases.splice(currentCaseIdx,1); currentCaseIdx=null; persist(); showCasesList();
+}
+function openCasePickerForEst() {
+  if(!cases.length){alert('案件がまだありません');return;}
+  const sC={active:'var(--accent)',pending:'var(--orange)',done:'var(--green)'};
+  const sL={active:'進行中',pending:'着工前',done:'完工'};
+  document.getElementById('picker-title').textContent='案件を選択';
+  document.getElementById('picker-body').innerHTML=cases.map(c=>`
+    <div class="activity-item" onclick="applyCaseToEst('${c.id}')" style="cursor:pointer">
+      <div class="activity-dot" style="background:${sC[c.status]||'var(--accent)'}"></div>
+      <div class="activity-text"><strong>${c.name}</strong><br><span style="color:var(--ink-sub);font-size:11px">${c.client||'—'} · ${c.start||'—'}</span></div>
+      <div style="font-size:11px;font-weight:700;color:${sC[c.status]}">${sL[c.status]||'—'}</div>
+    </div>`).join('');
+  document.getElementById('picker-modal').classList.add('open');
+}
+function applyCaseToEst(id) {
+  const c=cases.find(x=>String(x.id)===String(id));
+  if(!c)return;
+  document.getElementById('est-client').value=c.client||'';
+  document.getElementById('est-project').value=c.name||'';
+  if(!document.getElementById('est-address').value) document.getElementById('est-address').value=c.address||'';
+  closePicker();
 }
 function openEstPickerForCase() {
   if(!estimates.length){alert('見積がまだありません');return;}
