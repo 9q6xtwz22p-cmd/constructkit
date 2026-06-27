@@ -132,7 +132,29 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
   .pfooter-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #888; margin-bottom: 4px; }
   .pfooter-val { font-size: 10px; line-height: 1.8; color: #333; }
 }
+/* ===== GANTT ===== */
+.gantt-wrap { overflow-x:auto; padding:12px 16px 16px; }
+.gantt-months { display:flex; font-size:10px; color:var(--ink-sub); font-weight:600; margin-bottom:6px; border-bottom:1px solid var(--rule); padding-bottom:4px; }
+.gantt-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; min-height:28px; }
+.gantt-label { font-size:11px; min-width:80px; max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink); font-weight:600; flex-shrink:0; }
+.gantt-track { flex:1; position:relative; height:22px; background:#f3f4f6; border-radius:6px; overflow:hidden; }
+.gantt-bar { position:absolute; height:100%; border-radius:6px; display:flex; align-items:center; padding:0 6px; font-size:10px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; min-width:4px; }
+.gantt-today { position:absolute; top:0; bottom:0; width:2px; background:var(--red); z-index:1; }
+.gantt-input-row { display:flex; gap:6px; align-items:center; padding:8px 16px; border-bottom:1px solid var(--rule); }
+.gantt-input-row input { font-size:12px; padding:7px 9px; border:1.5px solid var(--rule); border-radius:8px; font-family:inherit; outline:none; background:#fafafa; color:var(--ink); }
+.gantt-input-row input:focus { border-color:var(--accent); background:#fff; }
+.gantt-name-inp { flex:1; min-width:0; }
+/* ===== PHOTOS ===== */
+.photo-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:12px 16px; }
+.photo-cell { position:relative; aspect-ratio:1; border-radius:8px; overflow:hidden; background:var(--bg); border:1.5px solid var(--rule); cursor:pointer; }
+.photo-cell img { width:100%; height:100%; object-fit:cover; }
+.photo-cell .photo-del { position:absolute; top:4px; right:4px; background:rgba(0,0,0,0.55); border:none; color:#fff; border-radius:50%; width:22px; height:22px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.photo-cell .photo-lbl { position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.45); color:#fff; font-size:9px; font-weight:700; padding:2px 5px; text-align:center; }
+.photo-add { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; font-size:11px; color:var(--ink-sub); font-weight:600; cursor:pointer; border:2px dashed var(--rule); }
+.photo-add:active { background:var(--accent-soft); border-color:var(--accent); }
+.photo-cat-tabs { display:flex; gap:6px; padding:10px 16px; border-bottom:1px solid var(--rule); background:#fafafa; }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -168,6 +190,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
     <div class="card">
       <div class="card-header">
         <h2>見積一覧</h2>
+        <button class="btn-sm" onclick="exportEstimates()" title="Excel出力">📊</button>
         <button class="btn-sm accent" onclick="estNewForm()">＋ 新規作成</button>
       </div>
       <div style="padding:10px 16px;border-bottom:1px solid var(--rule)">
@@ -247,6 +270,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
     <div class="card">
       <div class="card-header">
         <h2>請求一覧</h2>
+        <button class="btn-sm" onclick="exportInvoices()" title="Excel出力">📊</button>
         <button class="btn-sm accent" onclick="invNewForm()">＋ 新規作成</button>
       </div>
       <div style="padding:10px 16px;border-bottom:1px solid var(--rule);display:flex;gap:8px">
@@ -381,6 +405,21 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       </div>
       <div style="padding:0 16px" id="case-items"></div>
       <div class="totals-box"><div class="total-line"><span class="lbl">費用合計</span><span class="val" id="case-total">¥0</span></div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h2>工程表</h2><button class="btn-sm accent" onclick="scheduleAddRow()">＋ 追加</button></div>
+      <div id="schedule-inputs"></div>
+      <div class="gantt-wrap"><div id="gantt-chart"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h2>現場写真</h2></div>
+      <div class="photo-cat-tabs">
+        <button class="btn-sm" onclick="triggerPhoto('before')">📷 着工前</button>
+        <button class="btn-sm" onclick="triggerPhoto('during')">📷 施工中</button>
+        <button class="btn-sm" onclick="triggerPhoto('after')">📷 完工</button>
+      </div>
+      <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="handlePhoto(event)">
+      <div class="photo-grid" id="photo-grid"><div class="empty-state" style="padding:20px;font-size:12px;grid-column:1/-1">写真がまだありません</div></div>
     </div>
     <div class="card">
       <div class="card-header"><h2>現場メモ</h2></div>
@@ -905,6 +944,8 @@ function showCaseDetail(idx) {
   document.getElementById('case-items').innerHTML='';
   (c.items||[]).forEach(item=>caseAddItem(item.name,item.unit,item.qty,item.price));
   caseRecalc();
+  renderSchedule();
+  renderPhotos();
 }
 function saveCase() {
   const obj={id:Date.now(),name:document.getElementById('case-name').value||'無題の現場',client:document.getElementById('case-client').value,address:document.getElementById('case-address').value,start:document.getElementById('case-start').value,end:document.getElementById('case-end').value,status:document.getElementById('case-status').value,notes:document.getElementById('case-notes').value,items:[],memo:''};
@@ -976,6 +1017,164 @@ function updateDashboard() {
 }
 function goToEst(id){const n=document.querySelector('[data-page="estimate"]');navigate('estimate',n);estEditForm(id);}
 function goToInv(id){const n=document.querySelector('[data-page="invoice"]');navigate('invoice',n);invEditForm(id);}
+
+// ===== SCHEDULE (Gantt) =====
+const GANTT_COLORS=['#4f7cff','#22c55e','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#f97316'];
+let photoTarget='before';
+
+function scheduleAddRow(name='',start='',end='') {
+  if(!start){const t=new Date();start=fmtDate(t);}
+  if(!end){const t=new Date();t.setMonth(t.getMonth()+1);end=fmtDate(t);}
+  const c=cases[currentCaseIdx];
+  if(!c.schedule) c.schedule=[];
+  c.schedule.push({name,start,end});
+  persist(); renderSchedule();
+}
+function renderSchedule() {
+  const c=cases[currentCaseIdx];
+  const sched=c.schedule||[];
+  const inp=document.getElementById('schedule-inputs');
+  inp.innerHTML=sched.map((s,i)=>`
+    <div class="gantt-input-row">
+      <input class="gantt-name-inp" type="text" value="${s.name}" placeholder="工程名" oninput="updateSchedule(${i},'name',this.value)">
+      <input type="date" value="${s.start}" oninput="updateSchedule(${i},'start',this.value)" style="width:120px">
+      <input type="date" value="${s.end}" oninput="updateSchedule(${i},'end',this.value)" style="width:120px">
+      <button class="btn-del" onclick="deleteSchedule(${i})">✕</button>
+    </div>`).join('');
+  renderGantt(sched, c.start, c.end);
+}
+function updateSchedule(i,key,val) {
+  if(!cases[currentCaseIdx].schedule) return;
+  cases[currentCaseIdx].schedule[i][key]=val;
+  persist(); renderGantt(cases[currentCaseIdx].schedule, cases[currentCaseIdx].start, cases[currentCaseIdx].end);
+}
+function deleteSchedule(i) {
+  cases[currentCaseIdx].schedule.splice(i,1);
+  persist(); renderSchedule();
+}
+function renderGantt(sched, projStart, projEnd) {
+  const el=document.getElementById('gantt-chart');
+  if(!sched||!sched.length){el.innerHTML='<div style="color:var(--ink-sub);font-size:12px;text-align:center;padding:8px">工程を追加すると表示されます</div>';return;}
+  const dates=sched.flatMap(s=>[s.start,s.end]).filter(Boolean).sort();
+  const minD=new Date(projStart||dates[0]||fmtDate(new Date()));
+  const maxD=new Date(projEnd||dates[dates.length-1]||fmtDate(new Date()));
+  if(isNaN(minD)||isNaN(maxD)||minD>=maxD){el.innerHTML='<div style="color:var(--ink-sub);font-size:12px;text-align:center;padding:8px">開始日・完工日を現場情報に設定してください</div>';return;}
+  const totalMs=maxD-minD;
+  const pct=(d)=>Math.max(0,Math.min(100,(new Date(d)-minD)/totalMs*100));
+  // Month labels
+  const months=[];
+  let cur=new Date(minD.getFullYear(),minD.getMonth(),1);
+  while(cur<=maxD){months.push({label:(cur.getMonth()+1)+'月',left:pct(fmtDate(cur))});cur=new Date(cur.getFullYear(),cur.getMonth()+1,1);}
+  const monthHTML=`<div class="gantt-months" style="position:relative;height:18px">${months.map(m=>`<span style="position:absolute;left:${m.left}%">${m.label}</span>`).join('')}</div>`;
+  const today=fmtDate(new Date());
+  const todayPct=pct(today);
+  const todayLine=(todayPct>0&&todayPct<100)?`<div class="gantt-today" style="left:${todayPct}%"></div>`:'';
+  const bars=sched.map((s,i)=>{
+    if(!s.start||!s.end)return '';
+    const l=pct(s.start),w=Math.max(1,pct(s.end)-l);
+    const col=GANTT_COLORS[i%GANTT_COLORS.length];
+    return `<div class="gantt-row">
+      <div class="gantt-label" title="${s.name}">${s.name||'—'}</div>
+      <div class="gantt-track">${todayLine}<div class="gantt-bar" style="left:${l}%;width:${w}%;background:${col}">${s.name||''}</div></div>
+    </div>`;
+  }).join('');
+  el.innerHTML=monthHTML+`<div style="position:relative">`+bars+`</div>`;
+}
+
+// ===== PHOTOS =====
+function triggerPhoto(cat) {photoTarget=cat;document.getElementById('photo-input').click();}
+function handlePhoto(e) {
+  const file=e.target.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=(ev)=>{
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      const MAX=900; let w=img.width,h=img.height;
+      if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+      canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      const data=canvas.toDataURL('image/jpeg',0.72);
+      const c=cases[currentCaseIdx];
+      if(!c.photos)c.photos=[];
+      c.photos.push({cat:photoTarget,data,date:fmtDate(new Date())});
+      try{persist();}catch(err){alert('写真の保存に失敗しました（容量不足の可能性があります）');}
+      renderPhotos();
+    };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value='';
+}
+function renderPhotos() {
+  const c=cases[currentCaseIdx];
+  const photos=c.photos||[];
+  const el=document.getElementById('photo-grid');
+  const catLabel={before:'着工前',during:'施工中',after:'完工'};
+  if(!photos.length){el.innerHTML='<div class="empty-state" style="padding:20px;font-size:12px;grid-column:1/-1">写真がまだありません</div>';return;}
+  el.innerHTML=photos.map((p,i)=>`
+    <div class="photo-cell">
+      <img src="${p.data}" loading="lazy" onclick="viewPhoto(${i})">
+      <button class="photo-del" onclick="event.stopPropagation();deletePhoto(${i})">✕</button>
+      <div class="photo-lbl">${catLabel[p.cat]||p.cat}</div>
+    </div>`).join('');
+}
+function deletePhoto(i) {
+  if(!confirm('この写真を削除しますか？'))return;
+  cases[currentCaseIdx].photos.splice(i,1);
+  persist(); renderPhotos();
+}
+function viewPhoto(i) {
+  const p=cases[currentCaseIdx].photos[i];
+  const w=window.open('','_blank','width=800,height=600');
+  w.document.write(`<img src="${p.data}" style="max-width:100%;max-height:100vh;display:block;margin:auto">`);
+}
+
+// ===== EXCEL EXPORT =====
+function exportEstimates() {
+  if(!estimates.length){alert('見積がありません');return;}
+  const wb=XLSX.utils.book_new();
+  // Summary sheet
+  const summaryRows=[['番号','顧客名','案件名','見積日','有効期限','小計','消費税','合計（税込）','原価合計','粗利','粗利率(%)']];
+  estimates.forEach(e=>summaryRows.push([e.num,e.client||'',e.project||'',e.date||'',e.expiry||'',e.sub||0,e.tax||0,e.grand||0,e.costTotal||0,e.profit||0,e.profitRate||0]));
+  const ws=XLSX.utils.aoa_to_sheet(summaryRows);
+  ws['!cols']=[{wch:18},{wch:20},{wch:25},{wch:12},{wch:12},{wch:12},{wch:10},{wch:14},{wch:12},{wch:12},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,ws,'見積一覧');
+  // Detail sheets (up to 10 most recent)
+  [...estimates].reverse().slice(0,10).forEach(e=>{
+    const rows=[['御見積書'],[''],['顧客名',e.client||''],['案件名',e.project||''],['見積番号',e.num],['見積日',e.date||''],['有効期限',e.expiry||''],['現場住所',e.address||''],['担当者',e.staff||''],['']];
+    rows.push(['項目','数量','単位','単価','金額']);
+    (e.items||[]).forEach(item=>{if(item.type==='section'){rows.push([item.name,'','','','']);}else{rows.push([item.name,item.qty,item.unit,item.price,Math.round((item.qty||0)*(item.price||0))]);}});
+    rows.push(['','','','小計',e.sub||0],['','','','消費税',e.tax||0],['','','','合計（税込）',e.grand||0]);
+    if(e.costTotal){rows.push(['','','','原価合計',e.costTotal],['','','','粗利',e.profit],['','','','粗利率',(e.profitRate||0)+'%']);}
+    if(e.notes){rows.push([''],['備考',e.notes]);}
+    const ws2=XLSX.utils.aoa_to_sheet(rows);
+    ws2['!cols']=[{wch:25},{wch:8},{wch:6},{wch:12},{wch:14}];
+    XLSX.utils.book_append_sheet(wb,ws2,(e.num||'見積').slice(0,31));
+  });
+  XLSX.writeFile(wb,'見積_'+fmtDate(new Date())+'.xlsx');
+}
+function exportInvoices() {
+  if(!invoices.length){alert('請求がありません');return;}
+  const wb=XLSX.utils.book_new();
+  const summaryRows=[['番号','請求先','件名','請求日','支払期限','小計','消費税','合計（税込）','ステータス']];
+  const sLbl={draft:'下書き',sent:'送付済み',paid:'入金済み',overdue:'期限超過'};
+  invoices.forEach(i=>summaryRows.push([i.num,i.client||'',i.project||'',i.date||'',i.due||'',i.sub||0,i.tax||0,i.grand||0,sLbl[i.status]||i.status]));
+  const ws=XLSX.utils.aoa_to_sheet(summaryRows);
+  ws['!cols']=[{wch:18},{wch:20},{wch:25},{wch:12},{wch:12},{wch:12},{wch:10},{wch:14},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,ws,'請求一覧');
+  [...invoices].reverse().slice(0,10).forEach(inv=>{
+    const rows=[['請求書'],[''],['請求先',inv.client||''],['件名',inv.project||''],['請求番号',inv.num],['請求日',inv.date||''],['支払期限',inv.due||''],['振込先',inv.bank||''],['ステータス',sLbl[inv.status]||''],['']];
+    rows.push(['項目','数量','単位','単価','金額']);
+    (inv.items||[]).forEach(item=>{if(item.type==='section'){rows.push([item.name,'','','','']);}else{rows.push([item.name,item.qty,item.unit,item.price,Math.round((item.qty||0)*(item.price||0))]);}});
+    rows.push(['','','','小計',inv.sub||0],['','','','消費税',inv.tax||0],['','','','請求合計（税込）',inv.grand||0]);
+    if(inv.notes){rows.push([''],['備考',inv.notes]);}
+    const ws2=XLSX.utils.aoa_to_sheet(rows);
+    ws2['!cols']=[{wch:25},{wch:8},{wch:6},{wch:12},{wch:14}];
+    XLSX.utils.book_append_sheet(wb,ws2,(inv.num||'請求').slice(0,31));
+  });
+  XLSX.writeFile(wb,'請求_'+fmtDate(new Date())+'.xlsx');
+}
 
 // ===== UTILS =====
 function parseNum(id){return parseInt(document.getElementById(id).textContent.replace(/[¥,]/g,''))||0;}
