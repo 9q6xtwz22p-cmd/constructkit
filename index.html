@@ -387,6 +387,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
         <button class="btn-sm" onclick="showCasesList()">← 一覧</button>
         <h2 style="margin-left:8px" id="detail-case-name">—</h2>
         <span class="badge" id="detail-case-badge">進行中</span>
+        <button class="btn-sm" style="margin-left:auto;color:var(--red);border-color:var(--red)" onclick="deleteCase()">🗑 削除</button>
       </div>
       <div style="padding:14px 16px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:6px">
         <div style="font-size:12px;color:var(--ink-sub)" id="detail-case-client">—</div>
@@ -420,6 +421,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       </div>
       <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="handlePhoto(event)">
       <div class="photo-grid" id="photo-grid"><div class="empty-state" style="padding:20px;font-size:12px;grid-column:1/-1">写真がまだありません</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h2>関連見積</h2><button class="btn-sm accent" onclick="openEstPickerForCase()">＋ 見積を紐づけ</button></div>
+      <div id="case-est-list"><div class="empty-state" style="padding:16px;font-size:12px">紐づけられた見積はありません</div></div>
     </div>
     <div class="card">
       <div class="card-header"><h2>現場メモ</h2></div>
@@ -946,9 +951,10 @@ function showCaseDetail(idx) {
   caseRecalc();
   renderSchedule();
   renderPhotos();
+  renderCaseEstimates();
 }
 function saveCase() {
-  const obj={id:Date.now(),name:document.getElementById('case-name').value||'無題の現場',client:document.getElementById('case-client').value,address:document.getElementById('case-address').value,start:document.getElementById('case-start').value,end:document.getElementById('case-end').value,status:document.getElementById('case-status').value,notes:document.getElementById('case-notes').value,items:[],memo:''};
+  const obj={id:Date.now(),name:document.getElementById('case-name').value||'無題の現場',client:document.getElementById('case-client').value,address:document.getElementById('case-address').value,start:document.getElementById('case-start').value,end:document.getElementById('case-end').value,status:document.getElementById('case-status').value,notes:document.getElementById('case-notes').value,items:[],memo:'',estIds:[]};
   cases.push(obj); persist();
   ['case-name','case-client','case-address','case-notes'].forEach(id=>document.getElementById(id).value='');
   showCasesList();
@@ -986,6 +992,53 @@ function saveCaseItems() {
 function saveCaseMemo() {
   if(currentCaseIdx===null)return;
   cases[currentCaseIdx].memo=document.getElementById('case-memo').value; persist();
+}
+function deleteCase() {
+  if(!confirm('この現場を削除しますか？\n写真・工程表・費用データもすべて削除されます。'))return;
+  cases.splice(currentCaseIdx,1); currentCaseIdx=null; persist(); showCasesList();
+}
+function openEstPickerForCase() {
+  if(!estimates.length){alert('見積がまだありません');return;}
+  const c=cases[currentCaseIdx];
+  const linked=c.estIds||[];
+  const avail=estimates.filter(e=>!linked.includes(String(e.id)));
+  const rows=avail.length?avail.map(e=>`
+    <div class="activity-item" onclick="applyEstToCase('${e.id}')" style="cursor:pointer">
+      <div class="activity-dot" style="background:var(--accent)"></div>
+      <div class="activity-text"><strong>${e.client||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${e.num} · ${e.date||''}</span></div>
+      <div class="activity-right" style="font-size:13px;font-weight:700;color:var(--accent)">¥${commas(e.grand||0)}</div>
+    </div>`).join('')
+    :'<div class="empty-state">紐づけ可能な見積がありません</div>';
+  document.getElementById('picker-title').textContent='見積を選択';
+  document.getElementById('picker-body').innerHTML=rows;
+  document.getElementById('picker-modal').classList.add('open');
+}
+function applyEstToCase(id) {
+  closePicker();
+  const c=cases[currentCaseIdx];
+  if(!c.estIds) c.estIds=[];
+  if(!c.estIds.includes(String(id))) c.estIds.push(String(id));
+  persist(); renderCaseEstimates();
+}
+function removeEstFromCase(id) {
+  const c=cases[currentCaseIdx];
+  c.estIds=(c.estIds||[]).filter(x=>x!==String(id)); persist(); renderCaseEstimates();
+}
+function renderCaseEstimates() {
+  const el=document.getElementById('case-est-list');
+  if(!el)return;
+  const c=cases[currentCaseIdx];
+  const ids=c.estIds||[];
+  if(!ids.length){el.innerHTML='<div class="empty-state" style="padding:16px;font-size:12px">紐づけられた見積はありません</div>';return;}
+  el.innerHTML=ids.map(id=>{
+    const e=estimates.find(x=>String(x.id)===String(id));
+    if(!e)return '';
+    return `<div class="activity-item">
+      <div class="activity-dot" style="background:var(--accent)"></div>
+      <div class="activity-text" style="cursor:pointer" onclick="goToEst('${e.id}')"><strong>${e.client||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${e.num} · ${e.date||''} · ¥${commas(e.grand||0)}</span></div>
+      <button class="btn-sm" style="color:var(--red);border-color:var(--red);margin-left:auto" onclick="removeEstFromCase('${e.id}')">外す</button>
+    </div>`;
+  }).join('');
 }
 
 // ===== STORAGE & DASHBOARD =====
