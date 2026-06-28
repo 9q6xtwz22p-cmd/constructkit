@@ -514,6 +514,16 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px" onclick="saveCompany()">保存</button>
     </div>
   </div>
+  <div class="card">
+    <div class="card-header"><h2>💾 データバックアップ</h2></div>
+    <div class="card-body">
+      <p style="font-size:12px;color:var(--ink-sub);margin-bottom:16px;line-height:1.7">データはこのブラウザにのみ保存されています。定期的にバックアップを取ることをお勧めします。</p>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:10px" onclick="exportBackup()">📤 バックアップを書き出す</button>
+      <button class="btn" style="width:100%;justify-content:center;border:1px solid var(--rule)" onclick="document.getElementById('import-file').click()">📥 バックアップから復元する</button>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importBackup(event)">
+      <p style="font-size:11px;color:var(--red);margin-top:10px;line-height:1.6">⚠️ 復元すると現在のデータはすべて上書きされます</p>
+    </div>
+  </div>
 </div>
 
 <!-- 顧客選択モーダル（共通） -->
@@ -1275,6 +1285,45 @@ function deleteTemplate(id) {
   templates=templates.filter(t=>t.id!==id);
   persistTemplates();
   openTemplatePicker();
+}
+function exportBackup() {
+  const data={
+    estimates, invoices, customers, cases,
+    estCounter, invCounter,
+    company: JSON.parse(localStorage.getItem('ck_company')||'{}'),
+    templates: JSON.parse(localStorage.getItem('ck_templates')||'[]'),
+    exportedAt: new Date().toISOString()
+  };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  const d=new Date();
+  a.download=`まとめる現場_バックアップ_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.json`;
+  a.click();
+}
+function importBackup(event) {
+  const file=event.target.files[0];
+  if(!file)return;
+  if(!confirm('現在のデータをすべて上書きします。よろしいですか？'))return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(data.estimates) estimates=data.estimates;
+      if(data.invoices) invoices=data.invoices;
+      if(data.customers) customers=data.customers;
+      if(data.cases) cases=data.cases;
+      if(data.estCounter) estCounter=data.estCounter;
+      if(data.invCounter) invCounter=data.invCounter;
+      if(data.company) localStorage.setItem('ck_company',JSON.stringify(data.company));
+      if(data.templates) localStorage.setItem('ck_templates',JSON.stringify(data.templates));
+      persist();
+      alert('復元が完了しました！');
+      updateDashboard();
+    }catch(err){alert('ファイルの読み込みに失敗しました。正しいバックアップファイルか確認してください。');}
+  };
+  reader.readAsText(file);
+  event.target.value='';
 }
 function saveCompany() {
   const co={name:document.getElementById('co-name').value,zip:document.getElementById('co-zip').value,address:document.getElementById('co-address').value,tel:document.getElementById('co-tel').value,fax:document.getElementById('co-fax').value,email:document.getElementById('co-email').value,license:document.getElementById('co-license').value,staff:document.getElementById('co-staff').value};
