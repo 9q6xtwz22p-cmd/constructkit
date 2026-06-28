@@ -379,15 +379,17 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       <div class="card-body">
         <div class="form-field">
           <label>案件タイプ</label>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
-            <label style="display:flex;align-items:center;gap:8px;padding:10px;border:2px solid var(--rule);border-radius:8px;cursor:pointer" id="case-type-prime-label">
-              <input type="radio" name="case-type" value="prime" id="case-type-prime" checked onchange="updateCaseTypeUI()">
-              <span><strong>元請け</strong><br><span style="font-size:11px;color:var(--ink-sub)">施主への直接工事</span></span>
-            </label>
-            <label style="display:flex;align-items:center;gap:8px;padding:10px;border:2px solid var(--rule);border-radius:8px;cursor:pointer" id="case-type-sub-label">
-              <input type="radio" name="case-type" value="sub" id="case-type-sub" onchange="updateCaseTypeUI()">
-              <span><strong>下請け</strong><br><span style="font-size:11px;color:var(--ink-sub)">元請けからの発注</span></span>
-            </label>
+          <div style="display:flex;background:var(--bg);border-radius:10px;padding:4px;margin-top:6px;position:relative">
+            <input type="radio" name="case-type" value="prime" id="case-type-prime" checked onchange="updateCaseTypeUI()" style="display:none">
+            <input type="radio" name="case-type" value="sub" id="case-type-sub" onchange="updateCaseTypeUI()" style="display:none">
+            <button type="button" id="case-type-prime-label" onclick="document.getElementById('case-type-prime').checked=true;updateCaseTypeUI()"
+              style="flex:1;padding:10px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:var(--accent);color:#fff">
+              元請け
+            </button>
+            <button type="button" id="case-type-sub-label" onclick="document.getElementById('case-type-sub').checked=true;updateCaseTypeUI()"
+              style="flex:1;padding:10px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--ink-sub)">
+              下請け
+            </button>
           </div>
         </div>
         <div class="form-field"><label>現場名</label><input type="text" id="case-name" placeholder="〇〇邸リノベーション"></div>
@@ -1103,8 +1105,12 @@ function updateCaseTypeUI() {
   const isSub=document.getElementById('case-type-sub').checked;
   document.getElementById('case-prime-field').style.display=isSub?'block':'none';
   document.getElementById('case-order-field').style.display=isSub?'block':'none';
-  document.getElementById('case-type-prime-label').style.borderColor=isSub?'var(--rule)':'var(--accent)';
-  document.getElementById('case-type-sub-label').style.borderColor=isSub?'var(--accent)':'var(--rule)';
+  const primeBtn=document.getElementById('case-type-prime-label');
+  const subBtn=document.getElementById('case-type-sub-label');
+  primeBtn.style.background=isSub?'transparent':'var(--accent)';
+  primeBtn.style.color=isSub?'var(--ink-sub)':'#fff';
+  subBtn.style.background=isSub?'var(--accent)':'transparent';
+  subBtn.style.color=isSub?'#fff':'var(--ink-sub)';
   const clientLabel=document.querySelector('#case-client-field label');
   if(clientLabel) clientLabel.textContent=isSub?'施主名（任意）':'施主名 / 顧客名';
 }
