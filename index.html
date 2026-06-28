@@ -245,6 +245,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       <div class="card-header">
         <h2>明細</h2>
         <div style="display:flex;gap:6px">
+          <button class="btn-sm" onclick="openTemplatePicker()" title="テンプレートから読み込む">📂 テンプレ</button>
+          <button class="btn-sm" onclick="saveEstTemplate()" title="現在の明細をテンプレートとして保存">💾 保存</button>
           <button class="btn-sm" onclick="estAddSection()">＋ 区分</button>
           <button class="btn-sm accent" onclick="estAddRow()">＋ 追加</button>
         </div>
@@ -375,8 +377,23 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
     <div class="card">
       <div class="card-header"><button class="btn-sm" onclick="showCasesList()">← 戻る</button><h2 style="margin-left:8px">新規現場登録</h2></div>
       <div class="card-body">
+        <div class="form-field">
+          <label>案件タイプ</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+            <label style="display:flex;align-items:center;gap:8px;padding:10px;border:2px solid var(--rule);border-radius:8px;cursor:pointer" id="case-type-prime-label">
+              <input type="radio" name="case-type" value="prime" id="case-type-prime" checked onchange="updateCaseTypeUI()">
+              <span><strong>元請け</strong><br><span style="font-size:11px;color:var(--ink-sub)">施主への直接工事</span></span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;padding:10px;border:2px solid var(--rule);border-radius:8px;cursor:pointer" id="case-type-sub-label">
+              <input type="radio" name="case-type" value="sub" id="case-type-sub" onchange="updateCaseTypeUI()">
+              <span><strong>下請け</strong><br><span style="font-size:11px;color:var(--ink-sub)">元請けからの発注</span></span>
+            </label>
+          </div>
+        </div>
         <div class="form-field"><label>現場名</label><input type="text" id="case-name" placeholder="〇〇邸リノベーション"></div>
-        <div class="form-field"><label>顧客名</label><input type="text" id="case-client" placeholder="株式会社〇〇"></div>
+        <div class="form-field" id="case-client-field"><label>施主名 / 顧客名</label><input type="text" id="case-client" placeholder="株式会社〇〇"></div>
+        <div class="form-field" id="case-prime-field" style="display:none"><label>元請け会社名</label><input type="text" id="case-prime-company" placeholder="株式会社〇〇建設"></div>
+        <div class="form-field" id="case-order-field" style="display:none"><label>発注番号</label><input type="text" id="case-order-num" placeholder="発注No. 00000"></div>
         <div class="form-field"><label>現場住所</label><input type="text" id="case-address" placeholder="千葉県〇〇市…"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <div class="form-field"><label>着工日</label><input type="date" id="case-start"></div>
@@ -396,10 +413,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
         <button class="btn-sm" onclick="showCasesList()">← 一覧</button>
         <h2 style="margin-left:8px" id="detail-case-name">—</h2>
         <span class="badge" id="detail-case-badge">進行中</span>
+        <span class="badge" id="detail-case-type-badge" style="background:var(--ink-sub);color:#fff"></span>
         <button class="btn-sm" style="margin-left:auto;color:var(--red);border-color:var(--red)" onclick="deleteCase()">🗑 削除</button>
       </div>
       <div style="padding:14px 16px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:6px">
         <div style="font-size:12px;color:var(--ink-sub)" id="detail-case-client">—</div>
+        <div style="font-size:12px;color:var(--ink-sub);display:none" id="detail-case-prime">—</div>
         <div style="font-size:12px;color:var(--ink-sub)" id="detail-case-address">—</div>
         <div style="font-size:12px;color:var(--ink-sub)" id="detail-case-period">—</div>
       </div>
@@ -471,6 +490,26 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
           <button class="btn btn-danger" id="client-del-btn" style="display:none" onclick="deleteClient()">削除</button>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 設定 ===== -->
+<div class="page" id="page-settings" style="display:none">
+  <div class="card">
+    <div class="card-header"><h2>⚙️ 自社情報</h2></div>
+    <div class="card-body">
+      <div class="form-field"><label>会社名</label><input type="text" id="co-name" placeholder="株式会社まとめる現場"></div>
+      <div class="form-field"><label>〒 郵便番号</label><input type="text" id="co-zip" placeholder="000-0000"></div>
+      <div class="form-field"><label>住所</label><input type="text" id="co-address" placeholder="千葉県〇〇市…"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-field"><label>電話番号</label><input type="tel" id="co-tel" placeholder="000-0000-0000"></div>
+        <div class="form-field"><label>FAX</label><input type="tel" id="co-fax" placeholder="000-0000-0000"></div>
+      </div>
+      <div class="form-field"><label>メール</label><input type="email" id="co-email" placeholder="info@example.com"></div>
+      <div class="form-field"><label>建設業許可番号</label><input type="text" id="co-license" placeholder="〇〇知事許可（般-00）第00000号"></div>
+      <div class="form-field"><label>担当者名（印刷時の担当者欄）</label><input type="text" id="co-staff" placeholder="代表 田中太郎"></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px" onclick="saveCompany()">保存</button>
     </div>
   </div>
 </div>
@@ -556,6 +595,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
   <div class="nav-item" onclick="navigate('invoice',this)" data-page="invoice"><span class="nav-ico">🧾</span>請求<span class="nav-badge" id="m-inv-badge" style="display:none">0</span></div>
   <div class="nav-item" onclick="navigate('cases',this)" data-page="cases"><span class="nav-ico">📋</span>案件</div>
   <div class="nav-item" onclick="navigate('clients',this)" data-page="clients"><span class="nav-ico">👥</span>顧客</div>
+  <div class="nav-item" onclick="navigate('settings',this)" data-page="settings"><span class="nav-ico">⚙️</span>設定</div>
 </nav>
 
 <script>
@@ -564,7 +604,7 @@ const commas = n => Math.round(n).toLocaleString('ja-JP');
 const fmtDate = d => d.toISOString().split('T')[0];
 const units = ['式','m²','m','箇所','個','本','枚','回','人工','kg','L'];
 const unitOpts = sel => units.map(u => `<option${u===sel?' selected':''}>${u}</option>`).join('');
-const pageTitles = {dashboard:'ダッシュボード',estimate:'見積',invoice:'請求',cases:'案件管理',clients:'顧客管理'};
+const pageTitles = {dashboard:'ダッシュボード',estimate:'見積',invoice:'請求',cases:'案件管理',clients:'顧客管理',settings:'設定'};
 const S_COLOR = {draft:'var(--ink-sub)',sent:'var(--orange)',paid:'var(--green)',overdue:'var(--red)'};
 const S_LABEL = {draft:'下書き',sent:'送付済み',paid:'入金済み',overdue:'期限超過'};
 const S_BADGE = {draft:'badge-gray',sent:'badge-orange',paid:'badge-green',overdue:'badge-red'};
@@ -588,6 +628,7 @@ function navigate(page, el) {
   if(page==='estimate') showEstList();
   if(page==='invoice') showInvList();
   if(page==='clients') showClientList();
+  if(page==='settings') loadCompany();
 }
 
 // ===== ESTIMATE =====
@@ -961,7 +1002,7 @@ function buildPrintHTML(type, data) {
     (data.notes?`<div class="pfooter-sec"><div class="pfooter-lbl">備考</div><div class="pfooter-val">${data.notes}</div></div>`:'');
   return `<div class="pdoc">
   <div class="ph">
-    <div class="ph-co"><div class="ph-co-name">${co.name||''}</div>${co.address?`<div>${co.address}</div>`:''} ${co.tel?`<div>TEL: ${co.tel}</div>`:''} ${co.email?`<div>${co.email}</div>`:''}</div>
+    <div class="ph-co"><div class="ph-co-name">${co.name||''}</div>${co.zip?`<div>〒${co.zip}</div>`:''} ${co.address?`<div>${co.address}</div>`:''} ${co.tel?`<div>TEL: ${co.tel}</div>`:''} ${co.fax?`<div>FAX: ${co.fax}</div>`:''} ${co.email?`<div>${co.email}</div>`:''} ${co.license?`<div style="font-size:9px;margin-top:2px">${co.license}</div>`:''}</div>
     <div class="ph-title"><h1>${type==='estimate'?'御見積書':'請求書'}</h1><p>${data.num}</p></div>
   </div>
   <div class="pm">
@@ -1023,6 +1064,13 @@ function showCaseDetail(idx) {
   const sC={active:'badge-blue',pending:'badge-orange',done:'badge-green'};
   const sL={active:'進行中',pending:'着工前',done:'完工'};
   badge.className='badge '+(sC[c.status]||'badge-blue'); badge.textContent=sL[c.status]||'—';
+  const typeBadge=document.getElementById('detail-case-type-badge');
+  const isSub=c.caseType==='sub';
+  typeBadge.textContent=isSub?'下請け':'元請け';
+  typeBadge.style.background=isSub?'var(--orange)':'var(--accent)';
+  const primeEl=document.getElementById('detail-case-prime');
+  if(isSub&&c.primeCompany){primeEl.style.display='block';primeEl.textContent='🏢 元請け: '+c.primeCompany+(c.orderNum?' / 発注No.'+c.orderNum:'');}
+  else{primeEl.style.display='none';}
   document.getElementById('case-memo').value=c.memo||'';
   document.getElementById('case-items').innerHTML='';
   (c.items||[]).forEach(item=>caseAddItem(item.name,item.unit,item.qty,item.price));
@@ -1032,10 +1080,20 @@ function showCaseDetail(idx) {
   renderCaseEstimates();
 }
 function saveCase() {
-  const obj={id:Date.now(),name:document.getElementById('case-name').value||'無題の現場',client:document.getElementById('case-client').value,address:document.getElementById('case-address').value,start:document.getElementById('case-start').value,end:document.getElementById('case-end').value,status:document.getElementById('case-status').value,notes:document.getElementById('case-notes').value,items:[],memo:'',estIds:[]};
+  const caseType=document.querySelector('input[name="case-type"]:checked')?.value||'prime';
+  const obj={id:Date.now(),caseType,name:document.getElementById('case-name').value||'無題の現場',client:document.getElementById('case-client').value,primeCompany:document.getElementById('case-prime-company')?.value||'',orderNum:document.getElementById('case-order-num')?.value||'',address:document.getElementById('case-address').value,start:document.getElementById('case-start').value,end:document.getElementById('case-end').value,status:document.getElementById('case-status').value,notes:document.getElementById('case-notes').value,items:[],memo:'',estIds:[]};
   cases.push(obj); persist();
   ['case-name','case-client','case-address','case-notes'].forEach(id=>document.getElementById(id).value='');
   showCasesList();
+}
+function updateCaseTypeUI() {
+  const isSub=document.getElementById('case-type-sub').checked;
+  document.getElementById('case-prime-field').style.display=isSub?'block':'none';
+  document.getElementById('case-order-field').style.display=isSub?'block':'none';
+  document.getElementById('case-type-prime-label').style.borderColor=isSub?'var(--rule)':'var(--accent)';
+  document.getElementById('case-type-sub-label').style.borderColor=isSub?'var(--accent)':'var(--rule)';
+  const clientLabel=document.querySelector('#case-client-field label');
+  if(clientLabel) clientLabel.textContent=isSub?'施主名（任意）':'施主名 / 顧客名';
 }
 function renderCasesList() {
   const el=document.getElementById('cases-list');
@@ -1156,6 +1214,64 @@ function load() {
   try{const ca=localStorage.getItem('ck_cases');if(ca)cases=JSON.parse(ca);}catch(e){}
   const ec=localStorage.getItem('ck_est_counter');if(ec)estCounter=parseInt(ec);
   const ic=localStorage.getItem('ck_inv_counter');if(ic)invCounter=parseInt(ic);
+}
+// ===== TEMPLATES =====
+let templates=[];
+function loadTemplates(){try{const t=localStorage.getItem('ck_templates');if(t)templates=JSON.parse(t);}catch(e){}}
+function persistTemplates(){localStorage.setItem('ck_templates',JSON.stringify(templates));}
+function saveEstTemplate() {
+  const items=collectItems('est-items','data-est-item');
+  if(!items.length){alert('明細が空です');return;}
+  const name=prompt('テンプレート名を入力してください');
+  if(!name)return;
+  templates.push({id:Date.now(),name,items});
+  persistTemplates();
+  alert('「'+name+'」として保存しました');
+}
+function openTemplatePicker() {
+  loadTemplates();
+  if(!templates.length){alert('テンプレートがまだありません。先に明細を作って「💾 保存」してください');return;}
+  document.getElementById('picker-title').textContent='テンプレートを選択';
+  document.getElementById('picker-body').innerHTML=templates.map(t=>`
+    <div class="activity-item">
+      <div class="activity-dot" style="background:var(--accent)"></div>
+      <div class="activity-text" style="cursor:pointer" onclick="applyTemplate(${t.id})"><strong>${t.name}</strong><br><span style="color:var(--ink-sub);font-size:11px">${t.items.length}件の明細</span></div>
+      <button class="btn-sm" style="color:var(--red);border-color:var(--red)" onclick="deleteTemplate(${t.id})">削除</button>
+    </div>`).join('');
+  document.getElementById('picker-modal').classList.add('open');
+}
+function applyTemplate(id) {
+  const t=templates.find(x=>x.id===id);
+  if(!t)return;
+  if(!confirm('「'+t.name+'」の明細を追加しますか？\n（既存の明細はそのまま残ります）'))return;
+  closePicker();
+  t.items.forEach(item=>{
+    if(item.type==='section') estAddSection(item.name);
+    else estAddRow(item.name,item.unit,item.qty,item.price,item.cost||0);
+  });
+  estRecalc();
+}
+function deleteTemplate(id) {
+  if(!confirm('このテンプレートを削除しますか？'))return;
+  templates=templates.filter(t=>t.id!==id);
+  persistTemplates();
+  openTemplatePicker();
+}
+function saveCompany() {
+  const co={name:document.getElementById('co-name').value,zip:document.getElementById('co-zip').value,address:document.getElementById('co-address').value,tel:document.getElementById('co-tel').value,fax:document.getElementById('co-fax').value,email:document.getElementById('co-email').value,license:document.getElementById('co-license').value,staff:document.getElementById('co-staff').value};
+  localStorage.setItem('ck_company',JSON.stringify(co));
+  alert('自社情報を保存しました');
+}
+function loadCompany() {
+  const co=JSON.parse(localStorage.getItem('ck_company')||'{}');
+  document.getElementById('co-name').value=co.name||'';
+  document.getElementById('co-zip').value=co.zip||'';
+  document.getElementById('co-address').value=co.address||'';
+  document.getElementById('co-tel').value=co.tel||'';
+  document.getElementById('co-fax').value=co.fax||'';
+  document.getElementById('co-email').value=co.email||'';
+  document.getElementById('co-license').value=co.license||'';
+  document.getElementById('co-staff').value=co.staff||'';
 }
 function updateDashboard() {
   document.getElementById('dash-est-count').textContent=estimates.length;
