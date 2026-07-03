@@ -158,13 +158,33 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 .photo-cat-tabs { display:flex; gap:6px; padding:10px 16px; border-bottom:1px solid var(--rule); background:#fafafa; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+
+<!-- ===== AUTH OVERLAY ===== -->
+<div id="auth-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px">
+  <div style="background:var(--surface);border-radius:20px;padding:32px 28px;width:100%;max-width:380px;box-shadow:0 8px 40px rgba(0,0,0,0.16)">
+    <div style="text-align:center;margin-bottom:28px">
+      <img src="2044D66D-EA6B-4314-9CA7-8F4B3C0A6E94.PNG" alt="まとめる現場" style="height:72px;width:auto">
+    </div>
+    <div style="display:flex;background:var(--bg);border-radius:10px;padding:3px;margin-bottom:20px">
+      <button onclick="switchAuthTab('login')" id="tab-login" style="flex:1;padding:9px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:var(--surface);color:var(--ink);font-family:inherit;transition:all 0.15s">ログイン</button>
+      <button onclick="switchAuthTab('signup')" id="tab-signup" style="flex:1;padding:9px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:var(--ink-sub);font-family:inherit;transition:all 0.15s">新規登録</button>
+    </div>
+    <div class="form-field"><label>メールアドレス</label><input type="email" id="auth-email" placeholder="info@example.com" onkeydown="if(event.key==='Enter')submitAuth()"></div>
+    <div class="form-field"><label>パスワード</label><input type="password" id="auth-password" placeholder="6文字以上" onkeydown="if(event.key==='Enter')submitAuth()"></div>
+    <div id="auth-error" style="color:var(--red);font-size:12px;margin-bottom:10px;display:none;line-height:1.5;padding:8px 12px;background:var(--red-soft);border-radius:8px"></div>
+    <div id="auth-info" style="color:#16a34a;font-size:12px;margin-bottom:10px;display:none;line-height:1.5;padding:8px 12px;background:var(--green-soft);border-radius:8px"></div>
+    <button id="auth-submit-btn" onclick="submitAuth()" class="btn btn-primary" style="width:100%;justify-content:center;font-size:15px;padding:13px">ログイン</button>
+  </div>
+</div>
 
 <div class="topbar">
   <div style="flex:1;display:flex;align-items:center;gap:4px">
     <button onclick="openHelp()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-sub);padding:4px 8px;border-radius:50%;line-height:1" title="使い方">？</button>
     <button onclick="navigate('settings',document.querySelector('[data-page=settings]'))" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-sub);padding:4px 8px;border-radius:50%;line-height:1" title="設定">⚙️</button>
+    <span id="sync-indicator" style="font-size:10px;font-weight:700;color:var(--green);opacity:0;transition:opacity 0.5s;white-space:nowrap">☁ 保存済み</span>
   </div>
   <img src="2044D66D-EA6B-4314-9CA7-8F4B3C0A6E94.PNG" alt="まとめる現場" style="height:66px;width:auto;object-fit:contain;position:absolute;left:50%;transform:translateX(-50%)">
   <div style="flex:1;display:flex;justify-content:flex-end" id="topbar-actions"></div>
@@ -516,9 +536,16 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
     </div>
   </div>
   <div class="card">
+    <div class="card-header"><h2>👤 アカウント</h2></div>
+    <div class="card-body">
+      <p style="font-size:12px;color:var(--ink-sub);margin-bottom:12px;line-height:1.7">ログイン中のアカウント：<br><strong id="settings-user-email" style="color:var(--ink);font-size:13px"></strong></p>
+      <button onclick="logout()" class="btn btn-danger" style="width:100%;justify-content:center">ログアウト</button>
+    </div>
+  </div>
+  <div class="card">
     <div class="card-header"><h2>💾 データバックアップ</h2></div>
     <div class="card-body">
-      <p style="font-size:12px;color:var(--ink-sub);margin-bottom:16px;line-height:1.7">データはこのブラウザにのみ保存されています。定期的にバックアップを取ることをお勧めします。</p>
+      <p style="font-size:12px;color:var(--ink-sub);margin-bottom:16px;line-height:1.7">データはクラウドに自動同期されています。念のためローカルバックアップも定期的に取ることをお勧めします。</p>
       <button class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:10px" onclick="exportBackup()">📤 バックアップを書き出す</button>
       <button class="btn" style="width:100%;justify-content:center;border:1px solid var(--rule)" onclick="document.getElementById('import-file').click()">📥 バックアップから復元する</button>
       <input type="file" id="import-file" accept=".json" style="display:none" onchange="importBackup(event)">
@@ -624,6 +651,155 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 </nav>
 
 <script>
+// ===== SUPABASE =====
+const SUPABASE_URL = 'https://vlogklovwfsdykadtmgb.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_IzdcdpO3LROX_jPTdoX4mw_dPLrs7mh';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let currentUser = null;
+
+// Auth state listener — fires immediately on load
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (session && session.user) {
+    currentUser = session.user;
+    document.getElementById('auth-overlay').style.display = 'none';
+    const emailEl = document.getElementById('settings-user-email');
+    if (emailEl) emailEl.textContent = session.user.email;
+    await loadFromSupabase();
+    updateDashboard();
+    setBadge('m-est-badge', estimates.length);
+    setBadge('m-inv-badge', invoices.length);
+  } else {
+    currentUser = null;
+    // Reset data on logout
+    estimates=[]; invoices=[]; customers=[]; cases=[];
+    estCounter=1; invCounter=1;
+    document.getElementById('auth-overlay').style.display = 'flex';
+  }
+});
+
+async function loadFromSupabase() {
+  if (!currentUser) return;
+  try {
+    const { data, error } = await sb.from('user_data').select('data_type,data').eq('user_id', currentUser.id);
+    if (error) throw error;
+    if (data && data.length) {
+      data.forEach(row => {
+        if (row.data_type === 'estimates') estimates = row.data || [];
+        else if (row.data_type === 'invoices') invoices = row.data || [];
+        else if (row.data_type === 'customers') customers = row.data || [];
+        else if (row.data_type === 'cases') cases = row.data || [];
+        else if (row.data_type === 'counters') {
+          const c = row.data;
+          if (c.estCounter) estCounter = c.estCounter;
+          if (c.invCounter) invCounter = c.invCounter;
+        }
+      });
+    } else {
+      // First login: migrate from localStorage if any data exists
+      load();
+      if (estimates.length || invoices.length || customers.length || cases.length) {
+        await syncToSupabase();
+      }
+    }
+  } catch (e) {
+    console.error('Supabase load error:', e);
+    load(); // fallback to localStorage
+  }
+}
+
+async function syncToSupabase() {
+  if (!currentUser) return;
+  const rows = [
+    { user_id: currentUser.id, data_type: 'estimates', data: estimates, updated_at: new Date().toISOString() },
+    { user_id: currentUser.id, data_type: 'invoices', data: invoices, updated_at: new Date().toISOString() },
+    { user_id: currentUser.id, data_type: 'customers', data: customers, updated_at: new Date().toISOString() },
+    { user_id: currentUser.id, data_type: 'cases', data: cases, updated_at: new Date().toISOString() },
+    { user_id: currentUser.id, data_type: 'counters', data: { estCounter, invCounter }, updated_at: new Date().toISOString() },
+  ];
+  try {
+    const { error } = await sb.from('user_data').upsert(rows, { onConflict: 'user_id,data_type' });
+    if (!error) showSyncDone();
+  } catch (e) {
+    console.error('Supabase sync error:', e);
+  }
+}
+
+function showSyncDone() {
+  const el = document.getElementById('sync-indicator');
+  if (!el) return;
+  el.textContent = '☁ 保存済み';
+  el.style.opacity = '1';
+  el.style.color = 'var(--green)';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.style.opacity = '0'; }, 2500);
+}
+
+// Auth form
+let authMode = 'login';
+function switchAuthTab(mode) {
+  authMode = mode;
+  const loginBtn = document.getElementById('tab-login');
+  const signupBtn = document.getElementById('tab-signup');
+  loginBtn.style.background = mode === 'login' ? 'var(--surface)' : 'transparent';
+  loginBtn.style.color = mode === 'login' ? 'var(--ink)' : 'var(--ink-sub)';
+  signupBtn.style.background = mode === 'signup' ? 'var(--surface)' : 'transparent';
+  signupBtn.style.color = mode === 'signup' ? 'var(--ink)' : 'var(--ink-sub)';
+  document.getElementById('auth-submit-btn').textContent = mode === 'login' ? 'ログイン' : 'アカウント作成';
+  document.getElementById('auth-error').style.display = 'none';
+  document.getElementById('auth-info').style.display = 'none';
+}
+
+async function submitAuth() {
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const btn = document.getElementById('auth-submit-btn');
+  document.getElementById('auth-error').style.display = 'none';
+  document.getElementById('auth-info').style.display = 'none';
+  if (!email || !password) { showAuthMsg('error', 'メールアドレスとパスワードを入力してください'); return; }
+  btn.disabled = true;
+  btn.textContent = '処理中...';
+  try {
+    let result;
+    if (authMode === 'login') {
+      result = await sb.auth.signInWithPassword({ email, password });
+      if (result.error) { showAuthMsg('error', authErrMsg(result.error.message)); }
+    } else {
+      result = await sb.auth.signUp({ email, password });
+      if (result.error) {
+        showAuthMsg('error', authErrMsg(result.error.message));
+      } else if (result.data.user && !result.data.session) {
+        showAuthMsg('info', '確認メールを送信しました。メール内のリンクをクリックしてからログインしてください。');
+        switchAuthTab('login');
+      }
+    }
+  } catch (e) {
+    showAuthMsg('error', 'エラーが発生しました。もう一度お試しください。');
+  }
+  btn.disabled = false;
+  btn.textContent = authMode === 'login' ? 'ログイン' : 'アカウント作成';
+}
+
+function showAuthMsg(type, msg) {
+  const errEl = document.getElementById('auth-error');
+  const infoEl = document.getElementById('auth-info');
+  if (type === 'error') { errEl.textContent = msg; errEl.style.display = 'block'; }
+  else { infoEl.textContent = msg; infoEl.style.display = 'block'; }
+}
+
+function authErrMsg(msg) {
+  if (msg.includes('Invalid login credentials')) return 'メールアドレスまたはパスワードが正しくありません';
+  if (msg.includes('Email not confirmed')) return 'メールアドレスの確認が完了していません';
+  if (msg.includes('already registered') || msg.includes('already been registered')) return 'このメールアドレスはすでに登録されています';
+  if (msg.includes('Password should be at least')) return 'パスワードは6文字以上にしてください';
+  if (msg.includes('Unable to validate')) return 'メールアドレスの形式が正しくありません';
+  return msg;
+}
+
+async function logout() {
+  if (!confirm('ログアウトしますか？')) return;
+  await sb.auth.signOut();
+}
+
 // ===== CONSTANTS =====
 const commas = n => Math.round(n).toLocaleString('ja-JP');
 const fmtDate = d => d.toISOString().split('T')[0];
@@ -1238,6 +1414,7 @@ function persist() {
   localStorage.setItem('ck_cases',JSON.stringify(cases));
   localStorage.setItem('ck_est_counter',estCounter);
   localStorage.setItem('ck_inv_counter',invCounter);
+  syncToSupabase(); // async cloud sync
 }
 function load() {
   try{const e=localStorage.getItem('ck_estimates');if(e)estimates=JSON.parse(e);}catch(e){}
@@ -1520,10 +1697,8 @@ function parseNum(id){return parseInt(document.getElementById(id).textContent.re
 function setBadge(id,count){const el=document.getElementById(id);el.textContent=count;el.style.display=count>0?'block':'none';}
 
 window.onload=()=>{
-  load();
-  updateDashboard();
-  setBadge('m-est-badge',estimates.length);
-  setBadge('m-inv-badge',invoices.length);
+  // Data loading is handled by sb.auth.onAuthStateChange above
+  // (fires immediately with the current session on page load)
 };
 </script>
 </body>
