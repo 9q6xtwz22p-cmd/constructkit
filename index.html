@@ -162,8 +162,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 <body>
 
 <div class="topbar">
-  <div style="flex:1;display:flex;align-items:center">
+  <div style="flex:1;display:flex;align-items:center;gap:4px">
     <button onclick="openHelp()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-sub);padding:4px 8px;border-radius:50%;line-height:1" title="使い方">？</button>
+    <button onclick="navigate('settings',document.querySelector('[data-page=settings]'))" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-sub);padding:4px 8px;border-radius:50%;line-height:1" title="設定">⚙️</button>
   </div>
   <img src="2044D66D-EA6B-4314-9CA7-8F4B3C0A6E94.PNG" alt="まとめる現場" style="height:66px;width:auto;object-fit:contain;position:absolute;left:50%;transform:translateX(-50%)">
   <div style="flex:1;display:flex;justify-content:flex-end" id="topbar-actions"></div>
@@ -620,7 +621,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
   <div class="nav-item" onclick="navigate('invoice',this)" data-page="invoice"><span class="nav-ico">🧾</span>請求<span class="nav-badge" id="m-inv-badge" style="display:none">0</span></div>
   <div class="nav-item" onclick="navigate('cases',this)" data-page="cases"><span class="nav-ico">📋</span>案件</div>
   <div class="nav-item" onclick="navigate('clients',this)" data-page="clients"><span class="nav-ico">👥</span>顧客</div>
-  <div class="nav-item" onclick="navigate('settings',this)" data-page="settings"><span class="nav-ico">⚙️</span>設定</div>
 </nav>
 
 <script>
@@ -1027,7 +1027,7 @@ function buildPrintHTML(type, data) {
     (data.notes?`<div class="pfooter-sec"><div class="pfooter-lbl">備考</div><div class="pfooter-val">${data.notes}</div></div>`:'');
   return `<div class="pdoc">
   <div class="ph">
-    <div class="ph-co"><div class="ph-co-name">${co.name||''}</div>${co.zip?`<div>〒${co.zip}</div>`:''} ${co.address?`<div>${co.address}</div>`:''} ${co.tel?`<div>TEL: ${co.tel}</div>`:''} ${co.fax?`<div>FAX: ${co.fax}</div>`:''} ${co.email?`<div>${co.email}</div>`:''} ${co.license?`<div style="font-size:9px;margin-top:2px">${co.license}</div>`:''}</div>
+    <div class="ph-co"><div class="ph-co-name">${co.name||''}</div>${co.zip?`<div>〒${co.zip}</div>`:''} ${co.address?`<div>${co.address}</div>`:''} ${co.tel?`<div>TEL: ${co.tel}</div>`:''} ${co.fax?`<div>FAX: ${co.fax}</div>`:''} ${co.email?`<div>${co.email}</div>`:''} ${co.staff?`<div>担当: ${co.staff}</div>`:''} ${co.license?`<div style="font-size:9px;margin-top:2px">${co.license}</div>`:''}</div>
     <div class="ph-title"><h1>${type==='estimate'?'御見積書':'請求書'}</h1><p>${data.num}</p></div>
   </div>
   <div class="pm">
@@ -1075,6 +1075,9 @@ function showNewCaseForm() {
   document.getElementById('cases-new-view').style.display='block';
   document.getElementById('cases-detail-view').style.display='none';
   document.getElementById('case-start').value=fmtDate(new Date());
+  ['case-name','case-client','case-address','case-notes','case-prime-company','case-order-num'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('case-type-prime').checked=true;
+  updateCaseTypeUI();
 }
 function showCaseDetail(idx) {
   currentCaseIdx=idx; const c=cases[idx];
