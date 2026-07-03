@@ -536,6 +536,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
     </div>
   </div>
   <div class="card">
+    <div class="card-header"><h2>🏢 チーム共有</h2></div>
+    <div class="card-body">
+      <div id="org-section"><!-- updateOrgUI() で描画 --></div>
+    </div>
+  </div>
+  <div class="card">
     <div class="card-header"><h2>👤 アカウント</h2></div>
     <div class="card-body">
       <p style="font-size:12px;color:var(--ink-sub);margin-bottom:12px;line-height:1.7">ログイン中のアカウント：<br><strong id="settings-user-email" style="color:var(--ink);font-size:13px"></strong></p>
@@ -656,6 +662,8 @@ const SUPABASE_URL = 'https://vlogklovwfsdykadtmgb.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_IzdcdpO3LROX_jPTdoX4mw_dPLrs7mh';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
+let currentOrgId = null;
+let currentOrg = null;
 
 // Auth state listener — fires immediately on load
 sb.auth.onAuthStateChange(async (event, session) => {
@@ -668,9 +676,11 @@ sb.auth.onAuthStateChange(async (event, session) => {
     updateDashboard();
     setBadge('m-est-badge', estimates.length);
     setBadge('m-inv-badge', invoices.length);
+    updateOrgUI();
   } else {
     currentUser = null;
-    // Reset data on logout
+    currentOrgId = null;
+    currentOrg = null;
     estimates=[]; invoices=[]; customers=[]; cases=[];
     estCounter=1; invCounter=1;
     document.getElementById('auth-overlay').style.display = 'flex';
@@ -680,8 +690,29 @@ sb.auth.onAuthStateChange(async (event, session) => {
 async function loadFromSupabase() {
   if (!currentUser) return;
   try {
-    const { data, error } = await sb.from('user_data').select('data_type,data').eq('user_id', currentUser.id);
+    // まずチームメンバーシップを確認
+    const { data: membership } = await sb.from('org_members')
+      .select('org_id, role, organizations(id, name, invite_code, owner_id)')
+      .eq('user_id', currentUser.id)
+      .maybeSingle();
+    if (membership && membership.organizations) {
+      currentOrgId = membership.org_id;
+      currentOrg = membership.organizations;
+    } else {
+      currentOrgId = null;
+      currentOrg = null;
+    }
+
+    // チームモード or 個人モードでデータを読む
+    let query;
+    if (currentOrgId) {
+      query = sb.from('org_data').select('data_type,data').eq('org_id', currentOrgId);
+    } else {
+      query = sb.from('user_data').select('data_type,data').eq('user_id', currentUser.id);
+    }
+    const { data, error } = await query;
     if (error) throw error;
+
     if (data && data.length) {
       data.forEach(row => {
         if (row.data_type === 'estimates') estimates = row.data || [];
@@ -694,8 +725,8 @@ async function loadFromSupabase() {
           if (c.invCounter) invCounter = c.invCounter;
         }
       });
-    } else {
-      // First login: migrate from localStorage if any data exists
+    } else if (!currentOrgId) {
+      // 初回ログイン時はlocalStorageから移行
       load();
       if (estimates.length || invoices.length || customers.length || cases.length) {
         await syncToSupabase();
@@ -703,22 +734,27 @@ async function loadFromSupabase() {
     }
   } catch (e) {
     console.error('Supabase load error:', e);
-    load(); // fallback to localStorage
+    load();
   }
 }
 
 async function syncToSupabase() {
   if (!currentUser) return;
-  const rows = [
-    { user_id: currentUser.id, data_type: 'estimates', data: estimates, updated_at: new Date().toISOString() },
-    { user_id: currentUser.id, data_type: 'invoices', data: invoices, updated_at: new Date().toISOString() },
-    { user_id: currentUser.id, data_type: 'customers', data: customers, updated_at: new Date().toISOString() },
-    { user_id: currentUser.id, data_type: 'cases', data: cases, updated_at: new Date().toISOString() },
-    { user_id: currentUser.id, data_type: 'counters', data: { estCounter, invCounter }, updated_at: new Date().toISOString() },
-  ];
+  const now = new Date().toISOString();
+  const types = ['estimates','invoices','customers','cases','counters'];
+  const vals = [estimates, invoices, customers, cases, { estCounter, invCounter }];
   try {
-    const { error } = await sb.from('user_data').upsert(rows, { onConflict: 'user_id,data_type' });
-    if (!error) showSyncDone();
+    if (currentOrgId) {
+      // チームモード: org_dataテーブルに保存
+      const rows = types.map((t,i) => ({ org_id: currentOrgId, data_type: t, data: vals[i], updated_by: currentUser.id, updated_at: now }));
+      const { error } = await sb.from('org_data').upsert(rows, { onConflict: 'org_id,data_type' });
+      if (!error) showSyncDone();
+    } else {
+      // 個人モード: user_dataテーブルに保存
+      const rows = types.map((t,i) => ({ user_id: currentUser.id, data_type: t, data: vals[i], updated_at: now }));
+      const { error } = await sb.from('user_data').upsert(rows, { onConflict: 'user_id,data_type' });
+      if (!error) showSyncDone();
+    }
   } catch (e) {
     console.error('Supabase sync error:', e);
   }
@@ -798,6 +834,98 @@ function authErrMsg(msg) {
 async function logout() {
   if (!confirm('ログアウトしますか？')) return;
   await sb.auth.signOut();
+}
+
+// ===== TEAM / ORG =====
+function updateOrgUI() {
+  const el = document.getElementById('org-section');
+  if (!el) return;
+  if (currentOrg) {
+    const isOwner = currentOrg.owner_id === currentUser?.id;
+    el.innerHTML = `
+      <div style="background:var(--accent-soft);border-radius:12px;padding:16px;margin-bottom:14px">
+        <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:4px">TEAM MODE ☁</div>
+        <div style="font-size:16px;font-weight:700;margin-bottom:6px">${currentOrg.name}</div>
+        <div style="font-size:12px;color:var(--ink-sub)">招待コード</div>
+        <div style="font-size:22px;font-weight:800;letter-spacing:4px;color:var(--ink);margin-top:2px">${currentOrg.invite_code}</div>
+        <div style="font-size:11px;color:var(--ink-sub);margin-top:4px">このコードを仲間に共有してください</div>
+      </div>
+      <button onclick="leaveOrg()" class="btn btn-danger" style="width:100%;justify-content:center">${isOwner?'チームを解散する':'チームを抜ける'}</button>
+    `;
+  } else {
+    el.innerHTML = `
+      <p style="font-size:12px;color:var(--ink-sub);margin-bottom:16px;line-height:1.7">チームを作成すると複数人でデータを共有できます。招待コードをメンバーに送るだけで参加できます。</p>
+      <div class="form-field"><label>会社名（チームを作成）</label><input type="text" id="org-name-input" placeholder="株式会社まとめる現場"></div>
+      <button onclick="createOrg()" class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:16px">🏢 チームを作成する</button>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px"><div style="flex:1;height:1px;background:var(--rule)"></div><span style="font-size:11px;color:var(--ink-sub)">または</span><div style="flex:1;height:1px;background:var(--rule)"></div></div>
+      <div class="form-field"><label>招待コードで参加</label><input type="text" id="org-code-input" placeholder="ABC123" style="text-transform:uppercase;letter-spacing:3px;font-size:18px;font-weight:800;text-align:center" oninput="this.value=this.value.toUpperCase()"></div>
+      <button onclick="joinOrg()" class="btn" style="width:100%;justify-content:center;border:1.5px solid var(--rule)">参加する</button>
+    `;
+  }
+}
+
+async function createOrg() {
+  const name = (document.getElementById('org-name-input')?.value||'').trim();
+  if (!name) { alert('会社名を入力してください'); return; }
+  const invite_code = Math.random().toString(36).substring(2,8).toUpperCase();
+  const { data: org, error: orgErr } = await sb.from('organizations')
+    .insert({ name, invite_code, owner_id: currentUser.id }).select().single();
+  if (orgErr) { alert('作成に失敗しました: ' + orgErr.message); return; }
+  const { error: memErr } = await sb.from('org_members')
+    .insert({ org_id: org.id, user_id: currentUser.id, role: 'owner' });
+  if (memErr) { alert('メンバー登録に失敗しました'); return; }
+  currentOrgId = org.id;
+  currentOrg = org;
+  // 現在の個人データをチームに移行
+  await syncToSupabase();
+  updateOrgUI();
+  alert(`✅ チーム「${name}」を作成しました！\n\n招待コード: ${invite_code}\n\nこのコードをメンバーに共有してください。`);
+}
+
+async function joinOrg() {
+  const code = (document.getElementById('org-code-input')?.value||'').trim().toUpperCase();
+  if (code.length < 6) { alert('招待コードを入力してください'); return; }
+  const { data: org, error } = await sb.from('organizations')
+    .select('id, name, invite_code, owner_id').eq('invite_code', code).maybeSingle();
+  if (error || !org) { alert('招待コードが見つかりません。コードを確認してください。'); return; }
+  const { error: memErr } = await sb.from('org_members')
+    .insert({ org_id: org.id, user_id: currentUser.id, role: 'member' });
+  if (memErr) {
+    if (memErr.code === '23505') alert('すでにこのチームに参加しています');
+    else alert('参加に失敗しました: ' + memErr.message);
+    return;
+  }
+  currentOrgId = org.id;
+  currentOrg = org;
+  // チームのデータを読み込む
+  await loadFromSupabase();
+  updateDashboard();
+  setBadge('m-est-badge', estimates.length);
+  setBadge('m-inv-badge', invoices.length);
+  updateOrgUI();
+  alert(`✅ チーム「${org.name}」に参加しました！\nデータが共有されています。`);
+}
+
+async function leaveOrg() {
+  const isOwner = currentOrg?.owner_id === currentUser?.id;
+  const msg = isOwner
+    ? `「${currentOrg.name}」を解散しますか？\nメンバー全員がチームから切り離されます。`
+    : `「${currentOrg.name}」を抜けますか？\n個人モードに戻ります。`;
+  if (!confirm(msg)) return;
+  if (isOwner) {
+    // オーナーは会社を削除（CASCADE でメンバーも消える）
+    await sb.from('organizations').delete().eq('id', currentOrgId);
+  } else {
+    await sb.from('org_members').delete().eq('org_id', currentOrgId).eq('user_id', currentUser.id);
+  }
+  currentOrgId = null;
+  currentOrg = null;
+  // 個人データを読み込む
+  await loadFromSupabase();
+  updateDashboard();
+  setBadge('m-est-badge', estimates.length);
+  setBadge('m-inv-badge', invoices.length);
+  updateOrgUI();
 }
 
 // ===== CONSTANTS =====
@@ -1520,6 +1648,9 @@ function loadCompany() {
   document.getElementById('co-email').value=co.email||'';
   document.getElementById('co-license').value=co.license||'';
   document.getElementById('co-staff').value=co.staff||'';
+  const emailEl=document.getElementById('settings-user-email');
+  if(emailEl&&currentUser)emailEl.textContent=currentUser.email;
+  updateOrgUI();
 }
 function updateDashboard() {
   document.getElementById('dash-est-count').textContent=estimates.length;
