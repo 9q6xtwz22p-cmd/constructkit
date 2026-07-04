@@ -544,7 +544,25 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
   <div class="card">
     <div class="card-header"><h2>🏢 チーム共有</h2></div>
     <div class="card-body">
-      <div id="org-section"><!-- updateOrgUI() で描画 --></div>
+      <!-- チーム参加中の場合に表示 -->
+      <div id="org-teams-list" style="display:none"></div>
+      <!-- 別チームに参加フォーム（チーム参加中のみ表示） -->
+      <div id="org-join-extra" style="display:none">
+        <div style="border-top:1px solid var(--rule);padding-top:16px;margin-top:4px">
+          <div style="font-size:12px;color:var(--ink-sub);margin-bottom:12px">別のチームにも参加できます</div>
+          <div class="form-field"><label>招待コードで参加</label><input type="text" id="org-code-input" placeholder="ABC123" style="text-transform:uppercase;letter-spacing:3px;font-size:18px;font-weight:800;text-align:center" oninput="this.value=this.value.toUpperCase()"></div>
+          <button onclick="joinOrg()" class="btn" style="width:100%;justify-content:center;border:1.5px solid var(--rule)">参加する</button>
+        </div>
+      </div>
+      <!-- 未参加の場合に表示（デフォルト表示） -->
+      <div id="org-create-section">
+        <p style="font-size:12px;color:var(--ink-sub);margin-bottom:16px;line-height:1.7">チームを作成すると複数人でデータを共有できます。招待コードをメンバーに送るだけで参加できます。</p>
+        <div class="form-field"><label>会社名（チームを作成）</label><input type="text" id="org-name-input" placeholder="株式会社まとめる現場"></div>
+        <button onclick="createOrg()" class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:16px">🏢 チームを作成する</button>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px"><div style="flex:1;height:1px;background:var(--rule)"></div><span style="font-size:11px;color:var(--ink-sub)">または</span><div style="flex:1;height:1px;background:var(--rule)"></div></div>
+        <div class="form-field"><label>招待コードで参加</label><input type="text" id="org-code-input-create" placeholder="ABC123" style="text-transform:uppercase;letter-spacing:3px;font-size:18px;font-weight:800;text-align:center" oninput="this.value=this.value.toUpperCase()"></div>
+        <button onclick="joinOrgFromCreate()" class="btn" style="width:100%;justify-content:center;border:1.5px solid var(--rule)">参加する</button>
+      </div>
     </div>
   </div>
   <div class="card">
@@ -891,15 +909,15 @@ async function logout() {
 
 // ===== TEAM / ORG =====
 function updateOrgUI() {
-  const el = document.getElementById('org-section');
-  if (!el) return;
-  let html = '';
+  const teamsList = document.getElementById('org-teams-list');
+  const joinExtra = document.getElementById('org-join-extra');
+  const createSection = document.getElementById('org-create-section');
+  if (!teamsList) return;
   if (currentUserOrgs.length > 0) {
-    html += currentUserOrgs.map(m => {
+    teamsList.innerHTML = currentUserOrgs.map(m => {
       const org = m.organizations;
       const isOwner = org.owner_id === currentUser?.id;
-      return `
-      <div style="background:var(--accent-soft);border-radius:12px;padding:16px;margin-bottom:12px">
+      return `<div style="background:var(--accent-soft);border-radius:12px;padding:16px;margin-bottom:12px">
         <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:4px">TEAM MODE ☁</div>
         <div style="font-size:16px;font-weight:700;margin-bottom:6px">${org.name}</div>
         <div style="font-size:12px;color:var(--ink-sub)">招待コード</div>
@@ -908,20 +926,20 @@ function updateOrgUI() {
         <button onclick="leaveOrg('${m.org_id}')" class="btn btn-danger" style="width:100%;justify-content:center;margin-top:12px">${isOwner?'チームを解散する':'チームを抜ける'}</button>
       </div>`;
     }).join('');
-    html += `<div style="border-top:1px solid var(--rule);padding-top:16px;margin-top:4px"><div style="font-size:12px;color:var(--ink-sub);margin-bottom:12px">別のチームにも参加できます</div>`;
-    html += `<div class="form-field"><label>招待コードで参加</label><input type="text" id="org-code-input" placeholder="ABC123" style="text-transform:uppercase;letter-spacing:3px;font-size:18px;font-weight:800;text-align:center" oninput="this.value=this.value.toUpperCase()"></div>`;
-    html += `<button onclick="joinOrg()" class="btn" style="width:100%;justify-content:center;border:1.5px solid var(--rule)">参加する</button></div>`;
+    teamsList.style.display = 'block';
+    if (joinExtra) joinExtra.style.display = 'block';
+    if (createSection) createSection.style.display = 'none';
   } else {
-    html = `
-      <p style="font-size:12px;color:var(--ink-sub);margin-bottom:16px;line-height:1.7">チームを作成すると複数人でデータを共有できます。招待コードをメンバーに送るだけで参加できます。</p>
-      <div class="form-field"><label>会社名（チームを作成）</label><input type="text" id="org-name-input" placeholder="株式会社まとめる現場"></div>
-      <button onclick="createOrg()" class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:16px">🏢 チームを作成する</button>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px"><div style="flex:1;height:1px;background:var(--rule)"></div><span style="font-size:11px;color:var(--ink-sub)">または</span><div style="flex:1;height:1px;background:var(--rule)"></div></div>
-      <div class="form-field"><label>招待コードで参加</label><input type="text" id="org-code-input" placeholder="ABC123" style="text-transform:uppercase;letter-spacing:3px;font-size:18px;font-weight:800;text-align:center" oninput="this.value=this.value.toUpperCase()"></div>
-      <button onclick="joinOrg()" class="btn" style="width:100%;justify-content:center;border:1.5px solid var(--rule)">参加する</button>
-    `;
+    teamsList.style.display = 'none';
+    if (joinExtra) joinExtra.style.display = 'none';
+    if (createSection) createSection.style.display = 'block';
   }
-  el.innerHTML = html;
+}
+
+function joinOrgFromCreate() {
+  const inp = document.getElementById('org-code-input-create');
+  if (inp) { document.getElementById('org-code-input').value = inp.value; }
+  joinOrg();
 }
 
 async function createOrg() {
