@@ -435,6 +435,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
             チームがありません。<button onclick="showTab('m-settings')" style="background:none;border:none;color:var(--accent);font-size:12px;padding:0;cursor:pointer;text-decoration:underline">設定から作成 →</button>
           </div>
         </div>
+        <div class="form-field" id="case-workers-field" style="display:none">
+          <label>担当メンバー</label>
+          <div id="case-workers-checkboxes" style="display:flex;flex-direction:column;gap:8px;margin-top:6px"></div>
+        </div>
         <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px" onclick="saveCase()">現場を登録</button>
       </div>
     </div>
@@ -453,6 +457,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
         <div style="font-size:12px;color:var(--ink-sub);display:none" id="detail-case-prime">—</div>
         <div style="font-size:12px;color:var(--ink-sub)" id="detail-case-address">—</div>
         <div style="font-size:12px;color:var(--ink-sub)" id="detail-case-period">—</div>
+        <div id="detail-case-assignees" style="display:none;margin-top:4px"></div>
       </div>
     </div>
     <div class="card">
@@ -542,6 +547,20 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       <div class="form-field"><label>建設業許可番号</label><input type="text" id="co-license" placeholder="〇〇知事許可（般-00）第00000号"></div>
       <div class="form-field"><label>担当者名（印刷時の担当者欄）</label><input type="text" id="co-staff" placeholder="代表 田中太郎"></div>
       <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px" onclick="saveCompany()">保存</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h2>👷 メンバー管理</h2></div>
+    <div class="card-body">
+      <p style="font-size:12px;color:var(--ink-sub);margin-bottom:16px;line-height:1.7">現場ごとに担当者を割り当てられます。名前・メール・所属会社を登録してください。</p>
+      <div id="workers-list" style="margin-bottom:16px"></div>
+      <div style="border-top:1px solid var(--rule);padding-top:16px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:10px">メンバーを追加</div>
+        <div class="form-field"><label>名前</label><input type="text" id="worker-name-input" placeholder="山田 太郎"></div>
+        <div class="form-field"><label>メールアドレス</label><input type="email" id="worker-email-input" placeholder="yamada@example.com"></div>
+        <div class="form-field"><label>所属会社</label><input type="text" id="worker-company-input" placeholder="株式会社まとめる現場"></div>
+        <button onclick="addWorker()" class="btn btn-primary" style="width:100%;justify-content:center">＋ メンバーを追加</button>
+      </div>
     </div>
   </div>
   <div class="card">
@@ -728,6 +747,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
     setBadge('m-est-badge', estimates.length);
     setBadge('m-inv-badge', invoices.length);
     updateOrgUI();
+    renderWorkersList();
   } else {
     currentUser = null;
     currentOrgId = null;
@@ -768,6 +788,7 @@ async function loadFromSupabase() {
         else if (row.data_type === 'invoices') invoices = row.data || [];
         else if (row.data_type === 'customers') customers = row.data || [];
         else if (row.data_type === 'cases') personalCases = (row.data || []).map(c => ({...c, org_id: c.org_id || null}));
+        else if (row.data_type === 'workers') workers = row.data || [];
         else if (row.data_type === 'counters') {
           const c = row.data;
           if (c.estCounter) estCounter = c.estCounter;
@@ -817,6 +838,7 @@ async function syncToSupabase() {
       { user_id: currentUser.id, data_type: 'invoices', data: invoices, updated_at: now },
       { user_id: currentUser.id, data_type: 'customers', data: customers, updated_at: now },
       { user_id: currentUser.id, data_type: 'cases', data: personalCases, updated_at: now },
+      { user_id: currentUser.id, data_type: 'workers', data: workers, updated_at: now },
       { user_id: currentUser.id, data_type: 'counters', data: { estCounter, invCounter }, updated_at: now },
     ];
     const { error: pe } = await sb.from('user_data').upsert(personalRows, { onConflict: 'user_id,data_type' });
@@ -1023,7 +1045,7 @@ const S_LABEL = {draft:'下書き',sent:'送付済み',paid:'入金済み',overd
 const S_BADGE = {draft:'badge-gray',sent:'badge-orange',paid:'badge-green',overdue:'badge-red'};
 
 // ===== STATE =====
-let estimates=[], invoices=[], customers=[], cases=[];
+let estimates=[], invoices=[], customers=[], cases=[], workers=[];
 let currentEstId=null, currentInvId=null;
 let estCounter=1, invCounter=1, currentCaseIdx=null;
 let pickerTarget=''; // 'est' | 'inv' | 'est-copy'
@@ -1483,6 +1505,25 @@ function showNewCaseForm() {
       if(teamHint) teamHint.style.display='block';
     }
   }
+  // 担当メンバー選択
+  const workersField=document.getElementById('case-workers-field');
+  const workersBox=document.getElementById('case-workers-checkboxes');
+  if(workersField && workersBox){
+    if(workers.length>0){
+      workersField.style.display='block';
+      workersBox.innerHTML=workers.map(w=>`
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px;border-radius:8px;border:1px solid var(--rule)">
+          <input type="checkbox" value="${w.id}" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent)">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700">${w.name}</div>
+            ${w.company?`<div style="font-size:11px;color:var(--ink-sub)">${w.company}</div>`:''}
+          </div>
+        </label>
+      `).join('');
+    } else {
+      workersField.style.display='none';
+    }
+  }
 }
 function showCaseDetail(idx) {
   currentCaseIdx=idx; const c=cases[idx];
@@ -1504,6 +1545,18 @@ function showCaseDetail(idx) {
   const primeEl=document.getElementById('detail-case-prime');
   if(isSub&&c.primeCompany){primeEl.style.display='block';primeEl.textContent='🏢 元請け: '+c.primeCompany+(c.orderNum?' / 発注No.'+c.orderNum:'');}
   else{primeEl.style.display='none';}
+  // 担当メンバー表示
+  const assigneesEl=document.getElementById('detail-case-assignees');
+  const assignedWorkers=(c.assignees||[]).map(id=>workers.find(w=>w.id===id)).filter(Boolean);
+  if(assignedWorkers.length>0){
+    assigneesEl.style.display='flex';
+    assigneesEl.style.flexWrap='wrap';
+    assigneesEl.style.gap='6px';
+    assigneesEl.innerHTML='<span style="font-size:11px;color:var(--ink-sub);width:100%;margin-bottom:2px">👷 担当メンバー</span>'+
+      assignedWorkers.map(w=>`<span style="font-size:12px;background:var(--accent-soft);color:var(--accent);padding:3px 10px;border-radius:20px;font-weight:700">${w.name}</span>`).join('');
+  } else {
+    assigneesEl.style.display='none';
+  }
   document.getElementById('case-memo').value=c.memo||'';
   document.getElementById('case-items').innerHTML='';
   (c.items||[]).forEach(item=>caseAddItem(item.name,item.unit,item.qty,item.price));
@@ -1515,7 +1568,8 @@ function showCaseDetail(idx) {
 async function saveCase() {
   const caseType=document.querySelector('input[name="case-type"]:checked')?.value||'prime';
   const orgId=document.getElementById('case-team-select')?.value||null;
-  const obj={id:Date.now(),caseType,org_id:orgId||null,name:document.getElementById('case-name').value||'無題の現場',client:document.getElementById('case-client').value,primeCompany:document.getElementById('case-prime-company')?.value||'',orderNum:document.getElementById('case-order-num')?.value||'',address:document.getElementById('case-address').value,start:document.getElementById('case-start').value,end:document.getElementById('case-end').value,status:document.getElementById('case-status').value,notes:document.getElementById('case-notes').value,items:[],memo:'',estIds:[]};
+  const checkedWorkers=[...document.querySelectorAll('#case-workers-checkboxes input[type=checkbox]:checked')].map(el=>Number(el.value));
+  const obj={id:Date.now(),caseType,org_id:orgId||null,assignees:checkedWorkers,name:document.getElementById('case-name').value||'無題の現場',client:document.getElementById('case-client').value,primeCompany:document.getElementById('case-prime-company')?.value||'',orderNum:document.getElementById('case-order-num')?.value||'',address:document.getElementById('case-address').value,start:document.getElementById('case-start').value,end:document.getElementById('case-end').value,status:document.getElementById('case-status').value,notes:document.getElementById('case-notes').value,items:[],memo:'',estIds:[]};
   cases.push(obj);
   // ローカル保存
   localStorage.setItem('ck_cases',JSON.stringify(cases));
@@ -1675,6 +1729,7 @@ function persist() {
   localStorage.setItem('ck_invoices',JSON.stringify(invoices));
   localStorage.setItem('ck_customers',JSON.stringify(customers));
   localStorage.setItem('ck_cases',JSON.stringify(cases));
+  localStorage.setItem('ck_workers',JSON.stringify(workers));
   localStorage.setItem('ck_est_counter',estCounter);
   localStorage.setItem('ck_inv_counter',invCounter);
   syncToSupabase(); // async cloud sync
@@ -1684,6 +1739,7 @@ function load() {
   try{const i=localStorage.getItem('ck_invoices');if(i)invoices=JSON.parse(i);}catch(e){}
   try{const c=localStorage.getItem('ck_customers');if(c)customers=JSON.parse(c);}catch(e){}
   try{const ca=localStorage.getItem('ck_cases');if(ca)cases=JSON.parse(ca);}catch(e){}
+  try{const w=localStorage.getItem('ck_workers');if(w)workers=JSON.parse(w);}catch(e){}
   const ec=localStorage.getItem('ck_est_counter');if(ec)estCounter=parseInt(ec);
   const ic=localStorage.getItem('ck_inv_counter');if(ic)invCounter=parseInt(ic);
 }
@@ -1691,6 +1747,44 @@ function load() {
 let templates=[];
 function loadTemplates(){try{const t=localStorage.getItem('ck_templates');if(t)templates=JSON.parse(t);}catch(e){}}
 function persistTemplates(){localStorage.setItem('ck_templates',JSON.stringify(templates));}
+
+// ===== WORKERS =====
+function addWorker() {
+  const name = document.getElementById('worker-name-input').value.trim();
+  const email = document.getElementById('worker-email-input').value.trim();
+  const company = document.getElementById('worker-company-input').value.trim();
+  if (!name) { alert('名前を入力してください'); return; }
+  workers.push({ id: Date.now(), name, email, company });
+  persist();
+  document.getElementById('worker-name-input').value = '';
+  document.getElementById('worker-email-input').value = '';
+  document.getElementById('worker-company-input').value = '';
+  renderWorkersList();
+}
+function deleteWorker(id) {
+  workers = workers.filter(w => w.id !== id);
+  persist();
+  renderWorkersList();
+}
+function renderWorkersList() {
+  const el = document.getElementById('workers-list');
+  if (!el) return;
+  if (!workers.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--ink-sub);text-align:center;padding:12px 0">メンバーが登録されていません</div>';
+    return;
+  }
+  el.innerHTML = workers.map(w => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--rule)">
+      <div style="width:36px;height:36px;border-radius:50%;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--accent);flex-shrink:0">${w.name.charAt(0)}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${w.name}</div>
+        ${w.company ? `<div style="font-size:11px;color:var(--ink-sub)">${w.company}</div>` : ''}
+        ${w.email ? `<div style="font-size:11px;color:var(--ink-sub)">${w.email}</div>` : ''}
+      </div>
+      <button onclick="deleteWorker(${w.id})" style="background:none;border:none;color:var(--red);font-size:18px;cursor:pointer;flex-shrink:0">×</button>
+    </div>
+  `).join('');
+}
 function saveEstTemplate() {
   const items=collectItems('est-items','data-est-item');
   if(!items.length){alert('明細が空です');return;}
