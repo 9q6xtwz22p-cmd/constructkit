@@ -2114,10 +2114,12 @@ function saveCompany() {
 }
 function updateTopbarUser() {
   const name = userProfile.displayName || '';
+  const emailFallback = currentUser?.email ? currentUser.email.split('@')[0] : '';
+  const display = name || emailFallback;
   const avatarEl = document.getElementById('topbar-avatar');
   const nameEl = document.getElementById('topbar-name');
-  if (avatarEl) avatarEl.textContent = name ? name.charAt(0) : '—';
-  if (nameEl) nameEl.textContent = name || 'マイページ';
+  if (avatarEl) avatarEl.textContent = display ? display.charAt(0).toUpperCase() : '—';
+  if (nameEl) nameEl.textContent = display || 'マイページ';
 }
 async function saveProfile() {
   const name = (document.getElementById('profile-display-name').value||'').trim();
