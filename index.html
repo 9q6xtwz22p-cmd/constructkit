@@ -1506,11 +1506,15 @@ function showCaseDetail(idx) {
   renderPhotos();
   renderCaseEstimates();
 }
-function saveCase() {
+async function saveCase() {
   const caseType=document.querySelector('input[name="case-type"]:checked')?.value||'prime';
   const orgId=document.getElementById('case-team-select')?.value||null;
   const obj={id:Date.now(),caseType,org_id:orgId||null,name:document.getElementById('case-name').value||'無題の現場',client:document.getElementById('case-client').value,primeCompany:document.getElementById('case-prime-company')?.value||'',orderNum:document.getElementById('case-order-num')?.value||'',address:document.getElementById('case-address').value,start:document.getElementById('case-start').value,end:document.getElementById('case-end').value,status:document.getElementById('case-status').value,notes:document.getElementById('case-notes').value,items:[],memo:'',estIds:[]};
-  cases.push(obj); persist();
+  cases.push(obj);
+  // ローカル保存
+  localStorage.setItem('ck_cases',JSON.stringify(cases));
+  // Supabase同期を待ってから画面遷移（同期前にリロードされてもデータが消えないように）
+  await syncToSupabase();
   ['case-name','case-client','case-address','case-notes'].forEach(id=>document.getElementById(id).value='');
   showCasesList();
 }
