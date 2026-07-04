@@ -159,6 +159,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 </head>
 <body>
 
@@ -633,15 +634,23 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
           </div>
         </div>
         <!-- 経費追加フォーム -->
-        <div style="display:flex;gap:8px;margin-bottom:12px">
+        <div style="display:flex;gap:8px;margin-bottom:8px">
           <input type="text" id="exp-name-input" placeholder="項目名（例: 交通費）"
             style="flex:1;padding:9px 12px;border:1.5px solid var(--rule);border-radius:9px;font-size:13px;font-family:inherit;outline:none">
-          <div style="position:relative;width:100px">
-            <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--ink-sub)">¥</span>
-            <input type="number" id="exp-amount-input" placeholder="0" min="0"
-              style="width:100%;padding:9px 8px 9px 18px;border:1.5px solid var(--rule);border-radius:9px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box">
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+          <div style="position:relative;flex:1">
+            <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--ink-sub)">¥</span>
+            <input type="number" id="exp-amount-input" placeholder="金額"  min="0"
+              style="width:100%;padding:9px 8px 9px 22px;border:1.5px solid var(--rule);border-radius:9px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box">
           </div>
-          <button onclick="addExpItem()" class="btn btn-primary" style="padding:9px 12px;white-space:nowrap">＋</button>
+          <button id="exp-camera-btn" onclick="captureReceipt()" title="レシートを撮影して読み取り"
+            style="background:var(--surface);border:1.5px solid var(--rule);border-radius:9px;font-size:18px;cursor:pointer;padding:8px 10px;line-height:1;flex-shrink:0">📷</button>
+          <button onclick="addExpItem()" class="btn btn-primary" style="padding:9px 14px;white-space:nowrap;flex-shrink:0">＋追加</button>
+        </div>
+        <!-- OCR読み取り中インジケーター -->
+        <div id="exp-ocr-status" style="display:none;font-size:12px;color:var(--accent);text-align:center;padding:6px;margin-bottom:8px;border-radius:8px;background:var(--accent-soft)">
+          📷 レシートを読み取り中...
         </div>
         <!-- 経費一覧 -->
         <div id="exp-list"></div>
@@ -2072,6 +2081,71 @@ function loadCompany() {
   if(emailEl&&currentUser)emailEl.textContent=currentUser.email;
   updateOrgUI();
 }
+// ===== レシートOCR =====
+function captureReceipt() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.capture = 'environment'; // リアカメラ
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const statusEl = document.getElementById('exp-ocr-status');
+    const camBtn = document.getElementById('exp-camera-btn');
+    if (statusEl) statusEl.style.display = 'block';
+    if (camBtn) { camBtn.disabled = true; camBtn.textContent = '⏳'; }
+    try {
+      const worker = await Tesseract.createWorker('jpn+eng', 1, {
+        workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/worker.min.js',
+        langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+        corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@4/tesseract-core.wasm.js',
+        cacheMethod: 'write',
+      });
+      const { data: { text } } = await worker.recognize(file);
+      await worker.terminate();
+      const amount = extractReceiptAmount(text);
+      if (amount) {
+        document.getElementById('exp-amount-input').value = amount;
+        showToast(`¥${commas(amount)} を読み取りました`);
+      } else {
+        showToast('金額を読み取れませんでした。手入力してください');
+      }
+    } catch(err) {
+      console.error('OCR error:', err);
+      showToast('読み取りに失敗しました。手入力してください');
+    }
+    if (statusEl) statusEl.style.display = 'none';
+    if (camBtn) { camBtn.disabled = false; camBtn.textContent = '📷'; }
+  };
+  input.click();
+}
+function extractReceiptAmount(text) {
+  // 合計・小計・TOTAL等の後の金額を優先
+  const totalPatterns = [
+    /(?:合計|御合計|お会計|総合計|ご請求)[^\d]*?([\d,]+)/,
+    /TOTAL[^\d]*?([\d,]+)/i,
+    /(?:小計)[^\d]*?([\d,]+)/,
+  ];
+  for (const p of totalPatterns) {
+    const m = text.match(p);
+    if (m) { const n = parseInt(m[1].replace(/,/g, '')); if (n >= 100) return n; }
+  }
+  // ¥または円が付いた数字を全部抽出して最大値
+  const allAmounts = [];
+  const re = /[¥￥]\s*([\d,]+)|([\d,]+)\s*円/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const n = parseInt((m[1]||m[2]).replace(/,/g, ''));
+    if (n >= 100 && n <= 1000000) allAmounts.push(n);
+  }
+  if (allAmounts.length) return Math.max(...allAmounts);
+  // 数字パターンのみ（3桁以上）
+  const nums = [...text.matchAll(/\b(\d{3,6})\b/g)]
+    .map(m => parseInt(m[1])).filter(n => n >= 100 && n <= 500000);
+  if (nums.length) return Math.max(...nums);
+  return null;
+}
+
 // ===== 経費計算ツール =====
 function setBudget() {
   const v = parseFloat(document.getElementById('exp-budget-input').value) || 0;
