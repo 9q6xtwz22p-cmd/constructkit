@@ -1493,43 +1493,29 @@ function showNewCaseForm() {
   updateCaseTypeUI();
   // workersが未ロードならlocalStorageから補完
   if(!workers.length){try{const w=localStorage.getItem('ck_workers');if(w)workers=JSON.parse(w);}catch(e){}}
-  // チーム選択欄を更新（常に表示）
+  // 共有チーム＝会社名セレクト（workersの所属会社一覧）
   const teamField=document.getElementById('case-team-field');
   const teamSel=document.getElementById('case-team-select');
-  if(teamField) teamField.style.display='block';
   const teamHint=document.getElementById('case-team-hint');
+  if(teamField) teamField.style.display='block';
   if(teamSel){
-    if(currentUserOrgs.length>0){
-      teamSel.innerHTML='<option value="">個人設定（個人事業主）</option>'+
-        currentUserOrgs.map(m=>`<option value="${m.org_id}">${m.organizations.name}</option>`).join('');
+    const companies=[...new Set(workers.filter(w=>w.company).map(w=>w.company))];
+    if(companies.length>0){
+      teamSel.innerHTML='<option value="">会社を選択してください</option>'+
+        companies.map(c=>`<option value="${c}">${c}</option>`).join('');
       teamSel.disabled=false;
+      teamSel.onchange=()=>renderCaseWorkerToggles(teamSel.value);
       if(teamHint) teamHint.style.display='none';
     } else {
-      teamSel.innerHTML='<option value="">個人設定（個人事業主）</option>';
+      teamSel.innerHTML='<option value="">メンバー未登録</option>';
       teamSel.disabled=true;
       if(teamHint) teamHint.style.display='block';
     }
   }
-  // 担当メンバー選択
+  // 担当メンバー（会社選択後に表示）
   const workersField=document.getElementById('case-workers-field');
-  const workersBox=document.getElementById('case-workers-checkboxes');
-  if(workersField && workersBox){
-    workersField.style.display='block';
-    if(workers.length>0){
-      workersBox.innerHTML=workers.map(w=>`
-        <div id="wtog-${w.id}" onclick="toggleWorkerSel(${w.id})" data-sel="0"
-             style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:10px 12px;border-radius:10px;border:1.5px solid var(--rule);transition:all .15s;user-select:none">
-          <div id="wchk-${w.id}" style="width:22px;height:22px;border-radius:6px;border:2px solid var(--rule);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;transition:all .15s"></div>
-          <div style="flex:1">
-            <div style="font-size:13px;font-weight:700">${w.name}</div>
-            ${w.company?`<div style="font-size:11px;color:var(--ink-sub)">${w.company}</div>`:''}
-          </div>
-        </div>
-      `).join('');
-    } else {
-      workersBox.innerHTML='<div style="font-size:12px;color:var(--ink-sub)">メンバーが未登録です。<button onclick="navigate(\'settings\',document.querySelector(\'[data-page=settings]\'))" style="background:none;border:none;color:var(--accent);font-size:12px;padding:0;cursor:pointer;text-decoration:underline">設定から登録 →</button></div>';
-    }
-  }
+  if(workersField) workersField.style.display= workers.length>0 ? 'block':'none';
+  renderCaseWorkerToggles('');
 }
 function showCaseDetail(idx) {
   currentCaseIdx=idx; const c=cases[idx];
@@ -1755,6 +1741,26 @@ function loadTemplates(){try{const t=localStorage.getItem('ck_templates');if(t)t
 function persistTemplates(){localStorage.setItem('ck_templates',JSON.stringify(templates));}
 
 // ===== WORKERS =====
+function renderCaseWorkerToggles(company) {
+  const workersBox=document.getElementById('case-workers-checkboxes');
+  if(!workersBox) return;
+  const list=company ? workers.filter(w=>w.company===company) : [];
+  if(!company){
+    workersBox.innerHTML='<div style="font-size:12px;color:var(--ink-sub)">上の会社を選ぶとメンバーが表示されます</div>';
+    return;
+  }
+  if(!list.length){
+    workersBox.innerHTML='<div style="font-size:12px;color:var(--ink-sub)">この会社のメンバーがいません</div>';
+    return;
+  }
+  workersBox.innerHTML=list.map(w=>`
+    <div id="wtog-${w.id}" onclick="toggleWorkerSel(${w.id})" data-sel="0"
+         style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:10px 12px;border-radius:10px;border:1.5px solid var(--rule);transition:all .15s;user-select:none">
+      <div id="wchk-${w.id}" style="width:22px;height:22px;border-radius:6px;border:2px solid var(--rule);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;transition:all .15s"></div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:700">${w.name}</div></div>
+    </div>
+  `).join('');
+}
 function toggleWorkerSel(id) {
   const tog=document.getElementById('wtog-'+id);
   const chk=document.getElementById('wchk-'+id);
