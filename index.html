@@ -1463,15 +1463,19 @@ function showNewCaseForm() {
   ['case-name','case-client','case-address','case-notes','case-prime-company','case-order-num'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('case-type-prime').checked=true;
   updateCaseTypeUI();
-  // チーム選択欄を更新
+  // チーム選択欄を更新（常に表示）
   const teamField=document.getElementById('case-team-field');
   const teamSel=document.getElementById('case-team-select');
-  if(currentUserOrgs.length>0){
-    teamField.style.display='block';
-    teamSel.innerHTML='<option value="">個人（共有しない）</option>'+
-      currentUserOrgs.map(m=>`<option value="${m.org_id}">${m.organizations.name}</option>`).join('');
-  } else {
-    teamField.style.display='none';
+  if(teamField) teamField.style.display='block';
+  if(teamSel){
+    if(currentUserOrgs.length>0){
+      teamSel.innerHTML='<option value="">個人（共有しない）</option>'+
+        currentUserOrgs.map(m=>`<option value="${m.org_id}">${m.organizations.name}</option>`).join('');
+      teamSel.disabled=false;
+    } else {
+      teamSel.innerHTML='<option value="">個人（チーム未設定）</option>';
+      teamSel.disabled=true;
+    }
   }
 }
 function showCaseDetail(idx) {
