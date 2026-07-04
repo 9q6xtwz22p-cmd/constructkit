@@ -181,9 +181,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 </div>
 
 <div class="topbar">
-  <div style="flex:1;display:flex;align-items:center;gap:4px">
-    <button onclick="openHelp()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-sub);padding:4px 8px;border-radius:50%;line-height:1" title="使い方">？</button>
-    <button onclick="navigate('settings',document.querySelector('[data-page=settings]'))" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-sub);padding:4px 8px;border-radius:50%;line-height:1" title="設定">⚙️</button>
+  <div style="flex:1;display:flex;align-items:center;gap:6px;min-width:0">
+    <!-- ユーザーチップ -->
+    <div onclick="navigate('settings',document.querySelector('[data-page=settings]'))"
+         style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:4px 8px 4px 4px;border-radius:20px;background:var(--accent-soft);max-width:130px;overflow:hidden;flex-shrink:0">
+      <div id="topbar-avatar" style="width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">—</div>
+      <span id="topbar-name" style="font-size:12px;font-weight:600;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">マイページ</span>
+    </div>
+    <button onclick="openHelp()" style="background:none;border:none;font-size:17px;cursor:pointer;color:var(--ink-sub);padding:4px 6px;border-radius:50%;line-height:1;flex-shrink:0" title="使い方">？</button>
+    <button onclick="navigate('settings',document.querySelector('[data-page=settings]'))" style="background:none;border:none;font-size:17px;cursor:pointer;color:var(--ink-sub);padding:4px 6px;border-radius:50%;line-height:1;flex-shrink:0" title="設定">⚙️</button>
     <span id="sync-indicator" style="font-size:10px;font-weight:700;color:var(--green);opacity:0;transition:opacity 0.5s;white-space:nowrap">☁ 保存済み</span>
   </div>
   <img src="2044D66D-EA6B-4314-9CA7-8F4B3C0A6E94.PNG" alt="まとめる現場" style="height:66px;width:auto;object-fit:contain;position:absolute;left:50%;transform:translateX(-50%)">
@@ -2032,16 +2038,25 @@ function saveCompany() {
   localStorage.setItem('ck_company',JSON.stringify(co));
   alert('自社情報を保存しました');
 }
+function updateTopbarUser() {
+  const name = userProfile.displayName || '';
+  const avatarEl = document.getElementById('topbar-avatar');
+  const nameEl = document.getElementById('topbar-name');
+  if (avatarEl) avatarEl.textContent = name ? name.charAt(0) : '—';
+  if (nameEl) nameEl.textContent = name || 'マイページ';
+}
 async function saveProfile() {
   const name = (document.getElementById('profile-display-name').value||'').trim();
   userProfile = { displayName: name };
   localStorage.setItem('ck_profile', JSON.stringify(userProfile));
   await syncToSupabase();
+  updateTopbarUser();
   showToast('プロフィールを保存しました');
 }
 function loadProfile() {
   const el = document.getElementById('profile-display-name');
   if (el) el.value = userProfile.displayName || '';
+  updateTopbarUser();
 }
 function loadCompany() {
   const co=JSON.parse(localStorage.getItem('ck_company')||'{}');
