@@ -426,6 +426,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
           <select id="case-status"><option value="active">進行中</option><option value="pending">着工前</option><option value="done">完工</option></select>
         </div>
         <div class="form-field"><label>備考</label><textarea id="case-notes" placeholder="特記事項など"></textarea></div>
+        <div class="form-field" id="case-team-field" style="display:none">
+          <label>共有チーム</label>
+          <select id="case-team-select">
+            <option value="">個人（共有しない）</option>
+          </select>
+        </div>
         <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px" onclick="saveCase()">現場を登録</button>
       </div>
     </div>
@@ -686,6 +692,8 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let currentOrgId = null;
 let currentOrg = null;
+let currentUserOrgs = []; // all orgs the user belongs to
+let caseFilter = 'all';  // 'all' | 'personal' | org_id
 
 // Auth state listener — fires immediately on load
 sb.auth.onAuthStateChange(async (event, session) => {
@@ -703,6 +711,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
     currentUser = null;
     currentOrgId = null;
     currentOrg = null;
+    currentUserOrgs = [];
     estimates=[]; invoices=[]; customers=[]; cases=[];
     estCounter=1; invCounter=1;
     document.getElementById('auth-overlay').style.display = 'flex';
@@ -712,48 +721,63 @@ sb.auth.onAuthStateChange(async (event, session) => {
 async function loadFromSupabase() {
   if (!currentUser) return;
   try {
-    // まずチームメンバーシップを確認
-    const { data: membership } = await sb.from('org_members')
+    // 所属チームを全件取得
+    const { data: memberships } = await sb.from('org_members')
       .select('org_id, role, organizations(id, name, invite_code, owner_id)')
-      .eq('user_id', currentUser.id)
-      .maybeSingle();
-    if (membership && membership.organizations) {
-      currentOrgId = membership.org_id;
-      currentOrg = membership.organizations;
+      .eq('user_id', currentUser.id);
+    currentUserOrgs = (memberships || []).filter(m => m.organizations);
+    // 後方互換: 最初のチームを currentOrg に設定（チーム共有UIで使用）
+    if (currentUserOrgs.length > 0) {
+      currentOrgId = currentUserOrgs[0].org_id;
+      currentOrg = currentUserOrgs[0].organizations;
     } else {
       currentOrgId = null;
       currentOrg = null;
     }
 
-    // チームモード or 個人モードでデータを読む
-    let query;
-    if (currentOrgId) {
-      query = sb.from('org_data').select('data_type,data').eq('org_id', currentOrgId);
-    } else {
-      query = sb.from('user_data').select('data_type,data').eq('user_id', currentUser.id);
-    }
-    const { data, error } = await query;
+    // 個人データ（見積・請求・顧客・個人案件・カウンター）を user_data から読む
+    const { data: personalData, error } = await sb.from('user_data')
+      .select('data_type,data').eq('user_id', currentUser.id);
     if (error) throw error;
 
-    if (data && data.length) {
-      data.forEach(row => {
+    let personalCases = [];
+    if (personalData && personalData.length) {
+      personalData.forEach(row => {
         if (row.data_type === 'estimates') estimates = row.data || [];
         else if (row.data_type === 'invoices') invoices = row.data || [];
         else if (row.data_type === 'customers') customers = row.data || [];
-        else if (row.data_type === 'cases') cases = row.data || [];
+        else if (row.data_type === 'cases') personalCases = (row.data || []).map(c => ({...c, org_id: c.org_id || null}));
         else if (row.data_type === 'counters') {
           const c = row.data;
           if (c.estCounter) estCounter = c.estCounter;
           if (c.invCounter) invCounter = c.invCounter;
         }
       });
-    } else if (!currentOrgId) {
-      // 初回ログイン時はlocalStorageから移行
+    } else if (currentUserOrgs.length === 0) {
+      // 初回ログイン: localStorageから移行
       load();
       if (estimates.length || invoices.length || customers.length || cases.length) {
         await syncToSupabase();
+        return;
       }
     }
+
+    // 各チームの案件を org_data から読んでマージ
+    let orgCases = [];
+    for (const m of currentUserOrgs) {
+      const { data: od } = await sb.from('org_data')
+        .select('data_type,data').eq('org_id', m.org_id).eq('data_type', 'cases').maybeSingle();
+      if (od && od.data) {
+        orgCases = orgCases.concat((od.data || []).map(c => ({...c, org_id: m.org_id})));
+      }
+    }
+
+    // 個人案件 + チーム案件を重複なしでマージ
+    const seenIds = new Set();
+    cases = [];
+    [...personalCases, ...orgCases].forEach(c => {
+      if (!seenIds.has(c.id)) { seenIds.add(c.id); cases.push(c); }
+    });
   } catch (e) {
     console.error('Supabase load error:', e);
     load();
@@ -763,20 +787,27 @@ async function loadFromSupabase() {
 async function syncToSupabase() {
   if (!currentUser) return;
   const now = new Date().toISOString();
-  const types = ['estimates','invoices','customers','cases','counters'];
-  const vals = [estimates, invoices, customers, cases, { estCounter, invCounter }];
   try {
-    if (currentOrgId) {
-      // チームモード: org_dataテーブルに保存
-      const rows = types.map((t,i) => ({ org_id: currentOrgId, data_type: t, data: vals[i], updated_by: currentUser.id, updated_at: now }));
-      const { error } = await sb.from('org_data').upsert(rows, { onConflict: 'org_id,data_type' });
-      if (!error) showSyncDone();
-    } else {
-      // 個人モード: user_dataテーブルに保存
-      const rows = types.map((t,i) => ({ user_id: currentUser.id, data_type: t, data: vals[i], updated_at: now }));
-      const { error } = await sb.from('user_data').upsert(rows, { onConflict: 'user_id,data_type' });
-      if (!error) showSyncDone();
+    // 個人案件（org_id なし）
+    const personalCases = cases.filter(c => !c.org_id);
+    // 見積・請求・顧客・個人案件・カウンターは常に user_data に保存
+    const personalRows = [
+      { user_id: currentUser.id, data_type: 'estimates', data: estimates, updated_at: now },
+      { user_id: currentUser.id, data_type: 'invoices', data: invoices, updated_at: now },
+      { user_id: currentUser.id, data_type: 'customers', data: customers, updated_at: now },
+      { user_id: currentUser.id, data_type: 'cases', data: personalCases, updated_at: now },
+      { user_id: currentUser.id, data_type: 'counters', data: { estCounter, invCounter }, updated_at: now },
+    ];
+    const { error: pe } = await sb.from('user_data').upsert(personalRows, { onConflict: 'user_id,data_type' });
+    // 各チームの案件を org_data に保存
+    for (const m of currentUserOrgs) {
+      const orgCases = cases.filter(c => c.org_id === m.org_id);
+      await sb.from('org_data').upsert(
+        { org_id: m.org_id, data_type: 'cases', data: orgCases, updated_by: currentUser.id, updated_at: now },
+        { onConflict: 'org_id,data_type' }
+      );
     }
+    if (!pe) showSyncDone();
   } catch (e) {
     console.error('Supabase sync error:', e);
   }
@@ -862,20 +893,26 @@ async function logout() {
 function updateOrgUI() {
   const el = document.getElementById('org-section');
   if (!el) return;
-  if (currentOrg) {
-    const isOwner = currentOrg.owner_id === currentUser?.id;
-    el.innerHTML = `
-      <div style="background:var(--accent-soft);border-radius:12px;padding:16px;margin-bottom:14px">
+  let html = '';
+  if (currentUserOrgs.length > 0) {
+    html += currentUserOrgs.map(m => {
+      const org = m.organizations;
+      const isOwner = org.owner_id === currentUser?.id;
+      return `
+      <div style="background:var(--accent-soft);border-radius:12px;padding:16px;margin-bottom:12px">
         <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:4px">TEAM MODE ☁</div>
-        <div style="font-size:16px;font-weight:700;margin-bottom:6px">${currentOrg.name}</div>
+        <div style="font-size:16px;font-weight:700;margin-bottom:6px">${org.name}</div>
         <div style="font-size:12px;color:var(--ink-sub)">招待コード</div>
-        <div style="font-size:22px;font-weight:800;letter-spacing:4px;color:var(--ink);margin-top:2px">${currentOrg.invite_code}</div>
+        <div style="font-size:22px;font-weight:800;letter-spacing:4px;color:var(--ink);margin-top:2px">${org.invite_code}</div>
         <div style="font-size:11px;color:var(--ink-sub);margin-top:4px">このコードを仲間に共有してください</div>
-      </div>
-      <button onclick="leaveOrg()" class="btn btn-danger" style="width:100%;justify-content:center">${isOwner?'チームを解散する':'チームを抜ける'}</button>
-    `;
+        <button onclick="leaveOrg('${m.org_id}')" class="btn btn-danger" style="width:100%;justify-content:center;margin-top:12px">${isOwner?'チームを解散する':'チームを抜ける'}</button>
+      </div>`;
+    }).join('');
+    html += `<div style="border-top:1px solid var(--rule);padding-top:16px;margin-top:4px"><div style="font-size:12px;color:var(--ink-sub);margin-bottom:12px">別のチームにも参加できます</div>`;
+    html += `<div class="form-field"><label>招待コードで参加</label><input type="text" id="org-code-input" placeholder="ABC123" style="text-transform:uppercase;letter-spacing:3px;font-size:18px;font-weight:800;text-align:center" oninput="this.value=this.value.toUpperCase()"></div>`;
+    html += `<button onclick="joinOrg()" class="btn" style="width:100%;justify-content:center;border:1.5px solid var(--rule)">参加する</button></div>`;
   } else {
-    el.innerHTML = `
+    html = `
       <p style="font-size:12px;color:var(--ink-sub);margin-bottom:16px;line-height:1.7">チームを作成すると複数人でデータを共有できます。招待コードをメンバーに送るだけで参加できます。</p>
       <div class="form-field"><label>会社名（チームを作成）</label><input type="text" id="org-name-input" placeholder="株式会社まとめる現場"></div>
       <button onclick="createOrg()" class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:16px">🏢 チームを作成する</button>
@@ -884,6 +921,7 @@ function updateOrgUI() {
       <button onclick="joinOrg()" class="btn" style="width:100%;justify-content:center;border:1.5px solid var(--rule)">参加する</button>
     `;
   }
+  el.innerHTML = html;
 }
 
 async function createOrg() {
@@ -898,7 +936,7 @@ async function createOrg() {
   if (memErr) { alert('メンバー登録に失敗しました'); return; }
   currentOrgId = org.id;
   currentOrg = org;
-  // 現在の個人データをチームに移行
+  currentUserOrgs = [...currentUserOrgs, { org_id: org.id, role: 'owner', organizations: org }];
   await syncToSupabase();
   updateOrgUI();
   alert(`✅ チーム「${name}」を作成しました！\n\n招待コード: ${invite_code}\n\nこのコードをメンバーに共有してください。`);
@@ -919,6 +957,7 @@ async function joinOrg() {
   }
   currentOrgId = org.id;
   currentOrg = org;
+  currentUserOrgs = [...currentUserOrgs, { org_id: org.id, role: 'member', organizations: org }];
   // チームのデータを読み込む
   await loadFromSupabase();
   updateDashboard();
@@ -928,21 +967,23 @@ async function joinOrg() {
   alert(`✅ チーム「${org.name}」に参加しました！\nデータが共有されています。`);
 }
 
-async function leaveOrg() {
-  const isOwner = currentOrg?.owner_id === currentUser?.id;
+async function leaveOrg(orgId) {
+  const m = currentUserOrgs.find(x => x.org_id === orgId);
+  if (!m) return;
+  const org = m.organizations;
+  const isOwner = org.owner_id === currentUser?.id;
   const msg = isOwner
-    ? `「${currentOrg.name}」を解散しますか？\nメンバー全員がチームから切り離されます。`
-    : `「${currentOrg.name}」を抜けますか？\n個人モードに戻ります。`;
+    ? `「${org.name}」を解散しますか？\nメンバー全員がチームから切り離されます。`
+    : `「${org.name}」を抜けますか？\nこのチームの案件は個人モードに戻ります。`;
   if (!confirm(msg)) return;
   if (isOwner) {
-    // オーナーは会社を削除（CASCADE でメンバーも消える）
-    await sb.from('organizations').delete().eq('id', currentOrgId);
+    await sb.from('organizations').delete().eq('id', orgId);
   } else {
-    await sb.from('org_members').delete().eq('org_id', currentOrgId).eq('user_id', currentUser.id);
+    await sb.from('org_members').delete().eq('org_id', orgId).eq('user_id', currentUser.id);
   }
-  currentOrgId = null;
-  currentOrg = null;
-  // 個人データを読み込む
+  // このチームに属していた案件を個人（org_id: null）に戻す
+  cases = cases.map(c => c.org_id === orgId ? {...c, org_id: null} : c);
+  // 状態を更新
   await loadFromSupabase();
   updateDashboard();
   setBadge('m-est-badge', estimates.length);
@@ -1404,6 +1445,16 @@ function showNewCaseForm() {
   ['case-name','case-client','case-address','case-notes','case-prime-company','case-order-num'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('case-type-prime').checked=true;
   updateCaseTypeUI();
+  // チーム選択欄を更新
+  const teamField=document.getElementById('case-team-field');
+  const teamSel=document.getElementById('case-team-select');
+  if(currentUserOrgs.length>0){
+    teamField.style.display='block';
+    teamSel.innerHTML='<option value="">個人（共有しない）</option>'+
+      currentUserOrgs.map(m=>`<option value="${m.org_id}">${m.organizations.name}</option>`).join('');
+  } else {
+    teamField.style.display='none';
+  }
 }
 function showCaseDetail(idx) {
   currentCaseIdx=idx; const c=cases[idx];
@@ -1435,7 +1486,8 @@ function showCaseDetail(idx) {
 }
 function saveCase() {
   const caseType=document.querySelector('input[name="case-type"]:checked')?.value||'prime';
-  const obj={id:Date.now(),caseType,name:document.getElementById('case-name').value||'無題の現場',client:document.getElementById('case-client').value,primeCompany:document.getElementById('case-prime-company')?.value||'',orderNum:document.getElementById('case-order-num')?.value||'',address:document.getElementById('case-address').value,start:document.getElementById('case-start').value,end:document.getElementById('case-end').value,status:document.getElementById('case-status').value,notes:document.getElementById('case-notes').value,items:[],memo:'',estIds:[]};
+  const orgId=document.getElementById('case-team-select')?.value||null;
+  const obj={id:Date.now(),caseType,org_id:orgId||null,name:document.getElementById('case-name').value||'無題の現場',client:document.getElementById('case-client').value,primeCompany:document.getElementById('case-prime-company')?.value||'',orderNum:document.getElementById('case-order-num')?.value||'',address:document.getElementById('case-address').value,start:document.getElementById('case-start').value,end:document.getElementById('case-end').value,status:document.getElementById('case-status').value,notes:document.getElementById('case-notes').value,items:[],memo:'',estIds:[]};
   cases.push(obj); persist();
   ['case-name','case-client','case-address','case-notes'].forEach(id=>document.getElementById(id).value='');
   showCasesList();
@@ -1454,16 +1506,45 @@ function updateCaseTypeUI() {
   if(clientLabel) clientLabel.textContent=isSub?'施主名（任意）':'施主名 / 顧客名';
 }
 function renderCasesList() {
+  const container=document.getElementById('cases-list-view');
+  const listCard=container.querySelector('.card');
+  // フィルタータブを動的に挿入（チームが1つ以上あるとき）
+  let filterBar=document.getElementById('case-filter-bar');
+  if(!filterBar){
+    filterBar=document.createElement('div');
+    filterBar.id='case-filter-bar';
+    filterBar.style.cssText='display:flex;gap:6px;padding:10px 16px;border-bottom:1px solid var(--rule);overflow-x:auto;-webkit-overflow-scrolling:touch;background:#fafafa;flex-wrap:nowrap';
+    listCard.insertBefore(filterBar,document.getElementById('cases-list'));
+  }
+  if(currentUserOrgs.length>0){
+    filterBar.style.display='flex';
+    filterBar.innerHTML=
+      `<button class="btn-sm${caseFilter==='all'?' accent':''}" onclick="caseFilter='all';renderCasesList()" style="white-space:nowrap">すべて</button>`+
+      `<button class="btn-sm${caseFilter==='personal'?' accent':''}" onclick="caseFilter='personal';renderCasesList()" style="white-space:nowrap">個人</button>`+
+      currentUserOrgs.map(m=>`<button class="btn-sm${caseFilter===m.org_id?' accent':''}" onclick="caseFilter='${m.org_id}';renderCasesList()" style="white-space:nowrap">🏢 ${m.organizations.name}</button>`).join('');
+  } else {
+    filterBar.style.display='none';
+    caseFilter='all';
+  }
+
   const el=document.getElementById('cases-list');
-  if(!cases.length){el.innerHTML='<div class="empty-state"><div class="empty-ico">🏗</div>現場がまだありません</div>';return;}
+  let filtered=cases;
+  if(caseFilter==='personal') filtered=cases.filter(c=>!c.org_id);
+  else if(caseFilter!=='all') filtered=cases.filter(c=>c.org_id===caseFilter);
+
+  if(!filtered.length){el.innerHTML='<div class="empty-state"><div class="empty-ico">🏗</div>現場がまだありません</div>';return;}
   const sC={active:'var(--accent)',pending:'var(--orange)',done:'var(--green)'};
   const sL={active:'進行中',pending:'着工前',done:'完工'};
-  el.innerHTML=cases.map((c,i)=>`
-    <div class="activity-item" onclick="showCaseDetail(${i})">
+  el.innerHTML=filtered.map(c=>{
+    const globalIdx=cases.indexOf(c);
+    const orgName=c.org_id?(currentUserOrgs.find(m=>m.org_id===c.org_id)?.organizations?.name||'チーム'):null;
+    return `
+    <div class="activity-item" onclick="showCaseDetail(${globalIdx})">
       <div class="activity-dot" style="background:${sC[c.status]||'var(--accent)'}"></div>
-      <div class="activity-text"><strong>${c.name}</strong><br><span style="color:var(--ink-sub);font-size:11px">${c.client||'—'} · ${c.start||'—'}</span></div>
+      <div class="activity-text"><strong>${c.name}</strong>${orgName?`<span style="font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:5px;padding:1px 6px;margin-left:5px">🏢 ${orgName}</span>`:''}<br><span style="color:var(--ink-sub);font-size:11px">${c.client||'—'} · ${c.start||'—'}</span></div>
       <div style="font-size:11px;font-weight:700;color:${sC[c.status]}">${sL[c.status]||'—'} ›</div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 function caseAddItem(name='',unit='式',qty=1,price=0) {
   const w=document.getElementById('case-items'),d=document.createElement('div');
