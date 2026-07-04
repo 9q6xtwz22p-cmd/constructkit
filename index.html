@@ -630,9 +630,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
     </div>
   </div>
   <div class="card">
-    <div class="card-header"><h2>👤 アカウント</h2></div>
+    <div class="card-header"><h2>👤 マイページ</h2></div>
     <div class="card-body">
-      <p style="font-size:12px;color:var(--ink-sub);margin-bottom:12px;line-height:1.7">ログイン中のアカウント：<br><strong id="settings-user-email" style="color:var(--ink);font-size:13px"></strong></p>
+      <p style="font-size:12px;color:var(--ink-sub);margin-bottom:16px;line-height:1.7">ログイン中：<strong id="settings-user-email" style="color:var(--ink);font-size:13px"></strong></p>
+      <div class="form-field">
+        <label>氏名（表示名）</label>
+        <input type="text" id="profile-display-name" placeholder="山田 太郎" style="width:100%;padding:10px 12px;border:1.5px solid var(--rule);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box">
+      </div>
+      <p style="font-size:11px;color:var(--ink-sub);margin:-4px 0 14px;line-height:1.6">経費の支払者名・案件担当として表示されます</p>
+      <button onclick="saveProfile()" class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:10px">保存</button>
       <button onclick="logout()" class="btn btn-danger" style="width:100%;justify-content:center">ログアウト</button>
     </div>
   </div>
@@ -790,6 +796,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
     setBadge('m-inv-badge', invoices.length);
     updateOrgUI();
     renderWorkersList();
+    loadProfile();
   } else {
     currentUser = null;
     currentOrgId = null;
@@ -833,15 +840,25 @@ async function loadFromSupabase() {
         else if (row.data_type === 'workers') workers = row.data || [];
         else if (row.data_type === 'exp_items') expItems = row.data || [];
         else if (row.data_type === 'exp_budget') monthBudget = row.data?.budget || 0;
+        else if (row.data_type === 'profile') userProfile = row.data || { displayName: '' };
         else if (row.data_type === 'counters') {
           const c = row.data;
           if (c.estCounter) estCounter = c.estCounter;
           if (c.invCounter) invCounter = c.invCounter;
         }
       });
-      // workersがSupabaseに未登録ならlocalStorageから補完
+      // 未登録データをlocalStorageから補完
       if (!workers.length) {
         try { const w = localStorage.getItem('ck_workers'); if(w) workers = JSON.parse(w); } catch(e) {}
+      }
+      if (!expItems.length) {
+        try { const ex = localStorage.getItem('ck_exp_items'); if(ex) expItems = JSON.parse(ex); } catch(e) {}
+      }
+      if (!monthBudget) {
+        const mb = localStorage.getItem('ck_month_budget'); if(mb) monthBudget = parseFloat(mb)||0;
+      }
+      if (!userProfile.displayName) {
+        try { const p = localStorage.getItem('ck_profile'); if(p) userProfile = JSON.parse(p); } catch(e) {}
       }
     } else if (currentUserOrgs.length === 0) {
       // 初回ログイン: localStorageから移行
@@ -889,6 +906,7 @@ async function syncToSupabase() {
       { user_id: currentUser.id, data_type: 'workers', data: workers, updated_at: now },
       { user_id: currentUser.id, data_type: 'exp_items', data: expItems, updated_at: now },
       { user_id: currentUser.id, data_type: 'exp_budget', data: { budget: monthBudget }, updated_at: now },
+      { user_id: currentUser.id, data_type: 'profile', data: userProfile, updated_at: now },
       { user_id: currentUser.id, data_type: 'counters', data: { estCounter, invCounter }, updated_at: now },
     ];
     const { error: pe } = await sb.from('user_data').upsert(personalRows, { onConflict: 'user_id,data_type' });
@@ -1097,6 +1115,7 @@ const S_BADGE = {draft:'badge-gray',sent:'badge-orange',paid:'badge-green',overd
 // ===== STATE =====
 let estimates=[], invoices=[], customers=[], cases=[], workers=[], expItems=[];
 let monthBudget=0;
+let userProfile = { displayName: '' };
 let currentEstId=null, currentInvId=null;
 let estCounter=1, invCounter=1, currentCaseIdx=null;
 let pickerTarget=''; // 'est' | 'inv' | 'est-copy'
@@ -1114,7 +1133,7 @@ function navigate(page, el) {
   if(page==='estimate') showEstList();
   if(page==='invoice') showInvList();
   if(page==='clients') showClientList();
-  if(page==='settings') { loadCompany(); renderWorkersList(); updateOrgUI(); }
+  if(page==='settings') { loadCompany(); renderWorkersList(); updateOrgUI(); loadProfile(); }
 }
 
 // ===== ESTIMATE =====
@@ -1755,6 +1774,21 @@ function renderCaseEstimates() {
   }).join('');
 }
 
+// ===== TOAST =====
+function showToast(msg) {
+  let t = document.getElementById('ck-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'ck-toast';
+    t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;z-index:9999;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.opacity = '0'; }, 2000);
+}
+
 // ===== STORAGE & DASHBOARD =====
 function persist() {
   localStorage.setItem('ck_estimates',JSON.stringify(estimates));
@@ -1764,6 +1798,7 @@ function persist() {
   localStorage.setItem('ck_workers',JSON.stringify(workers));
   localStorage.setItem('ck_exp_items',JSON.stringify(expItems));
   localStorage.setItem('ck_month_budget',monthBudget);
+  localStorage.setItem('ck_profile',JSON.stringify(userProfile));
   localStorage.setItem('ck_est_counter',estCounter);
   localStorage.setItem('ck_inv_counter',invCounter);
   syncToSupabase(); // async cloud sync
@@ -1776,6 +1811,7 @@ function load() {
   try{const w=localStorage.getItem('ck_workers');if(w)workers=JSON.parse(w);}catch(e){}
   try{const ex=localStorage.getItem('ck_exp_items');if(ex)expItems=JSON.parse(ex);}catch(e){}
   const mb=localStorage.getItem('ck_month_budget');if(mb)monthBudget=parseFloat(mb)||0;
+  try{const p=localStorage.getItem('ck_profile');if(p)userProfile=JSON.parse(p);}catch(e){}
   const ec=localStorage.getItem('ck_est_counter');if(ec)estCounter=parseInt(ec);
   const ic=localStorage.getItem('ck_inv_counter');if(ic)invCounter=parseInt(ic);
 }
@@ -1873,19 +1909,25 @@ function toggleWorkerSel(id) {
     chk.textContent='';
   }
 }
-function addWorker() {
+async function addWorker() {
   const name = document.getElementById('worker-name-input').value.trim();
   const company = document.getElementById('worker-company-input').value.trim();
   if (!name) { alert('名前を入力してください'); return; }
+  const btn = document.querySelector('[onclick="addWorker()"]');
+  if (btn) { btn.disabled = true; btn.textContent = '保存中…'; }
   workers.push({ id: Date.now(), name, company });
-  persist();
+  localStorage.setItem('ck_workers', JSON.stringify(workers));
+  await syncToSupabase();
   document.getElementById('worker-name-input').value = '';
   document.getElementById('worker-company-input').value = '';
   renderWorkersList();
+  if (btn) { btn.disabled = false; btn.textContent = '＋ メンバーを追加'; }
+  showToast('メンバーを保存しました');
 }
-function deleteWorker(id) {
+async function deleteWorker(id) {
   workers = workers.filter(w => w.id !== id);
-  persist();
+  localStorage.setItem('ck_workers', JSON.stringify(workers));
+  await syncToSupabase();
   renderWorkersList();
 }
 function renderWorkersList() {
@@ -1989,6 +2031,17 @@ function saveCompany() {
   localStorage.setItem('ck_company',JSON.stringify(co));
   alert('自社情報を保存しました');
 }
+async function saveProfile() {
+  const name = (document.getElementById('profile-display-name').value||'').trim();
+  userProfile = { displayName: name };
+  localStorage.setItem('ck_profile', JSON.stringify(userProfile));
+  await syncToSupabase();
+  showToast('プロフィールを保存しました');
+}
+function loadProfile() {
+  const el = document.getElementById('profile-display-name');
+  if (el) el.value = userProfile.displayName || '';
+}
 function loadCompany() {
   const co=JSON.parse(localStorage.getItem('ck_company')||'{}');
   document.getElementById('co-name').value=co.name||'';
@@ -2017,7 +2070,8 @@ function addExpItem() {
   const amount = parseFloat(amtEl.value) || 0;
   if (!name || amount <= 0) { alert('項目名と金額を入力してください'); return; }
   const now = new Date();
-  expItems.push({ id: Date.now(), name, amount, month: `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`, date: fmtDate(now) });
+  const paidBy = userProfile.displayName || currentUser?.email || '';
+  expItems.push({ id: Date.now(), name, amount, month: `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`, date: fmtDate(now), paidBy });
   nameEl.value = ''; amtEl.value = '';
   persist();
   renderExpenseTracker();
@@ -2052,7 +2106,7 @@ function renderExpenseTracker() {
     <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--rule)">
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600">${e.name}</div>
-        <div style="font-size:11px;color:var(--ink-sub)">${e.date||''}</div>
+        <div style="font-size:11px;color:var(--ink-sub)">${e.date||''}${e.paidBy ? ' · ' + e.paidBy : ''}</div>
       </div>
       <div style="font-size:14px;font-weight:700;color:var(--ink)">¥${commas(e.amount)}</div>
       <button onclick="deleteExpItem(${e.id})" style="background:none;border:none;color:var(--ink-sub);font-size:16px;cursor:pointer;padding:2px 4px;line-height:1">×</button>
