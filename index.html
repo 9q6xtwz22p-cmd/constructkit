@@ -1502,6 +1502,7 @@ function showNewCaseForm() {
     const companies=[...new Set(workers.filter(w=>w.company).map(w=>w.company))];
     if(companies.length>0){
       teamSel.innerHTML='<option value="">会社を選択してください</option>'+
+        '<option value="__personal__">個人設定（個人事業主）</option>'+
         companies.map(c=>`<option value="${c}">${c}</option>`).join('');
       teamSel.disabled=false;
       teamSel.onchange=()=>renderCaseWorkerToggles(teamSel.value);
@@ -1745,8 +1746,8 @@ function renderCaseWorkerToggles(company) {
   const workersBox=document.getElementById('case-workers-checkboxes');
   if(!workersBox) return;
   const list=company ? workers.filter(w=>w.company===company) : [];
-  if(!company){
-    workersBox.innerHTML='<div style="font-size:12px;color:var(--ink-sub)">上の会社を選ぶとメンバーが表示されます</div>';
+  if(!company||company==='__personal__'){
+    workersBox.innerHTML='<div style="font-size:12px;color:var(--ink-sub)">'+(company==='__personal__'?'個人案件です':'上の会社を選ぶとメンバーが表示されます')+'</div>';
     return;
   }
   if(!list.length){
