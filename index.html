@@ -646,7 +646,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
         <div style="margin-bottom:8px">
           <select id="exp-case-select"
             style="width:100%;padding:9px 12px;border:1.5px solid var(--rule);border-radius:9px;font-size:13px;font-family:inherit;outline:none;background:var(--surface);color:var(--ink)">
-            <option value="">案件に紐づけない（個人経費）</option>
+            <option value="">経費立て替え分</option>
           </select>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
@@ -2274,7 +2274,7 @@ function renderExpenseTracker() {
   const caseSelect = document.getElementById('exp-case-select');
   if (caseSelect) {
     const cur = caseSelect.value;
-    caseSelect.innerHTML = '<option value="">案件に紐づけない（個人経費）</option>' +
+    caseSelect.innerHTML = '<option value="">経費立て替え分</option>' +
       cases.map(c => `<option value="${c.id}"${cur==c.id?' selected':''}>${c.name||'名称未設定'}</option>`).join('');
   }
   const monthItems = expItems.filter(e => e.month === curMonth);
