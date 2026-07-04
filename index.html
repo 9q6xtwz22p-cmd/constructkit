@@ -208,45 +208,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
     <div class="card-header"><h2>最近の請求</h2><span class="badge badge-orange">請求</span></div>
     <div id="dash-inv-list"><div class="empty-state">まだ請求がありません</div></div>
   </div>
-  <!-- 経費計算ツール -->
-  <div class="card" id="exp-tracker-card">
-    <div class="card-header"><h2>💴 経費管理</h2><span class="badge badge-blue" id="exp-month-label"></span></div>
-    <div class="card-body">
-      <!-- 予算設定 -->
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-        <span style="font-size:13px;color:var(--ink-sub);white-space:nowrap">月予算</span>
-        <div style="position:relative;flex:1">
-          <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--ink-sub)">¥</span>
-          <input type="number" id="exp-budget-input" placeholder="0" min="0"
-            style="width:100%;padding:8px 8px 8px 22px;border:1.5px solid var(--rule);border-radius:9px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"
-            onchange="setBudget()">
-        </div>
-      </div>
-      <!-- 進捗バー -->
-      <div id="exp-summary-area" style="margin-bottom:16px">
-        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--ink-sub);margin-bottom:4px">
-          <span id="exp-spent-label">使用: ¥0</span>
-          <span id="exp-remain-label">残り: ¥0</span>
-        </div>
-        <div style="height:10px;background:var(--rule);border-radius:99px;overflow:hidden">
-          <div id="exp-progress-bar" style="height:100%;width:0%;background:var(--green);border-radius:99px;transition:width .3s"></div>
-        </div>
-      </div>
-      <!-- 経費追加フォーム -->
-      <div style="display:flex;gap:8px;margin-bottom:12px">
-        <input type="text" id="exp-name-input" placeholder="項目名（例: 交通費）"
-          style="flex:1;padding:9px 12px;border:1.5px solid var(--rule);border-radius:9px;font-size:13px;font-family:inherit;outline:none">
-        <div style="position:relative;width:110px">
-          <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--ink-sub)">¥</span>
-          <input type="number" id="exp-amount-input" placeholder="0" min="0"
-            style="width:100%;padding:9px 8px 9px 18px;border:1.5px solid var(--rule);border-radius:9px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box">
-        </div>
-        <button onclick="addExpItem()" class="btn btn-primary" style="padding:9px 14px;white-space:nowrap">＋追加</button>
-      </div>
-      <!-- 経費一覧 -->
-      <div id="exp-list"></div>
-    </div>
-  </div>
 </div>
 
 <!-- ===== 見積 ===== -->
@@ -638,7 +599,47 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
         <input type="text" id="profile-display-name" placeholder="山田 太郎" style="width:100%;padding:10px 12px;border:1.5px solid var(--rule);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box">
       </div>
       <p style="font-size:11px;color:var(--ink-sub);margin:-4px 0 14px;line-height:1.6">経費の支払者名・案件担当として表示されます</p>
-      <button onclick="saveProfile()" class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:10px">保存</button>
+      <button onclick="saveProfile()" class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:20px">保存</button>
+      <!-- 経費管理 -->
+      <div style="border-top:1px solid var(--rule);padding-top:16px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:14px;font-weight:700">💴 今月の経費</div>
+          <span id="exp-month-label" style="font-size:12px;color:var(--ink-sub)"></span>
+        </div>
+        <!-- 予算設定 -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <span style="font-size:13px;color:var(--ink-sub);white-space:nowrap">月予算</span>
+          <div style="position:relative;flex:1">
+            <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--ink-sub)">¥</span>
+            <input type="number" id="exp-budget-input" placeholder="0" min="0"
+              style="width:100%;padding:8px 8px 8px 22px;border:1.5px solid var(--rule);border-radius:9px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"
+              onchange="setBudget()">
+          </div>
+        </div>
+        <!-- 進捗バー -->
+        <div style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--ink-sub);margin-bottom:4px">
+            <span id="exp-spent-label">使用: ¥0</span>
+            <span id="exp-remain-label">残り: ¥0</span>
+          </div>
+          <div style="height:10px;background:var(--rule);border-radius:99px;overflow:hidden">
+            <div id="exp-progress-bar" style="height:100%;width:0%;background:var(--green);border-radius:99px;transition:width .3s"></div>
+          </div>
+        </div>
+        <!-- 経費追加フォーム -->
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <input type="text" id="exp-name-input" placeholder="項目名（例: 交通費）"
+            style="flex:1;padding:9px 12px;border:1.5px solid var(--rule);border-radius:9px;font-size:13px;font-family:inherit;outline:none">
+          <div style="position:relative;width:100px">
+            <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--ink-sub)">¥</span>
+            <input type="number" id="exp-amount-input" placeholder="0" min="0"
+              style="width:100%;padding:9px 8px 9px 18px;border:1.5px solid var(--rule);border-radius:9px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box">
+          </div>
+          <button onclick="addExpItem()" class="btn btn-primary" style="padding:9px 12px;white-space:nowrap">＋</button>
+        </div>
+        <!-- 経費一覧 -->
+        <div id="exp-list"></div>
+      </div>
       <button onclick="logout()" class="btn btn-danger" style="width:100%;justify-content:center">ログアウト</button>
     </div>
   </div>
@@ -1133,7 +1134,7 @@ function navigate(page, el) {
   if(page==='estimate') showEstList();
   if(page==='invoice') showInvList();
   if(page==='clients') showClientList();
-  if(page==='settings') { loadCompany(); renderWorkersList(); updateOrgUI(); loadProfile(); }
+  if(page==='settings') { loadCompany(); renderWorkersList(); updateOrgUI(); loadProfile(); renderExpenseTracker(); }
 }
 
 // ===== ESTIMATE =====
@@ -2122,7 +2123,6 @@ function updateDashboard() {
     :[...invoices].reverse().slice(0,4).map(i=>`<div class="activity-item" onclick="goToInv('${i.id}')"><div class="activity-dot" style="background:${S_COLOR[i.status]}"></div><div class="activity-text"><strong>${i.client||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${i.num} · 期限 ${i.due||'—'}</span></div><div class="activity-right"><div style="font-size:13px;font-weight:700;color:${S_COLOR[i.status]}">¥${commas(i.grand||0)}</div><div style="font-size:11px;color:${S_COLOR[i.status]}">${S_LABEL[i.status]}</div></div></div>`).join('');
   const paid=invoices.filter(i=>i.status==='paid').reduce((s,i)=>s+(i.grand||0),0);
   document.getElementById('dash-inv-total').textContent='¥'+commas(paid);
-  renderExpenseTracker();
 }
 function goToEst(id){const n=document.querySelector('[data-page="estimate"]');navigate('estimate',n);estEditForm(id);}
 function goToInv(id){const n=document.querySelector('[data-page="invoice"]');navigate('invoice',n);invEditForm(id);}
