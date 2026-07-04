@@ -1871,7 +1871,9 @@ function showToast(msg) {
 }
 
 // ===== STORAGE & DASHBOARD =====
+let _persistSyncTimer = null;
 function persist() {
+  // localStorageに即時保存（同デバイスは常に安全）
   localStorage.setItem('ck_estimates',JSON.stringify(estimates));
   localStorage.setItem('ck_invoices',JSON.stringify(invoices));
   localStorage.setItem('ck_customers',JSON.stringify(customers));
@@ -1882,7 +1884,9 @@ function persist() {
   localStorage.setItem('ck_profile',JSON.stringify(userProfile));
   localStorage.setItem('ck_est_counter',estCounter);
   localStorage.setItem('ck_inv_counter',invCounter);
-  syncToSupabase(); // async cloud sync
+  // Supabaseへは2秒のデバウンスで確実に同期（連続変更をまとめて1回のみ）
+  clearTimeout(_persistSyncTimer);
+  _persistSyncTimer = setTimeout(() => syncToSupabase(), 2000);
 }
 function load() {
   try{const e=localStorage.getItem('ck_estimates');if(e)estimates=JSON.parse(e);}catch(e){}
@@ -2483,8 +2487,14 @@ function setBadge(id,count){const el=document.getElementById(id);el.textContent=
 
 window.onload=()=>{
   // Data loading is handled by sb.auth.onAuthStateChange above
-  // (fires immediately with the current session on page load)
 };
+// ページを閉じる直前に未sync分を強制送信
+window.addEventListener('beforeunload', () => {
+  if (_persistSyncTimer) {
+    clearTimeout(_persistSyncTimer);
+    syncToSupabase();
+  }
+});
 </script>
 </body>
 </html>
