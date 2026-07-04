@@ -794,6 +794,10 @@ async function loadFromSupabase() {
           if (c.invCounter) invCounter = c.invCounter;
         }
       });
+      // workersがSupabaseに未登録ならlocalStorageから補完
+      if (!workers.length) {
+        try { const w = localStorage.getItem('ck_workers'); if(w) workers = JSON.parse(w); } catch(e) {}
+      }
     } else if (currentUserOrgs.length === 0) {
       // 初回ログイン: localStorageから移行
       load();
@@ -1487,6 +1491,8 @@ function showNewCaseForm() {
   ['case-name','case-client','case-address','case-notes','case-prime-company','case-order-num'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('case-type-prime').checked=true;
   updateCaseTypeUI();
+  // workersが未ロードならlocalStorageから補完
+  if(!workers.length){try{const w=localStorage.getItem('ck_workers');if(w)workers=JSON.parse(w);}catch(e){}}
   // チーム選択欄を更新（常に表示）
   const teamField=document.getElementById('case-team-field');
   const teamSel=document.getElementById('case-team-select');
