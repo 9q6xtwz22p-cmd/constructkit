@@ -503,6 +503,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       <div id="case-est-list"><div class="empty-state" style="padding:16px;font-size:12px">紐づけられた見積はありません</div></div>
     </div>
     <div class="card">
+      <div class="card-header"><h2>💴 現場経費</h2></div>
+      <div id="case-exp-list" style="padding:0 16px"><div class="empty-state" style="padding:16px 0;font-size:12px">経費が記録されていません</div></div>
+      <div class="totals-box"><div class="total-line"><span class="lbl">経費合計</span><span class="val" id="case-exp-total">¥0</span></div></div>
+    </div>
+    <div class="card">
       <div class="card-header"><h2>現場メモ</h2></div>
       <div class="card-body"><div class="form-field"><textarea id="case-memo" placeholder="進捗・連絡事項など" oninput="saveCaseMemo()"></textarea></div></div>
     </div>
@@ -637,6 +642,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
         <div style="display:flex;gap:8px;margin-bottom:8px">
           <input type="text" id="exp-name-input" placeholder="項目名（例: 交通費）"
             style="flex:1;padding:9px 12px;border:1.5px solid var(--rule);border-radius:9px;font-size:13px;font-family:inherit;outline:none">
+        </div>
+        <div style="margin-bottom:8px">
+          <select id="exp-case-select"
+            style="width:100%;padding:9px 12px;border:1.5px solid var(--rule);border-radius:9px;font-size:13px;font-family:inherit;outline:none;background:var(--surface);color:var(--ink)">
+            <option value="">案件に紐づけない（個人経費）</option>
+          </select>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
           <div style="position:relative;flex:1">
@@ -885,14 +896,24 @@ async function loadFromSupabase() {
       }
     }
 
-    // 各チームの案件を org_data から読んでマージ
+    // 各チームのデータを org_data から読む
     let orgCases = [];
+    let orgWorkers = [];
     for (const m of currentUserOrgs) {
-      const { data: od } = await sb.from('org_data')
-        .select('data_type,data').eq('org_id', m.org_id).eq('data_type', 'cases').maybeSingle();
-      if (od && od.data) {
-        orgCases = orgCases.concat((od.data || []).map(c => ({...c, org_id: m.org_id})));
+      const { data: orgRows } = await sb.from('org_data')
+        .select('data_type,data').eq('org_id', m.org_id)
+        .in('data_type', ['cases', 'workers']);
+      if (orgRows) {
+        orgRows.forEach(od => {
+          if (od.data_type === 'cases') orgCases = orgCases.concat((od.data || []).map(c => ({...c, org_id: m.org_id})));
+          if (od.data_type === 'workers') orgWorkers = orgWorkers.concat(od.data || []);
+        });
       }
+    }
+    // チームに所属している場合はチームのworkers優先、個人workerとマージ
+    if (orgWorkers.length) {
+      const seenW = new Set(orgWorkers.map(w => w.id));
+      workers = [...orgWorkers, ...workers.filter(w => !seenW.has(w.id))];
     }
 
     // 個人案件 + チーム案件を重複なしでマージ
@@ -907,8 +928,15 @@ async function loadFromSupabase() {
   }
 }
 
+let _syncRetryTimer = null;
 async function syncToSupabase() {
   if (!currentUser) return;
+  if (!navigator.onLine) {
+    showSyncError('オフライン中 — 接続後に自動保存します');
+    // オンライン復帰時に再sync
+    window.addEventListener('online', () => syncToSupabase(), { once: true });
+    return;
+  }
   const now = new Date().toISOString();
   try {
     // 個人案件（org_id なし）
@@ -926,18 +954,34 @@ async function syncToSupabase() {
       { user_id: currentUser.id, data_type: 'counters', data: { estCounter, invCounter }, updated_at: now },
     ];
     const { error: pe } = await sb.from('user_data').upsert(personalRows, { onConflict: 'user_id,data_type' });
-    // 各チームの案件を org_data に保存
+    // 各チームの案件・メンバーを org_data に保存
     for (const m of currentUserOrgs) {
       const orgCases = cases.filter(c => c.org_id === m.org_id);
-      await sb.from('org_data').upsert(
+      await sb.from('org_data').upsert([
         { org_id: m.org_id, data_type: 'cases', data: orgCases, updated_by: currentUser.id, updated_at: now },
-        { onConflict: 'org_id,data_type' }
-      );
+        { org_id: m.org_id, data_type: 'workers', data: workers, updated_by: currentUser.id, updated_at: now },
+      ], { onConflict: 'org_id,data_type' });
     }
-    if (!pe) showSyncDone();
+    if (!pe) { showSyncDone(); }
+    else { showSyncError('保存に失敗しました — 再試行中'); scheduleRetry(); }
   } catch (e) {
     console.error('Supabase sync error:', e);
+    showSyncError('保存に失敗しました — 再試行中');
+    scheduleRetry();
   }
+}
+function scheduleRetry() {
+  clearTimeout(_syncRetryTimer);
+  _syncRetryTimer = setTimeout(() => syncToSupabase(), 10000); // 10秒後に再試行
+}
+function showSyncError(msg) {
+  const el = document.getElementById('sync-indicator');
+  if (!el) return;
+  el.textContent = '⚠ ' + msg;
+  el.style.opacity = '1';
+  el.style.color = 'var(--orange,#f59e0b)';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.style.opacity = '0'; }, 5000);
 }
 
 function showSyncDone() {
@@ -1631,6 +1675,7 @@ function showCaseDetail(idx) {
   renderSchedule();
   renderPhotos();
   renderCaseEstimates();
+  renderCaseExpenses();
 }
 async function saveCase() {
   const caseType=document.querySelector('input[name="case-type"]:checked')?.value||'prime';
@@ -1772,6 +1817,26 @@ function applyEstToCase(id) {
 function removeEstFromCase(id) {
   const c=cases[currentCaseIdx];
   c.estIds=(c.estIds||[]).filter(x=>x!==String(id)); persist(); renderCaseEstimates();
+}
+function renderCaseExpenses() {
+  const el = document.getElementById('case-exp-list');
+  const totalEl = document.getElementById('case-exp-total');
+  if (!el) return;
+  const c = cases[currentCaseIdx];
+  if (!c) return;
+  const items = expItems.filter(e => String(e.caseId) === String(c.id));
+  const total = items.reduce((s, e) => s + e.amount, 0);
+  if (totalEl) totalEl.textContent = '¥' + commas(total);
+  if (!items.length) { el.innerHTML = '<div class="empty-state" style="padding:16px 0;font-size:12px">経費が記録されていません</div>'; return; }
+  el.innerHTML = [...items].reverse().map(e => `
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--rule)">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600">${e.name}</div>
+        <div style="font-size:11px;color:var(--ink-sub)">${e.date||''}${e.paidBy ? ' · ' + e.paidBy : ''}</div>
+      </div>
+      <div style="font-size:14px;font-weight:700">¥${commas(e.amount)}</div>
+    </div>
+  `).join('');
 }
 function renderCaseEstimates() {
   const el=document.getElementById('case-est-list');
@@ -2086,27 +2151,21 @@ function captureReceipt() {
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
-  input.capture = 'environment'; // リアカメラ
+  input.capture = 'environment';
   input.onchange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const statusEl = document.getElementById('exp-ocr-status');
     const camBtn = document.getElementById('exp-camera-btn');
-    if (statusEl) statusEl.style.display = 'block';
+    if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = '📷 レシートを読み取り中...'; }
     if (camBtn) { camBtn.disabled = true; camBtn.textContent = '⏳'; }
     try {
-      const worker = await Tesseract.createWorker('jpn+eng', 1, {
-        workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/worker.min.js',
-        langPath: 'https://tessdata.projectnaptha.com/4.0.0',
-        corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@4/tesseract-core.wasm.js',
-        cacheMethod: 'write',
-      });
+      const worker = await Tesseract.createWorker('jpn+eng');
       const { data: { text } } = await worker.recognize(file);
       await worker.terminate();
-      const amount = extractReceiptAmount(text);
-      if (amount) {
-        document.getElementById('exp-amount-input').value = amount;
-        showToast(`¥${commas(amount)} を読み取りました`);
+      const candidates = extractReceiptCandidates(text);
+      if (candidates.length) {
+        showOCRPicker(candidates);
       } else {
         showToast('金額を読み取れませんでした。手入力してください');
       }
@@ -2119,31 +2178,51 @@ function captureReceipt() {
   };
   input.click();
 }
-function extractReceiptAmount(text) {
-  // 合計・小計・TOTAL等の後の金額を優先
-  const totalPatterns = [
-    /(?:合計|御合計|お会計|総合計|ご請求)[^\d]*?([\d,]+)/,
-    /TOTAL[^\d]*?([\d,]+)/i,
-    /(?:小計)[^\d]*?([\d,]+)/,
-  ];
-  for (const p of totalPatterns) {
-    const m = text.match(p);
-    if (m) { const n = parseInt(m[1].replace(/,/g, '')); if (n >= 100) return n; }
-  }
-  // ¥または円が付いた数字を全部抽出して最大値
-  const allAmounts = [];
-  const re = /[¥￥]\s*([\d,]+)|([\d,]+)\s*円/g;
+function extractReceiptCandidates(text) {
+  const results = [];
+  const seen = new Set();
+  const addAmt = (n, label) => {
+    if (n >= 100 && n <= 2000000 && !seen.has(n)) { seen.add(n); results.push({ amount: n, label }); }
+  };
+  // 合計系キーワードの後の数字（最優先）
+  const totalRe = /(?:合計|御合計|お会計|総合計|ご請求額?|TOTAL|Amount)[^\d]*?([\d,]+)/gi;
   let m;
-  while ((m = re.exec(text)) !== null) {
-    const n = parseInt((m[1]||m[2]).replace(/,/g, ''));
-    if (n >= 100 && n <= 1000000) allAmounts.push(n);
+  while ((m = totalRe.exec(text)) !== null) addAmt(parseInt(m[1].replace(/,/g,'')), '合計');
+  // ¥・円付き
+  const yenRe = /[¥￥]\s*([\d,]+)|([\d,]+)\s*円/g;
+  while ((m = yenRe.exec(text)) !== null) addAmt(parseInt((m[1]||m[2]).replace(/,/g,'')), '金額');
+  // 3〜6桁の数字（候補として）
+  [...text.matchAll(/\b(\d{3,6})\b/g)].forEach(m => addAmt(parseInt(m[1]), '数値'));
+  // 合計ラベルを先頭に
+  results.sort((a,b) => (a.label==='合計'?-1:b.label==='合計'?1:b.amount-a.amount));
+  return results.slice(0, 5);
+}
+function showOCRPicker(candidates) {
+  let modal = document.getElementById('ocr-picker-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'ocr-picker-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;display:flex;align-items:flex-end';
+    document.body.appendChild(modal);
   }
-  if (allAmounts.length) return Math.max(...allAmounts);
-  // 数字パターンのみ（3桁以上）
-  const nums = [...text.matchAll(/\b(\d{3,6})\b/g)]
-    .map(m => parseInt(m[1])).filter(n => n >= 100 && n <= 500000);
-  if (nums.length) return Math.max(...nums);
-  return null;
+  modal.innerHTML = `
+    <div style="background:var(--surface);width:100%;border-radius:20px 20px 0 0;padding:20px;max-height:60vh;overflow-y:auto">
+      <div style="font-size:14px;font-weight:700;margin-bottom:14px">読み取った金額を選択</div>
+      ${candidates.map(c => `
+        <button onclick="selectOCRAmount(${c.amount})"
+          style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px 16px;margin-bottom:8px;border:1.5px solid var(--rule);border-radius:12px;background:var(--surface);font-family:inherit;cursor:pointer">
+          <span style="font-size:12px;color:var(--ink-sub)">${c.label}</span>
+          <span style="font-size:16px;font-weight:700">¥${commas(c.amount)}</span>
+        </button>`).join('')}
+      <button onclick="document.getElementById('ocr-picker-modal').style.display='none'"
+        style="width:100%;padding:12px;border:none;background:none;color:var(--ink-sub);font-size:14px;cursor:pointer;margin-top:4px">キャンセル</button>
+    </div>`;
+  modal.style.display = 'flex';
+}
+function selectOCRAmount(amount) {
+  document.getElementById('exp-amount-input').value = amount;
+  document.getElementById('ocr-picker-modal').style.display = 'none';
+  showToast(`¥${commas(amount)} をセットしました`);
 }
 
 // ===== 経費計算ツール =====
@@ -2161,7 +2240,8 @@ function addExpItem() {
   if (!name || amount <= 0) { alert('項目名と金額を入力してください'); return; }
   const now = new Date();
   const paidBy = userProfile.displayName || currentUser?.email || '';
-  expItems.push({ id: Date.now(), name, amount, month: `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`, date: fmtDate(now), paidBy });
+  const caseId = document.getElementById('exp-case-select')?.value || '';
+  expItems.push({ id: Date.now(), name, amount, month: `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`, date: fmtDate(now), paidBy, caseId: caseId || null });
   nameEl.value = ''; amtEl.value = '';
   persist();
   renderExpenseTracker();
@@ -2178,6 +2258,13 @@ function renderExpenseTracker() {
   if (monthLabel) monthLabel.textContent = `${now.getFullYear()}年${now.getMonth()+1}月`;
   const budgetInput = document.getElementById('exp-budget-input');
   if (budgetInput && !budgetInput.matches(':focus')) budgetInput.value = monthBudget || '';
+  // 案件セレクトを更新
+  const caseSelect = document.getElementById('exp-case-select');
+  if (caseSelect) {
+    const cur = caseSelect.value;
+    caseSelect.innerHTML = '<option value="">案件に紐づけない（個人経費）</option>' +
+      cases.map(c => `<option value="${c.id}"${cur==c.id?' selected':''}>${c.name||'名称未設定'}</option>`).join('');
+  }
   const monthItems = expItems.filter(e => e.month === curMonth);
   const spent = monthItems.reduce((s, e) => s + e.amount, 0);
   const remain = monthBudget - spent;
@@ -2192,16 +2279,20 @@ function renderExpenseTracker() {
   const listEl = document.getElementById('exp-list');
   if (!listEl) return;
   if (!monthItems.length) { listEl.innerHTML = '<div class="empty-state" style="padding:12px 0;font-size:13px">今月の経費はまだありません</div>'; return; }
-  listEl.innerHTML = [...monthItems].reverse().map(e => `
+  listEl.innerHTML = [...monthItems].reverse().map(e => {
+    const linkedCase = e.caseId ? cases.find(c => c.id == e.caseId) : null;
+    return `
     <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--rule)">
-      <div style="flex:1">
+      <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:600">${e.name}</div>
-        <div style="font-size:11px;color:var(--ink-sub)">${e.date||''}${e.paidBy ? ' · ' + e.paidBy : ''}</div>
+        <div style="font-size:11px;color:var(--ink-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          ${e.date||''}${e.paidBy ? ' · ' + e.paidBy : ''}${linkedCase ? ' · 📋' + linkedCase.name : ''}
+        </div>
       </div>
       <div style="font-size:14px;font-weight:700;color:var(--ink)">¥${commas(e.amount)}</div>
       <button onclick="deleteExpItem(${e.id})" style="background:none;border:none;color:var(--ink-sub);font-size:16px;cursor:pointer;padding:2px 4px;line-height:1">×</button>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 function updateDashboard() {
   document.getElementById('dash-est-count').textContent=estimates.length;
