@@ -557,7 +557,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       <div style="border-top:1px solid var(--rule);padding-top:16px">
         <div style="font-size:12px;font-weight:700;margin-bottom:10px">メンバーを追加</div>
         <div class="form-field"><label>名前</label><input type="text" id="worker-name-input" placeholder="山田 太郎"></div>
-        <div class="form-field"><label>メールアドレス</label><input type="email" id="worker-email-input" placeholder="yamada@example.com"></div>
         <div class="form-field"><label>所属会社</label><input type="text" id="worker-company-input" placeholder="株式会社まとめる現場"></div>
         <button onclick="addWorker()" class="btn btn-primary" style="width:100%;justify-content:center">＋ メンバーを追加</button>
       </div>
@@ -1063,7 +1062,7 @@ function navigate(page, el) {
   if(page==='estimate') showEstList();
   if(page==='invoice') showInvList();
   if(page==='clients') showClientList();
-  if(page==='settings') loadCompany();
+  if(page==='settings') { loadCompany(); renderWorkersList(); updateOrgUI(); }
 }
 
 // ===== ESTIMATE =====
@@ -1509,8 +1508,8 @@ function showNewCaseForm() {
   const workersField=document.getElementById('case-workers-field');
   const workersBox=document.getElementById('case-workers-checkboxes');
   if(workersField && workersBox){
+    workersField.style.display='block';
     if(workers.length>0){
-      workersField.style.display='block';
       workersBox.innerHTML=workers.map(w=>`
         <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px;border-radius:8px;border:1px solid var(--rule)">
           <input type="checkbox" value="${w.id}" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent)">
@@ -1521,7 +1520,7 @@ function showNewCaseForm() {
         </label>
       `).join('');
     } else {
-      workersField.style.display='none';
+      workersBox.innerHTML='<div style="font-size:12px;color:var(--ink-sub)">メンバーが未登録です。<button onclick="navigate(\'settings\',document.querySelector(\'[data-page=settings]\'))" style="background:none;border:none;color:var(--accent);font-size:12px;padding:0;cursor:pointer;text-decoration:underline">設定から登録 →</button></div>';
     }
   }
 }
@@ -1751,13 +1750,11 @@ function persistTemplates(){localStorage.setItem('ck_templates',JSON.stringify(t
 // ===== WORKERS =====
 function addWorker() {
   const name = document.getElementById('worker-name-input').value.trim();
-  const email = document.getElementById('worker-email-input').value.trim();
   const company = document.getElementById('worker-company-input').value.trim();
   if (!name) { alert('名前を入力してください'); return; }
-  workers.push({ id: Date.now(), name, email, company });
+  workers.push({ id: Date.now(), name, company });
   persist();
   document.getElementById('worker-name-input').value = '';
-  document.getElementById('worker-email-input').value = '';
   document.getElementById('worker-company-input').value = '';
   renderWorkersList();
 }
