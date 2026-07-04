@@ -457,7 +457,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
         <div style="font-size:12px;color:var(--ink-sub);display:none" id="detail-case-prime">—</div>
         <div style="font-size:12px;color:var(--ink-sub)" id="detail-case-address">—</div>
         <div style="font-size:12px;color:var(--ink-sub)" id="detail-case-period">—</div>
-        <div id="detail-case-assignees" style="display:none;margin-top:4px"></div>
+        <div id="detail-case-assignees" style="margin-top:4px"></div>
+        <div id="detail-case-assignees-edit" style="display:none;margin-top:8px">
+          <div id="detail-workers-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+          <button onclick="saveAssignees()" class="btn btn-primary" style="width:100%;justify-content:center;font-size:12px;padding:8px">保存</button>
+        </div>
       </div>
     </div>
     <div class="card">
@@ -1539,17 +1543,8 @@ function showCaseDetail(idx) {
   if(isSub&&c.primeCompany){primeEl.style.display='block';primeEl.textContent='🏢 元請け: '+c.primeCompany+(c.orderNum?' / 発注No.'+c.orderNum:'');}
   else{primeEl.style.display='none';}
   // 担当メンバー表示
-  const assigneesEl=document.getElementById('detail-case-assignees');
-  const assignedWorkers=(c.assignees||[]).map(id=>workers.find(w=>w.id===id)).filter(Boolean);
-  if(assignedWorkers.length>0){
-    assigneesEl.style.display='flex';
-    assigneesEl.style.flexWrap='wrap';
-    assigneesEl.style.gap='6px';
-    assigneesEl.innerHTML='<span style="font-size:11px;color:var(--ink-sub);width:100%;margin-bottom:2px">👷 担当メンバー</span>'+
-      assignedWorkers.map(w=>`<span style="font-size:12px;background:var(--accent-soft);color:var(--accent);padding:3px 10px;border-radius:20px;font-weight:700">${w.name}</span>`).join('');
-  } else {
-    assigneesEl.style.display='none';
-  }
+  renderDetailAssignees();
+  document.getElementById('detail-case-assignees-edit').style.display='none';
   document.getElementById('case-memo').value=c.memo||'';
   document.getElementById('case-items').innerHTML='';
   (c.items||[]).forEach(item=>caseAddItem(item.name,item.unit,item.qty,item.price));
@@ -1742,6 +1737,54 @@ function loadTemplates(){try{const t=localStorage.getItem('ck_templates');if(t)t
 function persistTemplates(){localStorage.setItem('ck_templates',JSON.stringify(templates));}
 
 // ===== WORKERS =====
+function renderDetailAssignees() {
+  const c=cases[currentCaseIdx]; if(!c) return;
+  const el=document.getElementById('detail-case-assignees'); if(!el) return;
+  const assigned=(c.assignees||[]).map(id=>workers.find(w=>w.id===id)).filter(Boolean);
+  el.innerHTML='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
+    +'<span style="font-size:11px;color:var(--ink-sub)">👷 担当</span>'
+    +(assigned.length
+      ? assigned.map(w=>`<span style="font-size:12px;background:var(--accent-soft);color:var(--accent);padding:3px 10px;border-radius:20px;font-weight:700">${w.name}</span>`).join('')
+      : '<span style="font-size:12px;color:var(--ink-sub)">未設定</span>')
+    +`<button onclick="openAssigneesEdit()" style="background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;margin-left:4px;padding:2px 6px;border-radius:6px;border:1px solid var(--accent)">編集</button>`
+    +'</div>';
+}
+function openAssigneesEdit() {
+  const c=cases[currentCaseIdx]; if(!c) return;
+  const editEl=document.getElementById('detail-case-assignees-edit');
+  const listEl=document.getElementById('detail-workers-list');
+  editEl.style.display='block';
+  if(!workers.length){try{const w=localStorage.getItem('ck_workers');if(w)workers=JSON.parse(w);}catch(e){}}
+  listEl.innerHTML=workers.map(w=>{
+    const sel=(c.assignees||[]).includes(w.id);
+    return `<div id="dtog-${w.id}" onclick="toggleDetailWorker(${w.id})" data-sel="${sel?1:0}"
+      style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:10px 12px;border-radius:10px;border:1.5px solid ${sel?'var(--accent)':'var(--rule)'};background:${sel?'var(--accent-soft)':''};user-select:none">
+      <div id="dchk-${w.id}" style="width:22px;height:22px;border-radius:6px;border:2px solid ${sel?'var(--accent)':'var(--rule)'};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;background:${sel?'var(--accent)':''}">
+        ${sel?'✓':''}
+      </div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:700">${w.name}</div>${w.company?`<div style="font-size:11px;color:var(--ink-sub)">${w.company}</div>`:''}</div>
+    </div>`;
+  }).join('');
+}
+function toggleDetailWorker(id) {
+  const tog=document.getElementById('dtog-'+id);
+  const chk=document.getElementById('dchk-'+id);
+  if(!tog||!chk) return;
+  const sel=tog.dataset.sel==='1';
+  tog.dataset.sel=sel?'0':'1';
+  tog.style.borderColor=sel?'var(--rule)':'var(--accent)';
+  tog.style.background=sel?'':'var(--accent-soft)';
+  chk.style.background=sel?'':'var(--accent)';
+  chk.style.borderColor=sel?'var(--rule)':'var(--accent)';
+  chk.textContent=sel?'':'✓';
+}
+function saveAssignees() {
+  const c=cases[currentCaseIdx]; if(!c) return;
+  c.assignees=workers.filter(w=>{const el=document.getElementById('dtog-'+w.id);return el&&el.dataset.sel==='1';}).map(w=>w.id);
+  persist();
+  document.getElementById('detail-case-assignees-edit').style.display='none';
+  renderDetailAssignees();
+}
 function renderCaseWorkerToggles(company) {
   const workersBox=document.getElementById('case-workers-checkboxes');
   if(!workersBox) return;
