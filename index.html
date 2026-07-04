@@ -429,7 +429,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
         <div class="form-field" id="case-team-field" style="display:none">
           <label>共有チーム</label>
           <select id="case-team-select">
-            <option value="">個人（共有しない）</option>
+            <option value="">個人設定（個人事業主）</option>
           </select>
           <div id="case-team-hint" style="display:none;margin-top:6px;font-size:12px;color:var(--ink-sub)">
             チームがありません。<button onclick="showTab('m-settings')" style="background:none;border:none;color:var(--accent);font-size:12px;padding:0;cursor:pointer;text-decoration:underline">設定から作成 →</button>
@@ -1473,12 +1473,12 @@ function showNewCaseForm() {
   const teamHint=document.getElementById('case-team-hint');
   if(teamSel){
     if(currentUserOrgs.length>0){
-      teamSel.innerHTML='<option value="">個人（共有しない）</option>'+
+      teamSel.innerHTML='<option value="">個人設定（個人事業主）</option>'+
         currentUserOrgs.map(m=>`<option value="${m.org_id}">${m.organizations.name}</option>`).join('');
       teamSel.disabled=false;
       if(teamHint) teamHint.style.display='none';
     } else {
-      teamSel.innerHTML='<option value="">個人（共有しない）</option>';
+      teamSel.innerHTML='<option value="">個人設定（個人事業主）</option>';
       teamSel.disabled=true;
       if(teamHint) teamHint.style.display='block';
     }
