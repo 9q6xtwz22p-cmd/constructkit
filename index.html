@@ -614,11 +614,18 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       <button onclick="saveProfile()" class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:20px">保存</button>
       <!-- 経費管理 -->
       <div style="border-top:1px solid var(--rule);padding-top:16px;margin-bottom:16px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <div style="font-size:14px;font-weight:700">💴 今月の経費</div>
-          <span id="exp-month-label" style="font-size:12px;color:var(--ink-sub)"></span>
+        <div style="font-size:14px;font-weight:700;margin-bottom:12px">💴 経費管理</div>
+        <!-- 絞り込みフィルター -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+          <select id="exp-filter-month" onchange="renderExpenseTracker()"
+            style="padding:8px 10px;border:1.5px solid var(--rule);border-radius:9px;font-size:12px;font-family:inherit;outline:none;background:var(--surface);color:var(--ink)">
+          </select>
+          <select id="exp-filter-case" onchange="renderExpenseTracker()"
+            style="padding:8px 10px;border:1.5px solid var(--rule);border-radius:9px;font-size:12px;font-family:inherit;outline:none;background:var(--surface);color:var(--ink)">
+            <option value="">すべての現場</option>
+          </select>
         </div>
-        <!-- 予算設定 -->
+        <!-- 予算設定（月フィルターが「今月」のときのみ有効） -->
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
           <span style="font-size:13px;color:var(--ink-sub);white-space:nowrap">月予算</span>
           <div style="position:relative;flex:1">
@@ -2270,39 +2277,74 @@ function deleteExpItem(id) {
 function renderExpenseTracker() {
   const now = new Date();
   const curMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  const monthLabel = document.getElementById('exp-month-label');
-  if (monthLabel) monthLabel.textContent = `${now.getFullYear()}年${now.getMonth()+1}月`;
+
+  // 月セレクトを生成（過去12ヶ月 + 今月）
+  const monthSel = document.getElementById('exp-filter-month');
+  if (monthSel) {
+    if (!monthSel.options.length) {
+      const opts = [];
+      for (let i = 0; i < 12; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        const label = `${d.getFullYear()}年${d.getMonth()+1}月${i===0?' (今月)':''}`;
+        opts.push(`<option value="${val}">${label}</option>`);
+      }
+      monthSel.innerHTML = opts.join('');
+    }
+  }
+  const selectedMonth = monthSel?.value || curMonth;
+
+  // 案件フィルターセレクトを更新
+  const caseSel = document.getElementById('exp-filter-case');
+  if (caseSel) {
+    const cur = caseSel.value;
+    caseSel.innerHTML = '<option value="">すべての現場</option>' +
+      '<option value="__none__">経費立て替え分のみ</option>' +
+      cases.map(c => `<option value="${c.id}"${cur==c.id?' selected':''}>${c.name||'名称未設定'}</option>`).join('');
+    if (cur) caseSel.value = cur;
+  }
+  const selectedCase = caseSel?.value || '';
+
+  // 入力フォームの案件セレクトも更新
+  const inputCaseSel = document.getElementById('exp-case-select');
+  if (inputCaseSel) {
+    const cur2 = inputCaseSel.value;
+    inputCaseSel.innerHTML = '<option value="">経費立て替え分</option>' +
+      cases.map(c => `<option value="${c.id}"${cur2==c.id?' selected':''}>${c.name||'名称未設定'}</option>`).join('');
+    if (cur2) inputCaseSel.value = cur2;
+  }
+
+  // フィルター適用
+  let filtered = expItems.filter(e => e.month === selectedMonth);
+  if (selectedCase === '__none__') filtered = filtered.filter(e => !e.caseId);
+  else if (selectedCase) filtered = filtered.filter(e => String(e.caseId) === String(selectedCase));
+
+  // 予算・進捗（今月・全現場フィルター時のみ表示）
   const budgetInput = document.getElementById('exp-budget-input');
   if (budgetInput && !budgetInput.matches(':focus')) budgetInput.value = monthBudget || '';
-  // 案件セレクトを更新
-  const caseSelect = document.getElementById('exp-case-select');
-  if (caseSelect) {
-    const cur = caseSelect.value;
-    caseSelect.innerHTML = '<option value="">経費立て替え分</option>' +
-      cases.map(c => `<option value="${c.id}"${cur==c.id?' selected':''}>${c.name||'名称未設定'}</option>`).join('');
-  }
-  const monthItems = expItems.filter(e => e.month === curMonth);
-  const spent = monthItems.reduce((s, e) => s + e.amount, 0);
+  const spent = filtered.reduce((s, e) => s + e.amount, 0);
+  const isThisMonth = selectedMonth === curMonth && !selectedCase;
   const remain = monthBudget - spent;
-  const pct = monthBudget > 0 ? Math.min(100, Math.round(spent / monthBudget * 100)) : 0;
+  const pct = (isThisMonth && monthBudget > 0) ? Math.min(100, Math.round(spent / monthBudget * 100)) : 0;
   const barColor = pct >= 100 ? 'var(--red,#ef4444)' : pct >= 80 ? 'var(--orange,#f59e0b)' : 'var(--green)';
   const spentEl = document.getElementById('exp-spent-label');
   const remainEl = document.getElementById('exp-remain-label');
   const barEl = document.getElementById('exp-progress-bar');
-  if (spentEl) spentEl.textContent = `使用: ¥${commas(spent)}`;
-  if (remainEl) remainEl.textContent = monthBudget > 0 ? (remain >= 0 ? `残り: ¥${commas(remain)}` : `超過: ¥${commas(Math.abs(remain))}`) : '予算未設定';
+  if (spentEl) spentEl.textContent = `合計: ¥${commas(spent)}`;
+  if (remainEl) remainEl.textContent = (isThisMonth && monthBudget > 0) ? (remain >= 0 ? `残り: ¥${commas(remain)}` : `超過: ¥${commas(Math.abs(remain))}`) : '';
   if (barEl) { barEl.style.width = pct + '%'; barEl.style.background = barColor; }
+
   const listEl = document.getElementById('exp-list');
   if (!listEl) return;
-  if (!monthItems.length) { listEl.innerHTML = '<div class="empty-state" style="padding:12px 0;font-size:13px">今月の経費はまだありません</div>'; return; }
-  listEl.innerHTML = [...monthItems].reverse().map(e => {
+  if (!filtered.length) { listEl.innerHTML = '<div class="empty-state" style="padding:12px 0;font-size:13px">経費がありません</div>'; return; }
+  listEl.innerHTML = [...filtered].reverse().map(e => {
     const linkedCase = e.caseId ? cases.find(c => c.id == e.caseId) : null;
     return `
     <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--rule)">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:600">${e.name}</div>
         <div style="font-size:11px;color:var(--ink-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-          ${e.date||''}${e.paidBy ? ' · ' + e.paidBy : ''}${linkedCase ? ' · 📋' + linkedCase.name : ''}
+          ${e.date||''}${e.paidBy ? ' · ' + e.paidBy : ''}${linkedCase ? ' · 📋' + linkedCase.name : ' · 立替'}
         </div>
       </div>
       <div style="font-size:14px;font-weight:700;color:var(--ink)">¥${commas(e.amount)}</div>
