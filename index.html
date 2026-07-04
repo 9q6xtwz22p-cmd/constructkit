@@ -2159,13 +2159,23 @@ function captureReceipt() {
     if (!file) return;
     const statusEl = document.getElementById('exp-ocr-status');
     const camBtn = document.getElementById('exp-camera-btn');
-    if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = '📷 レシートを読み取り中...'; }
+    const setStatus = (msg) => { if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = msg; } };
+    const clearStatus = () => { if (statusEl) statusEl.style.display = 'none'; };
+    setStatus('📷 モデル読み込み中...');
     if (camBtn) { camBtn.disabled = true; camBtn.textContent = '⏳'; }
     try {
-      const worker = await Tesseract.createWorker('jpn+eng');
+      // engのみ（数字・¥は英数字モデルで十分、jpnは重くてモバイルでタイムアウトしやすい）
+      const worker = await Tesseract.createWorker('eng', 1, {
+        workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/worker.min.js',
+        corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@4/tesseract-core-simd-lstm.wasm.js',
+        langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+      });
+      setStatus('📷 読み取り中...');
       const { data: { text } } = await worker.recognize(file);
       await worker.terminate();
+      console.log('[OCR text]', text);
       const candidates = extractReceiptCandidates(text);
+      clearStatus();
       if (candidates.length) {
         showOCRPicker(candidates);
       } else {
@@ -2173,9 +2183,9 @@ function captureReceipt() {
       }
     } catch(err) {
       console.error('OCR error:', err);
-      showToast('読み取りに失敗しました。手入力してください');
+      clearStatus();
+      showToast('読み取りに失敗しました（' + (err.message||'不明なエラー') + '）');
     }
-    if (statusEl) statusEl.style.display = 'none';
     if (camBtn) { camBtn.disabled = false; camBtn.textContent = '📷'; }
   };
   input.click();
