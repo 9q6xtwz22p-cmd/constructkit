@@ -861,16 +861,20 @@ async function loadFromSupabase() {
 
     // 個人データ（見積・請求・顧客・個人案件・カウンター）を user_data から読む
     const { data: personalData, error } = await sb.from('user_data')
-      .select('data_type,data').eq('user_id', currentUser.id);
+      .select('data_type,data,updated_at').eq('user_id', currentUser.id);
     if (error) throw error;
 
-    // ローカルとSupabaseのタイムスタンプを比較
+    // ローカルとSupabaseのタイムスタンプを比較して新しい方を使う
     const localTs = parseInt(localStorage.getItem('ck_local_ts') || '0');
-    const supabaseTs = personalData && personalData.length
-      ? Math.max(...personalData.map(r => new Date(r.updated_at||0).getTime()))
-      : 0;
+    const supabaseTimes = (personalData || []).map(r => {
+      const t = new Date(r.updated_at || 0).getTime();
+      return isNaN(t) ? 0 : t;
+    });
+    const supabaseTs = supabaseTimes.length ? Math.max(...supabaseTimes) : 0;
+    console.log('[CK] localTs:', localTs, 'supabaseTs:', supabaseTs, 'diff:', localTs - supabaseTs);
     // ローカルが新しい（500ms以上差がある）場合はローカルを使ってSupabaseに上書き
     if (localTs > supabaseTs + 500) {
+      console.log('[CK] ローカルデータが新しい → ローカル優先でSupabaseに書き込み');
       load();
       await syncToSupabase();
       return;
