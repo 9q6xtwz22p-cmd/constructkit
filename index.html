@@ -864,6 +864,18 @@ async function loadFromSupabase() {
       .select('data_type,data').eq('user_id', currentUser.id);
     if (error) throw error;
 
+    // ローカルとSupabaseのタイムスタンプを比較
+    const localTs = parseInt(localStorage.getItem('ck_local_ts') || '0');
+    const supabaseTs = personalData && personalData.length
+      ? Math.max(...personalData.map(r => new Date(r.updated_at||0).getTime()))
+      : 0;
+    // ローカルが新しい（500ms以上差がある）場合はローカルを使ってSupabaseに上書き
+    if (localTs > supabaseTs + 500) {
+      load();
+      await syncToSupabase();
+      return;
+    }
+
     let personalCases = [];
     if (personalData && personalData.length) {
       personalData.forEach(row => {
@@ -1880,7 +1892,7 @@ function showToast(msg) {
 // ===== STORAGE & DASHBOARD =====
 let _persistSyncTimer = null;
 function persist() {
-  // localStorageに即時保存（同デバイスは常に安全）
+  const ts = Date.now();
   localStorage.setItem('ck_estimates',JSON.stringify(estimates));
   localStorage.setItem('ck_invoices',JSON.stringify(invoices));
   localStorage.setItem('ck_customers',JSON.stringify(customers));
@@ -1891,9 +1903,9 @@ function persist() {
   localStorage.setItem('ck_profile',JSON.stringify(userProfile));
   localStorage.setItem('ck_est_counter',estCounter);
   localStorage.setItem('ck_inv_counter',invCounter);
-  // Supabaseへは2秒のデバウンスで確実に同期（連続変更をまとめて1回のみ）
+  localStorage.setItem('ck_local_ts', ts); // ローカルの最終更新タイムスタンプ
   clearTimeout(_persistSyncTimer);
-  _persistSyncTimer = setTimeout(() => syncToSupabase(), 2000);
+  _persistSyncTimer = setTimeout(() => syncToSupabase(), 500); // 2秒→0.5秒に短縮
 }
 function load() {
   try{const e=localStorage.getItem('ck_estimates');if(e)estimates=JSON.parse(e);}catch(e){}
