@@ -1212,7 +1212,6 @@ const commas = n => Math.round(n).toLocaleString('ja-JP');
 const fmtDate = d => d.toISOString().split('T')[0];
 const units = ['式','m²','m','箇所','個','本','枚','回','人工','kg','L'];
 const unitOpts = sel => units.map(u => `<option${u===sel?' selected':''}>${u}</option>`).join('');
-const pageTitles = {dashboard:'ダッシュボード',estimate:'見積',invoice:'請求',cases:'案件管理',clients:'顧客管理',settings:'設定'};
 const S_COLOR = {draft:'var(--ink-sub)',sent:'var(--orange)',paid:'var(--green)',overdue:'var(--red)'};
 const S_LABEL = {draft:'下書き',sent:'送付済み',paid:'入金済み',overdue:'期限超過'};
 const S_BADGE = {draft:'badge-gray',sent:'badge-orange',paid:'badge-green',overdue:'badge-red'};
@@ -1231,7 +1230,6 @@ function navigate(page, el) {
   document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   if(el) el.classList.add('active');
-  document.getElementById('page-title').textContent = pageTitles[page]||page;
   document.getElementById('topbar-actions').innerHTML = '';
   if(page==='dashboard') updateDashboard();
   if(page==='cases') showCasesList();
