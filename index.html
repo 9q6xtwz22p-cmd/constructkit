@@ -156,6 +156,19 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 .photo-add { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; font-size:11px; color:var(--ink-sub); font-weight:600; cursor:pointer; border:2px dashed var(--rule); }
 .photo-add:active { background:var(--accent-soft); border-color:var(--accent); }
 .photo-cat-tabs { display:flex; gap:6px; padding:10px 16px; border-bottom:1px solid var(--rule); background:#fafafa; }
+/* ===== WHITEBOARD ===== */
+.wb-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.wb-grid { display:grid; min-width:480px; border-radius:0 0 var(--radius) var(--radius); }
+.wb-head { display:contents; }
+.wb-head .wb-cell { background:var(--bg); font-size:10px; font-weight:700; color:var(--ink-sub); text-align:center; padding:6px 4px; position:sticky; top:0; }
+.wb-head .wb-cell.today { background:var(--accent-soft); color:var(--accent); }
+.wb-row { display:contents; }
+.wb-name { font-size:11px; font-weight:700; padding:8px 10px; background:var(--surface); border-bottom:1px solid var(--rule); display:flex; align-items:center; position:sticky; left:0; z-index:1; }
+.wb-day { padding:4px; background:var(--surface); border-bottom:1px solid var(--rule); border-left:1px solid var(--rule); }
+.wb-day.today { background:#f8f9ff; }
+.wb-chip { font-size:10px; font-weight:700; border-radius:6px; padding:3px 6px; text-align:center; line-height:1.3; }
+.wb-nav { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid var(--rule); }
+.wb-nav-title { font-size:13px; font-weight:700; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -206,6 +219,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
     <div class="stat-card"><div class="stat-label">見積</div><div class="stat-value" style="color:var(--accent)" id="dash-est-count">0</div><div class="stat-sub">件</div></div>
     <div class="stat-card"><div class="stat-label">未払い</div><div class="stat-value" style="color:var(--orange)" id="dash-inv-unpaid">0</div><div class="stat-sub">件</div></div>
     <div class="stat-card"><div class="stat-label">入金済み</div><div class="stat-value" style="color:var(--green);font-size:14px" id="dash-inv-total">¥0</div><div class="stat-sub">合計</div></div>
+  </div>
+  <div class="card" id="wb-card">
+    <div class="card-header"><h2>📋 今週の配置表</h2></div>
+    <div class="wb-nav">
+      <button class="btn-sm" onclick="wbPrevWeek()">← 前週</button>
+      <span class="wb-nav-title" id="wb-week-label">—</span>
+      <button class="btn-sm" onclick="wbNextWeek()">次週 →</button>
+    </div>
+    <div class="wb-wrap"><div class="wb-grid" id="wb-grid"></div></div>
   </div>
   <div class="card">
     <div class="card-header"><h2>最近の見積</h2><span class="badge badge-blue">見積</span></div>
@@ -2368,6 +2390,82 @@ function renderExpenseTracker() {
     </div>`;
   }).join('');
 }
+// ===== WHITEBOARD =====
+let wbWeekOffset = 0;
+const WB_COLORS = [
+  ['#4f7cff','#eef1ff'],['#22c55e','#dcfce7'],['#f59e0b','#fef3c7'],
+  ['#ef4444','#fef2f2'],['#8b5cf6','#ede9fe'],['#06b6d4','#cffafe'],
+  ['#ec4899','#fce7f3'],['#f97316','#ffedd5']
+];
+function wbPrevWeek() { wbWeekOffset--; renderWhiteboard(); }
+function wbNextWeek() { wbWeekOffset++; renderWhiteboard(); }
+function renderWhiteboard() {
+  const grid = document.getElementById('wb-grid');
+  const label = document.getElementById('wb-week-label');
+  if (!grid) return;
+  // 今週の月曜日を計算
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayDay = today.getDay(); // 0=日
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - (todayDay === 0 ? 6 : todayDay - 1) + wbWeekOffset * 7);
+  const days = Array.from({length:7}, (_,i) => { const d=new Date(monday); d.setDate(monday.getDate()+i); return d; });
+  // ラベル更新
+  const m1 = days[0], m7 = days[6];
+  label.textContent = `${m1.getMonth()+1}/${m1.getDate()}(月) 〜 ${m7.getMonth()+1}/${m7.getDate()}(日)`;
+  if (wbWeekOffset === 0) label.textContent = '今週 ' + label.textContent;
+  // 案件カラーマップ
+  const caseColorMap = {};
+  cases.forEach((c,i) => { caseColorMap[c.id] = WB_COLORS[i % WB_COLORS.length]; });
+  // グリッドの列数 = メンバー名列 + 7日
+  const cols = 8;
+  grid.style.gridTemplateColumns = '72px repeat(7, 1fr)';
+  if (!workers.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;padding:16px;text-align:center;font-size:12px;color:var(--ink-sub)">メンバーを登録すると配置表が使えます</div>';
+    return;
+  }
+  const DAY_NAMES = ['月','火','水','木','金','土','日'];
+  // ヘッダー行
+  let html = '<div class="wb-name" style="font-size:10px;color:var(--ink-sub)">メンバー</div>';
+  days.forEach((d,i) => {
+    const isToday = d.getTime() === today.getTime();
+    const isSat = i === 5, isSun = i === 6;
+    const color = isToday ? 'color:var(--accent)' : isSat ? 'color:#3b82f6' : isSun ? 'color:var(--red)' : '';
+    html += `<div class="wb-cell" style="${color};text-align:center;font-size:10px;font-weight:700;padding:6px 2px;background:${isToday?'var(--accent-soft)':'var(--bg)'};border-left:1px solid var(--rule)">${DAY_NAMES[i]}<br><span style="font-size:11px">${d.getMonth()+1}/${d.getDate()}</span></div>`;
+  });
+  // メンバー行
+  workers.forEach(w => {
+    html += `<div class="wb-name">${w.name}</div>`;
+    days.forEach((d,i) => {
+      const isToday = d.getTime() === today.getTime();
+      // この日にアサインされている案件を探す
+      const assigned = cases.filter(c => {
+        if (!c.assignees || !c.assignees.includes(w.id)) return false;
+        if (!c.start && !c.end) return false;
+        const cs = c.start ? new Date(c.start) : null;
+        const ce = c.end ? new Date(c.end) : null;
+        if (cs) cs.setHours(0,0,0,0);
+        if (ce) ce.setHours(0,0,0,0);
+        if (cs && ce) return d >= cs && d <= ce;
+        if (cs) return d >= cs;
+        if (ce) return d <= ce;
+        return false;
+      });
+      const bg = isToday ? '#f8f9ff' : 'var(--surface)';
+      if (!assigned.length) {
+        html += `<div class="wb-day" style="background:${bg};min-height:36px"></div>`;
+      } else {
+        const chips = assigned.map(c => {
+          const [fg,cbg] = caseColorMap[c.id] || ['#4f7cff','#eef1ff'];
+          const short = c.name.length > 6 ? c.name.slice(0,5)+'…' : c.name;
+          return `<div class="wb-chip" style="background:${cbg};color:${fg}">${short}</div>`;
+        }).join('');
+        html += `<div class="wb-day" style="background:${bg};display:flex;flex-direction:column;gap:2px;padding:3px">${chips}</div>`;
+      }
+    });
+  });
+  grid.innerHTML = html;
+}
+
 function updateDashboard() {
   document.getElementById('dash-est-count').textContent=estimates.length;
   document.getElementById('dash-inv-unpaid').textContent=invoices.filter(i=>i.status!=='paid').length;
@@ -2377,6 +2475,7 @@ function updateDashboard() {
     :[...invoices].reverse().slice(0,4).map(i=>`<div class="activity-item" onclick="goToInv('${i.id}')"><div class="activity-dot" style="background:${S_COLOR[i.status]}"></div><div class="activity-text"><strong>${i.client||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${i.num} · 期限 ${i.due||'—'}</span></div><div class="activity-right"><div style="font-size:13px;font-weight:700;color:${S_COLOR[i.status]}">¥${commas(i.grand||0)}</div><div style="font-size:11px;color:${S_COLOR[i.status]}">${S_LABEL[i.status]}</div></div></div>`).join('');
   const paid=invoices.filter(i=>i.status==='paid').reduce((s,i)=>s+(i.grand||0),0);
   document.getElementById('dash-inv-total').textContent='¥'+commas(paid);
+  renderWhiteboard();
 }
 function goToEst(id){const n=document.querySelector('[data-page="estimate"]');navigate('estimate',n);estEditForm(id);}
 function goToInv(id){const n=document.querySelector('[data-page="invoice"]');navigate('invoice',n);invEditForm(id);}
