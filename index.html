@@ -215,6 +215,30 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 
 <!-- ===== DASHBOARD ===== -->
 <div class="page active" id="page-dashboard">
+  <!-- 今月サマリー -->
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-header"><h2>📊 今月の経営サマリー</h2><span id="dash-month-label" style="font-size:11px;color:var(--ink-sub)"></span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule)">
+      <div style="background:var(--surface);padding:14px 16px">
+        <div style="font-size:10px;font-weight:700;color:var(--ink-sub);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">今月売上（入金済）</div>
+        <div style="font-size:20px;font-weight:800;color:var(--green)" id="dash-month-paid">¥0</div>
+      </div>
+      <div style="background:var(--surface);padding:14px 16px">
+        <div style="font-size:10px;font-weight:700;color:var(--ink-sub);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">今月粗利</div>
+        <div style="font-size:20px;font-weight:800;color:var(--accent)" id="dash-month-profit">¥0</div>
+      </div>
+      <div style="background:var(--surface);padding:14px 16px">
+        <div style="font-size:10px;font-weight:700;color:var(--ink-sub);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">未払い請求</div>
+        <div style="font-size:20px;font-weight:800;color:var(--orange)" id="dash-month-unpaid">¥0</div>
+        <div style="font-size:10px;color:var(--ink-sub)" id="dash-month-unpaid-count"></div>
+      </div>
+      <div style="background:var(--surface);padding:14px 16px">
+        <div style="font-size:10px;font-weight:700;color:var(--ink-sub);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">進行中現場</div>
+        <div style="font-size:20px;font-weight:800;color:var(--accent)" id="dash-active-cases">0</div>
+        <div style="font-size:10px;color:var(--ink-sub)" id="dash-overdue-label"></div>
+      </div>
+    </div>
+  </div>
   <div class="stat-row">
     <div class="stat-card"><div class="stat-label">見積</div><div class="stat-value" style="color:var(--accent)" id="dash-est-count">0</div><div class="stat-sub">件</div></div>
     <div class="stat-card"><div class="stat-label">未払い</div><div class="stat-value" style="color:var(--orange)" id="dash-inv-unpaid">0</div><div class="stat-sub">件</div></div>
@@ -512,10 +536,16 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
     </div>
     <div class="card">
       <div class="card-header"><h2>現場写真</h2></div>
-      <div class="photo-cat-tabs">
+      <div class="photo-cat-tabs" id="photo-cat-tabs" style="flex-wrap:wrap">
         <button class="btn-sm" onclick="triggerPhoto('before')">📷 着工前</button>
         <button class="btn-sm" onclick="triggerPhoto('during')">📷 施工中</button>
         <button class="btn-sm" onclick="triggerPhoto('after')">📷 完工</button>
+        <button class="btn-sm" id="photo-cat-add-btn" onclick="togglePhotoCatInput()" style="color:var(--accent);border-color:var(--accent)">＋ カテゴリ</button>
+      </div>
+      <div id="photo-cat-input-row" style="display:none;padding:8px 16px;border-bottom:1px solid var(--rule);background:#fafafa;display:none;gap:8px;align-items:center">
+        <input type="text" id="photo-cat-name" placeholder="カテゴリ名（例: 検査写真）" style="flex:1;border:1.5px solid var(--rule);border-radius:8px;padding:7px 10px;font-size:13px;font-family:inherit">
+        <button class="btn-sm accent" onclick="addPhotoCategory()">追加</button>
+        <button class="btn-sm" onclick="document.getElementById('photo-cat-input-row').style.display='none'">✕</button>
       </div>
       <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="handlePhoto(event)">
       <div class="photo-grid" id="photo-grid"><div class="empty-state" style="padding:20px;font-size:12px;grid-column:1/-1">写真がまだありません</div></div>
@@ -1762,6 +1792,7 @@ function showCaseDetail(idx) {
   (c.items||[]).forEach(item=>caseAddItem(item.name,item.unit,item.qty,item.price));
   caseRecalc();
   renderSchedule();
+  renderPhotoCats();
   renderPhotos();
   renderDrawings();
   renderCaseEstimates();
@@ -2512,6 +2543,31 @@ function renderWhiteboard() {
 }
 
 function updateDashboard() {
+  // ===== 今月サマリー =====
+  const now = new Date();
+  const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  document.getElementById('dash-month-label').textContent = `${now.getFullYear()}年${now.getMonth()+1}月`;
+  // 今月入金済み売上
+  const monthPaid = invoices.filter(i => i.status==='paid' && (i.date||'').startsWith(ym)).reduce((s,i)=>s+(i.grand||0),0);
+  document.getElementById('dash-month-paid').textContent = '¥'+commas(monthPaid);
+  // 今月粗利（入金済み請求の grand - costTotal）
+  const monthProfit = invoices.filter(i => i.status==='paid' && (i.date||'').startsWith(ym)).reduce((s,i)=>s+(i.grand||0)-(i.costTotal||0),0);
+  const profitEl = document.getElementById('dash-month-profit');
+  profitEl.textContent = '¥'+commas(monthProfit);
+  profitEl.style.color = monthProfit >= 0 ? 'var(--accent)' : 'var(--red)';
+  // 未払い請求合計
+  const unpaidInvs = invoices.filter(i => i.status==='sent'||i.status==='overdue');
+  const unpaidTotal = unpaidInvs.reduce((s,i)=>s+(i.grand||0),0);
+  document.getElementById('dash-month-unpaid').textContent = '¥'+commas(unpaidTotal);
+  document.getElementById('dash-month-unpaid-count').textContent = unpaidInvs.length ? `${unpaidInvs.length}件` : '';
+  // 進行中現場
+  const activeCases = cases.filter(c=>c.status==='active').length;
+  document.getElementById('dash-active-cases').textContent = activeCases;
+  // 期限超過の請求
+  const overdue = invoices.filter(i=>i.status==='overdue').length;
+  document.getElementById('dash-overdue-label').textContent = overdue ? `⚠️ 期限超過 ${overdue}件` : '';
+  document.getElementById('dash-overdue-label').style.color = 'var(--red)';
+
   document.getElementById('dash-est-count').textContent=estimates.length;
   document.getElementById('dash-inv-unpaid').textContent=invoices.filter(i=>i.status!=='paid').length;
   document.getElementById('dash-est-list').innerHTML=!estimates.length?'<div class="empty-state">まだ見積がありません</div>'
@@ -2590,6 +2646,44 @@ function renderGantt(sched, projStart, projEnd) {
 
 // ===== PHOTOS =====
 function triggerPhoto(cat) {photoTarget=cat;document.getElementById('photo-input').click();}
+function togglePhotoCatInput() {
+  const row = document.getElementById('photo-cat-input-row');
+  row.style.display = row.style.display === 'none' ? 'flex' : 'none';
+  if (row.style.display === 'flex') document.getElementById('photo-cat-name').focus();
+}
+function addPhotoCategory() {
+  const name = document.getElementById('photo-cat-name').value.trim();
+  if (!name) return;
+  const c = cases[currentCaseIdx];
+  if (!c.photoCategories) c.photoCategories = [];
+  if (!c.photoCategories.includes(name)) {
+    c.photoCategories.push(name);
+    persist();
+  }
+  document.getElementById('photo-cat-name').value = '';
+  document.getElementById('photo-cat-input-row').style.display = 'none';
+  renderPhotoCats();
+}
+function renderPhotoCats() {
+  const c = cases[currentCaseIdx];
+  const tabs = document.getElementById('photo-cat-tabs');
+  if (!tabs) return;
+  const custom = c.photoCategories || [];
+  const defaults = [
+    {id:'before', label:'着工前'},
+    {id:'during', label:'施工中'},
+    {id:'after',  label:'完工'}
+  ];
+  tabs.innerHTML =
+    defaults.map(d=>`<button class="btn-sm" onclick="triggerPhoto('${d.id}')">📷 ${d.label}</button>`).join('') +
+    custom.map(name=>`<button class="btn-sm" style="position:relative" onclick="triggerPhoto('${name}')">📷 ${name}<span onclick="event.stopPropagation();deletePhotoCategory('${name}')" style="margin-left:4px;color:var(--ink-sub);font-size:10px">✕</span></button>`).join('') +
+    `<button class="btn-sm" onclick="togglePhotoCatInput()" style="color:var(--accent);border-color:var(--accent)">＋ カテゴリ</button>`;
+}
+function deletePhotoCategory(name) {
+  const c = cases[currentCaseIdx];
+  c.photoCategories = (c.photoCategories||[]).filter(n=>n!==name);
+  persist(); renderPhotoCats();
+}
 function handlePhoto(e) {
   const file=e.target.files[0]; if(!file)return;
   const reader=new FileReader();
@@ -2617,7 +2711,8 @@ function renderPhotos() {
   const c=cases[currentCaseIdx];
   const photos=c.photos||[];
   const el=document.getElementById('photo-grid');
-  const catLabel={before:'着工前',during:'施工中',after:'完工'};
+  const custom = (c.photoCategories||[]).reduce((o,n)=>{o[n]=n;return o},{});
+  const catLabel={before:'着工前',during:'施工中',after:'完工',...custom};
   if(!photos.length){el.innerHTML='<div class="empty-state" style="padding:20px;font-size:12px;grid-column:1/-1">写真がまだありません</div>';return;}
   el.innerHTML=photos.map((p,i)=>`
     <div class="photo-cell">
