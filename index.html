@@ -2550,11 +2550,21 @@ function updateDashboard() {
   // 今月入金済み売上
   const monthPaid = invoices.filter(i => i.status==='paid' && (i.date||'').startsWith(ym)).reduce((s,i)=>s+(i.grand||0),0);
   document.getElementById('dash-month-paid').textContent = '¥'+commas(monthPaid);
-  // 今月粗利（入金済み請求の grand - costTotal）
-  const monthProfit = invoices.filter(i => i.status==='paid' && (i.date||'').startsWith(ym)).reduce((s,i)=>s+(i.grand||0)-(i.costTotal||0),0);
+  // 今月粗利（原価が入力されている請求のみ計算）
+  const paidThisMonth = invoices.filter(i => i.status==='paid' && (i.date||'').startsWith(ym));
+  const withCost = paidThisMonth.filter(i => i.costTotal > 0);
   const profitEl = document.getElementById('dash-month-profit');
-  profitEl.textContent = '¥'+commas(monthProfit);
-  profitEl.style.color = monthProfit >= 0 ? 'var(--accent)' : 'var(--red)';
+  if (withCost.length === 0) {
+    profitEl.textContent = '—';
+    profitEl.style.color = 'var(--ink-sub)';
+    profitEl.title = '原価が入力された請求がありません';
+  } else {
+    const monthProfit = withCost.reduce((s,i)=>s+(i.grand||0)-(i.costTotal||0),0);
+    profitEl.textContent = '¥'+commas(monthProfit);
+    profitEl.style.color = monthProfit >= 0 ? 'var(--accent)' : 'var(--red)';
+    profitEl.title = withCost.length < paidThisMonth.length
+      ? `※ 原価未入力の請求 ${paidThisMonth.length - withCost.length}件を除く` : '';
+  }
   // 未払い請求合計
   const unpaidInvs = invoices.filter(i => i.status==='sent'||i.status==='overdue');
   const unpaidTotal = unpaidInvs.reduce((s,i)=>s+(i.grand||0),0);
