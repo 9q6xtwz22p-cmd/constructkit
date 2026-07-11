@@ -521,6 +521,24 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       <div class="photo-grid" id="photo-grid"><div class="empty-state" style="padding:20px;font-size:12px;grid-column:1/-1">写真がまだありません</div></div>
     </div>
     <div class="card">
+      <div class="card-header"><h2>📐 図面データ</h2><button class="btn-sm accent" onclick="openDrawingOptions()">＋ 追加</button></div>
+      <input type="file" id="drawing-input" accept="image/*,.pdf" style="display:none" onchange="handleDrawing(event)">
+      <div id="drawing-list" style="padding:0 16px 12px"><div class="empty-state" style="padding:16px 0;font-size:12px">図面がまだありません</div></div>
+      <!-- 図面追加オプションシート -->
+      <div id="drawing-options" style="display:none;padding:14px 16px;border-top:1px solid var(--rule);background:#fafafa">
+        <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--ink-sub)">追加方法を選択</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="btn-sm" style="justify-content:flex-start;gap:10px;padding:10px 12px" onclick="document.getElementById('drawing-input').click();document.getElementById('drawing-options').style.display='none'">🖼 画像・PDFをアップロード</button>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="drawing-url-name" placeholder="図面名" style="flex:1;border:1.5px solid var(--rule);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit">
+            <input type="url" id="drawing-url-input" placeholder="Google DriveなどのURL" style="flex:2;border:1.5px solid var(--rule);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit">
+            <button class="btn-sm accent" onclick="addDrawingUrl()">追加</button>
+          </div>
+        </div>
+        <button class="btn-sm" style="margin-top:8px;width:100%;justify-content:center" onclick="document.getElementById('drawing-options').style.display='none'">キャンセル</button>
+      </div>
+    </div>
+    <div class="card">
       <div class="card-header"><h2>関連見積</h2><button class="btn-sm accent" onclick="openEstPickerForCase()">＋ 見積を紐づけ</button></div>
       <div id="case-est-list"><div class="empty-state" style="padding:16px;font-size:12px">紐づけられた見積はありません</div></div>
     </div>
@@ -1717,6 +1735,7 @@ function showCaseDetail(idx) {
   caseRecalc();
   renderSchedule();
   renderPhotos();
+  renderDrawings();
   renderCaseEstimates();
   renderCaseExpenses();
 }
@@ -2588,6 +2607,105 @@ function viewPhoto(i) {
   const p=cases[currentCaseIdx].photos[i];
   const w=window.open('','_blank','width=800,height=600');
   w.document.write(`<img src="${p.data}" style="max-width:100%;max-height:100vh;display:block;margin:auto">`);
+}
+
+// ===== DRAWINGS =====
+function openDrawingOptions() {
+  const el = document.getElementById('drawing-options');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+function handleDrawing(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const name = file.name;
+  const isPDF = file.type === 'application/pdf';
+  if (isPDF) {
+    // PDFはデータURLとして保存
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const c = cases[currentCaseIdx];
+      if (!c.drawings) c.drawings = [];
+      c.drawings.push({ type: 'file', fileType: 'pdf', name, data: ev.target.result, date: fmtDate(new Date()) });
+      try { persist(); } catch(err) { alert('図面の保存に失敗しました（ファイルが大きすぎます）'); return; }
+      renderDrawings();
+    };
+    reader.readAsDataURL(file);
+  } else {
+    // 画像は圧縮して保存
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX = 1200; let w = img.width, h = img.height;
+        if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const data = canvas.toDataURL('image/jpeg', 0.8);
+        const c = cases[currentCaseIdx];
+        if (!c.drawings) c.drawings = [];
+        c.drawings.push({ type: 'file', fileType: 'image', name, data, date: fmtDate(new Date()) });
+        try { persist(); } catch(err) { alert('図面の保存に失敗しました（ファイルが大きすぎます）'); return; }
+        renderDrawings();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+  e.target.value = '';
+}
+function addDrawingUrl() {
+  const name = document.getElementById('drawing-url-name').value.trim();
+  const url = document.getElementById('drawing-url-input').value.trim();
+  if (!url) { alert('URLを入力してください'); return; }
+  const c = cases[currentCaseIdx];
+  if (!c.drawings) c.drawings = [];
+  c.drawings.push({ type: 'url', name: name || url, url, date: fmtDate(new Date()) });
+  persist();
+  document.getElementById('drawing-url-name').value = '';
+  document.getElementById('drawing-url-input').value = '';
+  document.getElementById('drawing-options').style.display = 'none';
+  renderDrawings();
+}
+function renderDrawings() {
+  const c = cases[currentCaseIdx];
+  const drawings = c.drawings || [];
+  const el = document.getElementById('drawing-list');
+  if (!el) return;
+  if (!drawings.length) {
+    el.innerHTML = '<div class="empty-state" style="padding:16px 0;font-size:12px">図面がまだありません</div>';
+    return;
+  }
+  el.innerHTML = drawings.map((d, i) => {
+    const icon = d.type === 'url' ? '🔗' : d.fileType === 'pdf' ? '📄' : '🖼';
+    const action = d.type === 'url'
+      ? `onclick="window.open('${d.url}','_blank')"`
+      : d.fileType === 'pdf'
+        ? `onclick="viewDrawingPDF(${i})"`
+        : `onclick="viewDrawingImg(${i})"`;
+    return `<div class="activity-item" style="cursor:pointer" ${action}>
+      <div style="font-size:22px;line-height:1;flex-shrink:0">${icon}</div>
+      <div class="activity-text">
+        <strong style="font-size:13px">${d.name}</strong>
+        <br><span style="color:var(--ink-sub);font-size:11px">${d.date||''} ${d.type==='url'?'· 外部リンク':''}</span>
+      </div>
+      <button onclick="event.stopPropagation();deleteDrawing(${i})" style="background:none;border:none;color:#d1d5db;font-size:18px;cursor:pointer;padding:4px 6px;border-radius:6px;line-height:1">✕</button>
+    </div>`;
+  }).join('');
+}
+function viewDrawingImg(i) {
+  const d = cases[currentCaseIdx].drawings[i];
+  const w = window.open('', '_blank', 'width=1000,height=800');
+  w.document.write(`<img src="${d.data}" style="max-width:100%;height:auto;display:block;margin:auto">`);
+}
+function viewDrawingPDF(i) {
+  const d = cases[currentCaseIdx].drawings[i];
+  const w = window.open('', '_blank');
+  w.document.write(`<iframe src="${d.data}" style="width:100%;height:100vh;border:none"></iframe>`);
+}
+function deleteDrawing(i) {
+  if (!confirm('この図面を削除しますか？')) return;
+  cases[currentCaseIdx].drawings.splice(i, 1);
+  persist(); renderDrawings();
 }
 
 // ===== EXCEL EXPORT =====
