@@ -750,8 +750,17 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 
       <div style="background:var(--accent-soft);border-radius:10px;padding:14px;margin-bottom:16px">
         <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:6px">基本の流れ</div>
-        <div style="font-size:12px;color:var(--ink);line-height:1.8">
-          🏗 案件を作る　→　📄 見積を作る　→　🧾 請求書を送る
+        <div style="font-size:12px;color:var(--ink);line-height:1.9">
+          🏗 案件登録　→　👷 メンバー割当　→　📄 見積作成　→　🧾 請求書送付
+        </div>
+      </div>
+
+      <div style="margin-bottom:18px">
+        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">🏠 ホーム</div>
+        <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
+          • <strong>今週の配置表</strong>：メンバーがどの現場に入っているか一覧で確認<br>
+          • ← 前週 / 次週 → で週を切り替えられます<br>
+          • 最近の見積・請求の状況をまとめて確認できます
         </div>
       </div>
 
@@ -760,11 +769,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
           • 作成時に<strong>元請け／下請け</strong>を選択できます<br>
           • 下請けの場合は元請け会社名・発注番号を入力<br>
+          • 着工日・完工予定日を登録するとホームの配置表に反映されます<br>
+          • <strong>担当メンバー</strong>を割り当てると配置表に表示されます<br>
           • 材料・費用のトラッキングができます<br>
           • 工程表（ガントチャート）で進捗を可視化<br>
-          • 着工前・施工中・完工の写真を保存できます<br>
+          • 着工前・施工中・完工の<strong>写真</strong>を保存できます<br>
+          • <strong>図面データ</strong>：画像・PDF・外部リンク（Google Driveなど）を登録可能<br>
           • 「関連見積」で案件に見積を紐づけられます<br>
-          • 案件詳細から削除ボタンで案件を削除できます
+          • 現場ごとの<strong>経費</strong>もここで確認できます
         </div>
       </div>
 
@@ -773,8 +785,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
           • 「📂 案件から読み込む」で現場情報を自動入力<br>
           • 「👥 選択」で登録済み顧客を呼び出せます<br>
-          • 明細の「💾 保存」でよく使う明細をテンプレート保存<br>
-          • 「📂 テンプレ」でテンプレートをワンタップで読み込み<br>
+          • 明細テンプレートの保存・読み込みでよく使う内容をすぐ呼び出し<br>
           • 仕入単価を入力すると粗利が自動計算されます<br>
           • 「🖨」ボタンでA4サイズの見積書を印刷・PDF保存<br>
           • 「📊」ボタンでExcelにエクスポートできます
@@ -784,8 +795,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       <div style="margin-bottom:18px">
         <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">🧾 請求</div>
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
-          • 見積から明細を転記して請求書を作れます<br>
-          • ステータス管理：下書き→送付済み→入金済み<br>
+          • 見積から明細を転記して請求書をすぐ作成<br>
+          • ステータス管理：下書き → 送付済み → 入金済み<br>
           • 「🖨」ボタンで請求書を印刷・PDF保存<br>
           • 「📊」ボタンでExcelにエクスポートできます
         </div>
@@ -800,22 +811,24 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       </div>
 
       <div style="margin-bottom:18px">
-        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">⚙️ 設定</div>
+        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">👤 マイページ（設定内）</div>
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
-          • 自社の会社名・住所・TEL・FAX・メールを登録<br>
-          • 建設業許可番号も登録できます<br>
-          • 登録した情報は見積書・請求書の印刷に自動反映されます
+          • <strong>氏名（表示名）</strong>を登録すると経費の支払者名などに表示されます<br>
+          • <strong>💴 経費管理</strong>：月別・現場別に経費を記録できます<br>
+          • 📸 レシートを撮影すると金額を自動読み取り（OCR）<br>
+          • 月予算を設定して使用状況をグラフで確認<br>
+          • 経費は「どの現場の立て替えか」を紐づけて管理できます
         </div>
       </div>
 
       <div style="margin-bottom:18px">
-        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">☁ アカウント・クラウド同期</div>
+        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">⚙️ 設定</div>
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
-          • 初回起動時にメールアドレス＋パスワードで登録<br>
-          • データはクラウドに自動保存されます<br>
-          • スマホ・PC・タブレットなど複数デバイスで同期<br>
-          • 画面上部の「☁ 保存済み」が保存完了のサインです<br>
-          • ログアウトは 設定 → アカウント から行えます
+          • 自社の会社名・住所・TEL・FAX・メールを登録<br>
+          • 建設業許可番号も登録できます<br>
+          • 登録した情報は見積書・請求書の印刷に自動反映されます<br>
+          • <strong>メンバー管理</strong>：職人・スタッフの名前・所属会社を登録<br>
+          • 登録したメンバーは案件の担当者として割り当てられます
         </div>
       </div>
 
@@ -823,15 +836,25 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
         <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">🏢 チーム共有</div>
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
           • 設定 → チーム共有 からチームを作成・参加できます<br>
-          • 会社名を入力して「チームを作成する」→ 6文字の招待コードが発行されます<br>
-          • メンバーは招待コードを入力して「参加する」だけ<br>
-          • チームに参加するとデータが全メンバーに即時共有されます<br>
-          • 1人が見積を作ったら、他の全員にリアルタイムで反映されます
+          • 「チームを作成する」→ 6文字の招待コードが発行されます<br>
+          • メンバーは招待コードを入力するだけで参加できます<br>
+          • チーム参加後は案件・メンバーデータがリアルタイムで共有されます
         </div>
       </div>
 
-      <div style="background:var(--accent-soft);border-radius:10px;padding:14px;font-size:12px;color:var(--ink);line-height:1.8">
-        ☁ データはクラウドに自動同期されます。デバイスを変えてもデータは消えません。
+      <div style="margin-bottom:18px">
+        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">☁ クラウド同期</div>
+        <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
+          • データは入力のたびにクラウドへ自動保存されます<br>
+          • 画面上部の「☁ 保存済み」が表示されたら保存完了のサインです<br>
+          • スマホ・PC・タブレットなど複数デバイスで同じデータを使えます<br>
+          • ログアウトしてもデータは消えません。再ログインで復元されます
+        </div>
+      </div>
+
+      <div style="background:var(--green-soft);border-radius:10px;padding:14px;font-size:12px;color:var(--ink);line-height:1.8">
+        💡 <strong>まず試してほしい3ステップ</strong><br>
+        ① 設定でメンバーを登録　② 案件を1件作って担当者を割り当て　③ 見積書を作って印刷してみる
       </div>
     </div>
   </div>
