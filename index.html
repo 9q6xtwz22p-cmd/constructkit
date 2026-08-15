@@ -156,6 +156,18 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 .photo-add { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; font-size:11px; color:var(--ink-sub); font-weight:600; cursor:pointer; border:2px dashed var(--rule); }
 .photo-add:active { background:var(--accent-soft); border-color:var(--accent); }
 .photo-cat-tabs { display:flex; gap:6px; padding:10px 16px; border-bottom:1px solid var(--rule); background:#fafafa; }
+/* ===== QUICK ACTIONS ===== */
+.quick-primary { width:100%; display:flex; align-items:center; justify-content:center; gap:8px; background:var(--accent); color:#fff; border:none; border-radius:14px; padding:18px; font-size:16px; font-weight:800; font-family:inherit; cursor:pointer; margin-bottom:10px; box-shadow:0 2px 8px rgba(79,124,255,0.25); -webkit-tap-highlight-color:transparent; }
+.quick-primary:active { transform:scale(0.98); }
+.quick-row { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
+.quick-sub { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; background:var(--surface); border:1.5px solid var(--rule); border-radius:12px; padding:12px 4px; font-size:11px; font-weight:700; color:var(--ink); font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.quick-sub:active { background:#f3f4f6; }
+/* ===== COLLAPSIBLE ===== */
+.collapse-head { display:flex; align-items:center; justify-content:space-between; width:100%; background:none; border:none; padding:14px 16px; font-family:inherit; font-size:14px; font-weight:700; color:var(--ink); cursor:pointer; text-align:left; }
+.collapse-head .chev { font-size:12px; color:var(--ink-sub); transition:transform .2s; }
+.collapse-head.open .chev { transform:rotate(90deg); }
+.collapse-body { display:none; }
+.collapse-body.open { display:block; }
 /* ===== WHITEBOARD ===== */
 .wb-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
 .wb-grid { display:grid; min-width:480px; border-radius:0 0 var(--radius) var(--radius); }
@@ -215,6 +227,24 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 
 <!-- ===== DASHBOARD ===== -->
 <div class="page active" id="page-dashboard">
+  <!-- 通知許可バナー -->
+  <div id="notif-banner" style="display:none;background:var(--accent);color:#fff;padding:10px 14px;border-radius:10px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+    <span style="font-size:13px">🔔 期限リマインダーを有効にしますか？</span>
+    <div style="display:flex;gap:8px">
+      <button onclick="enableNotifications()" style="background:#fff;color:var(--accent);border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer">許可する</button>
+      <button onclick="this.closest('#notif-banner').style.display='none'" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.5);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer">後で</button>
+    </div>
+  </div>
+  <!-- クイックアクション -->
+  <button onclick="quickNewEstimate()" class="quick-primary">
+    <span style="font-size:22px;line-height:1">＋</span>
+    <span>見積を作る</span>
+  </button>
+  <div class="quick-row">
+    <button onclick="quickNewInvoice()" class="quick-sub"><span style="font-size:18px">🧾</span>請求を作る</button>
+    <button onclick="quickNewCase()" class="quick-sub"><span style="font-size:18px">🏗</span>現場を追加</button>
+    <button onclick="quickExpense()" class="quick-sub"><span style="font-size:18px">📷</span>経費を記録</button>
+  </div>
   <!-- 今月サマリー -->
   <div class="card" style="margin-bottom:14px">
     <div class="card-header"><h2>📊 今月の経営サマリー</h2><span id="dash-month-label" style="font-size:11px;color:var(--ink-sub)"></span></div>
@@ -619,9 +649,115 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 
 <!-- ===== 設定 ===== -->
 <div class="page" id="page-settings">
-  <div class="card">
-    <div class="card-header"><h2>⚙️ 自社情報</h2></div>
+  <!-- 自社情報 未入力アラート -->
+  <div id="co-incomplete-banner" style="display:none;background:#fff7ed;border:1.5px solid var(--orange);border-radius:12px;padding:12px 14px;margin-bottom:12px">
+    <div style="font-size:13px;font-weight:700;color:var(--orange);margin-bottom:4px">⚠️ 自社情報が未入力です</div>
+    <div style="font-size:12px;color:var(--ink-sub);line-height:1.7;margin-bottom:8px">会社名・住所・電話番号は見積書／請求書に印刷されます。一度だけ設定してください。</div>
+    <button onclick="openCompanySettings()" class="btn btn-primary" style="width:100%;justify-content:center;padding:8px">自社情報を入力する</button>
+  </div>
+
+  <!-- 💴 経費管理（毎日使う → 最上部） -->
+  <div class="card" id="expense-section">
+    <div class="card-header"><h2>💴 経費管理</h2></div>
     <div class="card-body">
+      <!-- 経費追加フォーム（最初に置く） -->
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input type="text" id="exp-name-input" placeholder="項目名（例: 交通費）"
+          style="flex:1;padding:10px 12px;border:1.5px solid var(--rule);border-radius:9px;font-size:14px;font-family:inherit;outline:none">
+      </div>
+      <div style="margin-bottom:8px">
+        <select id="exp-case-select"
+          style="width:100%;padding:10px 12px;border:1.5px solid var(--rule);border-radius:9px;font-size:14px;font-family:inherit;outline:none;background:var(--surface);color:var(--ink)">
+          <option value="">経費立て替え分</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+        <div style="position:relative;flex:1">
+          <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--ink-sub)">¥</span>
+          <input type="number" id="exp-amount-input" placeholder="金額" min="0"
+            style="width:100%;padding:10px 8px 10px 22px;border:1.5px solid var(--rule);border-radius:9px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box">
+        </div>
+        <button id="exp-camera-btn" onclick="captureReceipt()" title="レシートを撮影して読み取り"
+          style="background:var(--surface);border:1.5px solid var(--rule);border-radius:9px;font-size:19px;cursor:pointer;padding:9px 11px;line-height:1;flex-shrink:0">📷</button>
+        <button onclick="addExpItem()" class="btn btn-primary" style="padding:10px 14px;white-space:nowrap;flex-shrink:0">＋追加</button>
+      </div>
+      <div id="exp-ocr-status" style="display:none;font-size:12px;color:var(--accent);text-align:center;padding:6px;margin-bottom:8px;border-radius:8px;background:var(--accent-soft)">
+        📷 レシートを読み取り中...
+      </div>
+      <!-- 進捗バー -->
+      <div style="margin-bottom:14px;border-top:1px solid var(--rule);padding-top:14px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--ink-sub);margin-bottom:4px">
+          <span id="exp-spent-label">使用: ¥0</span>
+          <span id="exp-remain-label">残り: ¥0</span>
+        </div>
+        <div style="height:10px;background:var(--rule);border-radius:99px;overflow:hidden">
+          <div id="exp-progress-bar" style="height:100%;width:0%;background:var(--green);border-radius:99px;transition:width .3s"></div>
+        </div>
+      </div>
+      <!-- 絞り込み + 予算 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <select id="exp-filter-month" onchange="renderExpenseTracker()"
+          style="padding:8px 10px;border:1.5px solid var(--rule);border-radius:9px;font-size:12px;font-family:inherit;outline:none;background:var(--surface);color:var(--ink)">
+        </select>
+        <select id="exp-filter-case" onchange="renderExpenseTracker()"
+          style="padding:8px 10px;border:1.5px solid var(--rule);border-radius:9px;font-size:12px;font-family:inherit;outline:none;background:var(--surface);color:var(--ink)">
+          <option value="">すべての現場</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <span style="font-size:12px;color:var(--ink-sub);white-space:nowrap">月予算</span>
+        <div style="position:relative;flex:1">
+          <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--ink-sub)">¥</span>
+          <input type="number" id="exp-budget-input" placeholder="0" min="0"
+            style="width:100%;padding:8px 8px 8px 22px;border:1.5px solid var(--rule);border-radius:9px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"
+            onchange="setBudget()">
+        </div>
+      </div>
+      <!-- 経費一覧 -->
+      <div id="exp-list"></div>
+    </div>
+  </div>
+
+  <!-- 👷 メンバー管理 -->
+  <div class="card">
+    <div class="card-header"><h2>👷 メンバー管理</h2></div>
+    <div class="card-body">
+      <p style="font-size:12px;color:var(--ink-sub);margin-bottom:16px;line-height:1.7">現場ごとに担当者を割り当てられます。ホームの配置表にも表示されます。</p>
+      <div id="workers-list" style="margin-bottom:16px"></div>
+      <div style="border-top:1px solid var(--rule);padding-top:16px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:10px">メンバーを追加</div>
+        <div class="form-field"><label>名前</label><input type="text" id="worker-name-input" placeholder="山田 太郎"></div>
+        <div class="form-field"><label>所属会社</label><input type="text" id="worker-company-input" placeholder="株式会社まとめる現場"></div>
+        <button onclick="addWorker()" class="btn btn-primary" style="width:100%;justify-content:center">＋ メンバーを追加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 👤 アカウント -->
+  <div class="card">
+    <div class="card-header"><h2>👤 アカウント</h2></div>
+    <div class="card-body">
+      <p style="font-size:12px;color:var(--ink-sub);margin-bottom:16px;line-height:1.7">ログイン中：<strong id="settings-user-email" style="color:var(--ink);font-size:13px"></strong></p>
+      <div class="form-field">
+        <label>氏名（表示名）</label>
+        <input type="text" id="profile-display-name" placeholder="山田 太郎" style="width:100%;padding:10px 12px;border:1.5px solid var(--rule);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box">
+      </div>
+      <p style="font-size:11px;color:var(--ink-sub);margin:-4px 0 14px;line-height:1.6">経費の支払者名・案件担当として表示されます</p>
+      <button onclick="saveProfile()" class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:14px">保存</button>
+      <button onclick="logout()" class="btn btn-danger" style="width:100%;justify-content:center">ログアウト</button>
+    </div>
+  </div>
+
+  <!-- ===== ここから下は「たまに使う」設定 ===== -->
+  <div style="font-size:11px;font-weight:700;color:var(--ink-sub);letter-spacing:0.5px;margin:22px 0 8px 4px">その他の設定</div>
+
+  <!-- ▸ 自社情報（折りたたみ） -->
+  <div class="card">
+    <button class="collapse-head" id="co-collapse-head" onclick="toggleCollapse(this)">
+      <span>⚙️ 自社情報（見積書に印刷される）</span><span class="chev">▶</span>
+    </button>
+    <div class="collapse-body" id="co-collapse-body">
+    <div class="card-body" style="border-top:1px solid var(--rule)">
       <div class="form-field"><label>会社名</label><input type="text" id="co-name" placeholder="株式会社まとめる現場"></div>
       <div class="form-field"><label>〒 郵便番号</label><input type="text" id="co-zip" placeholder="000-0000"></div>
       <div class="form-field"><label>住所</label><input type="text" id="co-address" placeholder="千葉県〇〇市…"></div>
@@ -634,23 +770,16 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       <div class="form-field"><label>担当者名（印刷時の担当者欄）</label><input type="text" id="co-staff" placeholder="代表 田中太郎"></div>
       <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px" onclick="saveCompany()">保存</button>
     </div>
-  </div>
-  <div class="card">
-    <div class="card-header"><h2>👷 メンバー管理</h2></div>
-    <div class="card-body">
-      <p style="font-size:12px;color:var(--ink-sub);margin-bottom:16px;line-height:1.7">現場ごとに担当者を割り当てられます。名前・メール・所属会社を登録してください。</p>
-      <div id="workers-list" style="margin-bottom:16px"></div>
-      <div style="border-top:1px solid var(--rule);padding-top:16px">
-        <div style="font-size:12px;font-weight:700;margin-bottom:10px">メンバーを追加</div>
-        <div class="form-field"><label>名前</label><input type="text" id="worker-name-input" placeholder="山田 太郎"></div>
-        <div class="form-field"><label>所属会社</label><input type="text" id="worker-company-input" placeholder="株式会社まとめる現場"></div>
-        <button onclick="addWorker()" class="btn btn-primary" style="width:100%;justify-content:center">＋ メンバーを追加</button>
-      </div>
     </div>
   </div>
+
+  <!-- ▸ チーム共有（折りたたみ） -->
   <div class="card">
-    <div class="card-header"><h2>🏢 チーム共有</h2></div>
-    <div class="card-body">
+    <button class="collapse-head" onclick="toggleCollapse(this)">
+      <span>🏢 チーム共有</span><span class="chev">▶</span>
+    </button>
+    <div class="collapse-body">
+    <div class="card-body" style="border-top:1px solid var(--rule)">
       <!-- チーム参加中の場合に表示 -->
       <div id="org-teams-list" style="display:none"></div>
       <!-- 別チームに参加フォーム（チーム参加中のみ表示） -->
@@ -671,89 +800,22 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
         <button onclick="joinOrgFromCreate()" class="btn" style="width:100%;justify-content:center;border:1.5px solid var(--rule)">参加する</button>
       </div>
     </div>
-  </div>
-  <div class="card">
-    <div class="card-header"><h2>👤 マイページ</h2></div>
-    <div class="card-body">
-      <p style="font-size:12px;color:var(--ink-sub);margin-bottom:16px;line-height:1.7">ログイン中：<strong id="settings-user-email" style="color:var(--ink);font-size:13px"></strong></p>
-      <div class="form-field">
-        <label>氏名（表示名）</label>
-        <input type="text" id="profile-display-name" placeholder="山田 太郎" style="width:100%;padding:10px 12px;border:1.5px solid var(--rule);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box">
-      </div>
-      <p style="font-size:11px;color:var(--ink-sub);margin:-4px 0 14px;line-height:1.6">経費の支払者名・案件担当として表示されます</p>
-      <button onclick="saveProfile()" class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:20px">保存</button>
-      <!-- 経費管理 -->
-      <div style="border-top:1px solid var(--rule);padding-top:16px;margin-bottom:16px">
-        <div style="font-size:14px;font-weight:700;margin-bottom:12px">💴 経費管理</div>
-        <!-- 絞り込みフィルター -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-          <select id="exp-filter-month" onchange="renderExpenseTracker()"
-            style="padding:8px 10px;border:1.5px solid var(--rule);border-radius:9px;font-size:12px;font-family:inherit;outline:none;background:var(--surface);color:var(--ink)">
-          </select>
-          <select id="exp-filter-case" onchange="renderExpenseTracker()"
-            style="padding:8px 10px;border:1.5px solid var(--rule);border-radius:9px;font-size:12px;font-family:inherit;outline:none;background:var(--surface);color:var(--ink)">
-            <option value="">すべての現場</option>
-          </select>
-        </div>
-        <!-- 予算設定（月フィルターが「今月」のときのみ有効） -->
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-          <span style="font-size:13px;color:var(--ink-sub);white-space:nowrap">月予算</span>
-          <div style="position:relative;flex:1">
-            <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--ink-sub)">¥</span>
-            <input type="number" id="exp-budget-input" placeholder="0" min="0"
-              style="width:100%;padding:8px 8px 8px 22px;border:1.5px solid var(--rule);border-radius:9px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box"
-              onchange="setBudget()">
-          </div>
-        </div>
-        <!-- 進捗バー -->
-        <div style="margin-bottom:14px">
-          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--ink-sub);margin-bottom:4px">
-            <span id="exp-spent-label">使用: ¥0</span>
-            <span id="exp-remain-label">残り: ¥0</span>
-          </div>
-          <div style="height:10px;background:var(--rule);border-radius:99px;overflow:hidden">
-            <div id="exp-progress-bar" style="height:100%;width:0%;background:var(--green);border-radius:99px;transition:width .3s"></div>
-          </div>
-        </div>
-        <!-- 経費追加フォーム -->
-        <div style="display:flex;gap:8px;margin-bottom:8px">
-          <input type="text" id="exp-name-input" placeholder="項目名（例: 交通費）"
-            style="flex:1;padding:9px 12px;border:1.5px solid var(--rule);border-radius:9px;font-size:13px;font-family:inherit;outline:none">
-        </div>
-        <div style="margin-bottom:8px">
-          <select id="exp-case-select"
-            style="width:100%;padding:9px 12px;border:1.5px solid var(--rule);border-radius:9px;font-size:13px;font-family:inherit;outline:none;background:var(--surface);color:var(--ink)">
-            <option value="">経費立て替え分</option>
-          </select>
-        </div>
-        <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
-          <div style="position:relative;flex:1">
-            <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--ink-sub)">¥</span>
-            <input type="number" id="exp-amount-input" placeholder="金額"  min="0"
-              style="width:100%;padding:9px 8px 9px 22px;border:1.5px solid var(--rule);border-radius:9px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box">
-          </div>
-          <button id="exp-camera-btn" onclick="captureReceipt()" title="レシートを撮影して読み取り"
-            style="background:var(--surface);border:1.5px solid var(--rule);border-radius:9px;font-size:18px;cursor:pointer;padding:8px 10px;line-height:1;flex-shrink:0">📷</button>
-          <button onclick="addExpItem()" class="btn btn-primary" style="padding:9px 14px;white-space:nowrap;flex-shrink:0">＋追加</button>
-        </div>
-        <!-- OCR読み取り中インジケーター -->
-        <div id="exp-ocr-status" style="display:none;font-size:12px;color:var(--accent);text-align:center;padding:6px;margin-bottom:8px;border-radius:8px;background:var(--accent-soft)">
-          📷 レシートを読み取り中...
-        </div>
-        <!-- 経費一覧 -->
-        <div id="exp-list"></div>
-      </div>
-      <button onclick="logout()" class="btn btn-danger" style="width:100%;justify-content:center">ログアウト</button>
     </div>
   </div>
+
+  <!-- ▸ データバックアップ（折りたたみ） -->
   <div class="card">
-    <div class="card-header"><h2>💾 データバックアップ</h2></div>
-    <div class="card-body">
+    <button class="collapse-head" onclick="toggleCollapse(this)">
+      <span>💾 データバックアップ</span><span class="chev">▶</span>
+    </button>
+    <div class="collapse-body">
+    <div class="card-body" style="border-top:1px solid var(--rule)">
       <p style="font-size:12px;color:var(--ink-sub);margin-bottom:16px;line-height:1.7">データはクラウドに自動同期されています。念のためローカルバックアップも定期的に取ることをお勧めします。</p>
       <button class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:10px" onclick="exportBackup()">📤 バックアップを書き出す</button>
       <button class="btn" style="width:100%;justify-content:center;border:1px solid var(--rule)" onclick="document.getElementById('import-file').click()">📥 バックアップから復元する</button>
       <input type="file" id="import-file" accept=".json" style="display:none" onchange="importBackup(event)">
       <p style="font-size:11px;color:var(--red);margin-top:10px;line-height:1.6">⚠️ 復元すると現在のデータはすべて上書きされます</p>
+    </div>
     </div>
   </div>
 </div>
@@ -779,23 +841,37 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
     <div style="padding:0 4px">
 
       <div style="background:var(--accent-soft);border-radius:10px;padding:14px;margin-bottom:16px">
-        <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:6px">基本の流れ</div>
+        <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:6px">まず最初に</div>
         <div style="font-size:12px;color:var(--ink);line-height:1.9">
-          🏗 案件登録　→　👷 メンバー割当　→　📄 見積作成　→　🧾 請求書送付
+          ⚙️ 設定 →「その他の設定」→ <strong>自社情報</strong>を1回だけ入力してください。<br>
+          見積書・請求書に印刷される会社名・住所・電話番号です。
+        </div>
+        <div style="font-size:13px;font-weight:700;color:var(--accent);margin:12px 0 6px">基本の流れ</div>
+        <div style="font-size:12px;color:var(--ink);line-height:1.9">
+          🏗 現場を追加　→　👷 メンバー割当　→　📄 見積作成　→　🧾 請求書送付
         </div>
       </div>
 
       <div style="margin-bottom:18px">
-        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">🏠 ホーム（配置表）</div>
+        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">🏠 ホーム</div>
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
-          • <strong>今週の配置表</strong>：メンバーがどの現場に入っているか一覧で確認<br>
-          • ← 前週 / 次週 → で週を切り替えられます<br>
-          • 最近の見積・請求の状況をまとめて確認できます<br>
+          <strong>一番上のボタンから、よく使う操作にすぐ行けます</strong><br>
+          　<strong>＋ 見積を作る</strong>（青い大きいボタン）<br>
+          　🧾 請求を作る　／　🏗 現場を追加　／　📷 経費を記録<br>
+          <br>
+          • <strong>📊 今月の経営サマリー</strong>：売上・粗利・未払い・進行中の現場<br>
+          　　※ 粗利は仕入単価を入れた請求だけで計算します。未入力だと「—」表示<br>
+          • <strong>📋 今週の配置表</strong>：メンバーがどの現場に入っているか一覧で確認<br>
+          　　← 前週 / 次週 → で週を切り替えられます<br>
+          • 最近の見積・請求もここから確認できます<br>
           <br>
           <strong>📋 配置表を使うには2ステップ</strong><br>
           ① 設定 → メンバー管理 で職人・スタッフを登録<br>
           ② 案件に<strong>着工日・完工日</strong>と<strong>担当メンバー</strong>を設定<br>
-          → 該当期間に自動でメンバーの現場名が表示されます
+          → 該当期間に自動でメンバーの現場名が表示されます<br>
+          <br>
+          <strong>🔔 期限リマインダー</strong><br>
+          初回に出る「許可する」を押すと、見積の有効期限・請求の支払期限が近づいたとき（3日前・前日・当日）に通知が届きます。
         </div>
       </div>
 
@@ -823,6 +899,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
           • 明細テンプレートの保存・読み込みでよく使う内容をすぐ呼び出し<br>
           • 仕入単価を入力すると粗利が自動計算されます<br>
           • 「🖨」ボタンでA4サイズの見積書を印刷・PDF保存<br>
+          • 「📧」ボタンで<strong>メール送信・共有</strong>（スマホは共有シート、PCはメールソフトが開きます）<br>
           • 「📊」ボタンでExcelにエクスポートできます
         </div>
       </div>
@@ -833,6 +910,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
           • 見積から明細を転記して請求書をすぐ作成<br>
           • ステータス管理：下書き → 送付済み → 入金済み<br>
           • 「🖨」ボタンで請求書を印刷・PDF保存<br>
+          • 「📧」ボタンで<strong>メール送信・共有</strong><br>
           • 「📊」ボタンでExcelにエクスポートできます
         </div>
       </div>
@@ -846,31 +924,36 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       </div>
 
       <div style="margin-bottom:18px">
-        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">👤 マイページ（設定内）</div>
+        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">💴 経費管理（⚙️設定の一番上）</div>
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
-          • <strong>氏名（表示名）</strong>を登録すると経費の支払者名などに表示されます<br>
-          • <strong>💴 経費管理</strong>：月別・現場別に経費を記録できます<br>
-          • 📸 レシートを撮影すると金額を自動読み取り（OCR）<br>
-          • 月予算を設定して使用状況をグラフで確認<br>
-          • 経費は「どの現場の立て替えか」を紐づけて管理できます
+          • ホームの<strong>「📷 経費を記録」</strong>から直接ジャンプできます<br>
+          • 項目名・現場・金額を入れて「＋追加」<br>
+          • 📷 ボタンでレシートを撮影すると金額を自動読み取り（OCR）<br>
+          • 月予算を設定すると、使用状況がバーで確認できます<br>
+          • 月別・現場別に絞り込んで一覧できます
         </div>
       </div>
 
       <div style="margin-bottom:18px">
-        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">⚙️ 設定</div>
+        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">⚙️ 設定の構成</div>
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
-          • 自社の会社名・住所・TEL・FAX・メールを登録<br>
-          • 建設業許可番号も登録できます<br>
-          • 登録した情報は見積書・請求書の印刷に自動反映されます<br>
-          • <strong>メンバー管理</strong>：職人・スタッフの名前・所属会社を登録<br>
-          • 登録したメンバーは案件の担当者として割り当てられます
+          よく使うものが上、たまにしか使わないものは<strong>「その他の設定」</strong>に畳んであります。<br>
+          <br>
+          <strong>いつも見えている</strong><br>
+          　💴 経費管理／👷 メンバー管理／👤 アカウント<br>
+          <br>
+          <strong>その他の設定（▶ をタップで開く）</strong><br>
+          　⚙️ 自社情報　… 会社名・住所・TEL・許可番号など。<br>
+          　　<strong>見積書・請求書に印刷される情報</strong>なので、最初に1回だけ設定してください。未入力のときは設定画面の上に警告が出ます。<br>
+          　🏢 チーム共有　… 招待コードで複数人とデータ共有<br>
+          　💾 データバックアップ　… 書き出し・復元
         </div>
       </div>
 
       <div style="margin-bottom:18px">
         <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">🏢 チーム共有</div>
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
-          • 設定 → チーム共有 からチームを作成・参加できます<br>
+          • 設定 → その他の設定 → 🏢 チーム共有 を開く<br>
           • 「チームを作成する」→ 6文字の招待コードが発行されます<br>
           • メンバーは招待コードを入力するだけで参加できます<br>
           • チーム参加後は案件・メンバーデータがリアルタイムで共有されます
@@ -1361,7 +1444,7 @@ function estEditForm(id) {
   currentEstId=id;
   document.getElementById('est-list-view').style.display='none';
   document.getElementById('est-edit-view').style.display='block';
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-ghost" onclick="printEst('${id}')" style="padding:8px 12px;font-size:13px">🖨</button><button class="btn btn-primary" onclick="saveEstimate()" style="padding:8px 14px;font-size:13px">保存</button>`;
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-ghost" onclick="shareEst('${id}')" style="padding:8px 12px;font-size:13px" title="メール送信">📧</button><button class="btn btn-ghost" onclick="printEst('${id}')" style="padding:8px 12px;font-size:13px">🖨</button><button class="btn btn-primary" onclick="saveEstimate()" style="padding:8px 14px;font-size:13px">保存</button>`;
   document.getElementById('est-delete-wrap').style.display='block';
   document.getElementById('est-num').textContent=est.num;
   document.getElementById('est-date-sub').textContent='作成日: '+(est.date||'');
@@ -1484,7 +1567,7 @@ function invEditForm(id) {
   currentInvId=id;
   document.getElementById('inv-list-view').style.display='none';
   document.getElementById('inv-edit-view').style.display='block';
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-ghost" onclick="printInv('${id}')" style="padding:8px 12px;font-size:13px">🖨</button><button class="btn btn-primary" onclick="saveInvoice()" style="padding:8px 14px;font-size:13px">保存</button>`;
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-ghost" onclick="shareInv('${id}')" style="padding:8px 12px;font-size:13px" title="メール送信">📧</button><button class="btn btn-ghost" onclick="printInv('${id}')" style="padding:8px 12px;font-size:13px">🖨</button><button class="btn btn-primary" onclick="saveInvoice()" style="padding:8px 14px;font-size:13px">保存</button>`;
   document.getElementById('inv-delete-wrap').style.display='block';
   document.getElementById('inv-num').textContent=inv.num;
   document.getElementById('inv-client').value=inv.client||'';
@@ -1720,6 +1803,62 @@ function printInv(id) {
   if(!inv)return;
   document.getElementById('print-area').innerHTML=buildPrintHTML('invoice',inv);
   window.print();
+}
+
+// ===== SHARE / EMAIL =====
+function buildShareText(type, data) {
+  const co = company || {};
+  const items = (data.rows || data.items || []);
+  const lines = items.filter(r=>r.name).map(r=>`  ・${r.name}${r.qty?` ${r.qty}${r.unit||''}`:''} ¥${commas(r.amount||0)}`).join('\n');
+  if (type === 'estimate') {
+    return `【見積書】${data.num||''}
+顧客: ${data.client||''}
+案件: ${data.project||''}
+見積日: ${data.date||''} / 有効期限: ${data.expiry||''}
+
+【明細】
+${lines||'  （明細なし）'}
+
+合計（税込）: ¥${commas(data.grand||0)}
+
+${co.name||''}
+TEL: ${co.tel||''} MAIL: ${co.email||''}
+`.trim();
+  } else {
+    return `【請求書】${data.num||''}
+請求先: ${data.client||''}
+請求日: ${data.date||''} / 支払期限: ${data.due||''}
+
+【明細】
+${lines||'  （明細なし）'}
+
+請求合計（税込）: ¥${commas(data.grand||0)}
+振込先: ${data.bank||''}
+
+${co.name||''}
+TEL: ${co.tel||''} MAIL: ${co.email||''}
+`.trim();
+  }
+}
+async function shareEst(id) {
+  const est = estimates.find(e=>String(e.id)===String(id));
+  if (!est) return;
+  const text = buildShareText('estimate', est);
+  const subject = `見積書 ${est.num} - ${est.client||''}`;
+  if (navigator.share) {
+    try { await navigator.share({ title: subject, text }); return; } catch(e) {}
+  }
+  window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
+}
+async function shareInv(id) {
+  const inv = invoices.find(i=>String(i.id)===String(id));
+  if (!inv) return;
+  const text = buildShareText('invoice', inv);
+  const subject = `請求書 ${inv.num} - ${inv.client||''}`;
+  if (navigator.share) {
+    try { await navigator.share({ title: subject, text }); return; } catch(e) {}
+  }
+  window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
 }
 
 // ===== CASES =====
@@ -2235,7 +2374,29 @@ function importBackup(event) {
 function saveCompany() {
   const co={name:document.getElementById('co-name').value,zip:document.getElementById('co-zip').value,address:document.getElementById('co-address').value,tel:document.getElementById('co-tel').value,fax:document.getElementById('co-fax').value,email:document.getElementById('co-email').value,license:document.getElementById('co-license').value,staff:document.getElementById('co-staff').value};
   localStorage.setItem('ck_company',JSON.stringify(co));
+  checkCompanyComplete();
   alert('自社情報を保存しました');
+}
+// 自社情報の必須項目チェック（見積書に印刷される項目）
+function checkCompanyComplete() {
+  const co = JSON.parse(localStorage.getItem('ck_company')||'{}');
+  const ok = !!(co.name && co.address && co.tel);
+  const banner = document.getElementById('co-incomplete-banner');
+  if (banner) banner.style.display = ok ? 'none' : 'block';
+  return ok;
+}
+// バナーから自社情報セクションを開く
+function openCompanySettings() {
+  const head = document.getElementById('co-collapse-head');
+  const body = document.getElementById('co-collapse-body');
+  if (head && !head.classList.contains('open')) {
+    head.classList.add('open');
+    body.classList.add('open');
+  }
+  setTimeout(()=>{
+    head?.scrollIntoView({behavior:'smooth',block:'start'});
+    document.getElementById('co-name')?.focus();
+  }, 80);
 }
 function updateTopbarUser() {
   const name = userProfile.displayName || '';
@@ -2271,6 +2432,7 @@ function loadCompany() {
   document.getElementById('co-staff').value=co.staff||'';
   const emailEl=document.getElementById('settings-user-email');
   if(emailEl&&currentUser)emailEl.textContent=currentUser.email;
+  checkCompanyComplete();
   updateOrgUI();
 }
 // ===== レシートOCR =====
@@ -2587,6 +2749,18 @@ function updateDashboard() {
   const paid=invoices.filter(i=>i.status==='paid').reduce((s,i)=>s+(i.grand||0),0);
   document.getElementById('dash-inv-total').textContent='¥'+commas(paid);
   renderWhiteboard();
+  // 通知バナー制御
+  const banner = document.getElementById('notif-banner');
+  if (banner) {
+    if (!('Notification' in window) || Notification.permission === 'denied') {
+      banner.style.display = 'none';
+    } else if (Notification.permission === 'granted') {
+      banner.style.display = 'none';
+      checkDeadlines();
+    } else {
+      banner.style.display = 'flex';
+    }
+  }
 }
 function goToEst(id){const n=document.querySelector('[data-page="estimate"]');navigate('estimate',n);estEditForm(id);}
 function goToInv(id){const n=document.querySelector('[data-page="invoice"]');navigate('invoice',n);invEditForm(id);}
@@ -2890,6 +3064,100 @@ function exportInvoices() {
 // ===== UTILS =====
 function parseNum(id){return parseInt(document.getElementById(id).textContent.replace(/[¥,]/g,''))||0;}
 function setBadge(id,count){const el=document.getElementById(id);el.textContent=count;el.style.display=count>0?'block':'none';}
+
+// ===== クイックアクション =====
+function quickNewEstimate() {
+  navigate('estimate', document.querySelector('[data-page="estimate"]'));
+  estNewForm();
+}
+function quickNewInvoice() {
+  navigate('invoice', document.querySelector('[data-page="invoice"]'));
+  invNewForm();
+}
+function quickNewCase() {
+  navigate('cases', document.querySelector('[data-page="cases"]'));
+  showNewCaseForm();
+}
+function quickExpense() {
+  navigate('settings', document.querySelector('[data-page=settings]'));
+  // 経費セクションを開いてスクロール
+  const sec = document.getElementById('expense-section');
+  if (sec) {
+    setTimeout(() => {
+      sec.scrollIntoView({ behavior:'smooth', block:'start' });
+      document.getElementById('exp-name-input')?.focus();
+    }, 80);
+  }
+}
+
+// ===== 折りたたみ =====
+function toggleCollapse(btn) {
+  btn.classList.toggle('open');
+  const body = btn.nextElementSibling;
+  if (body) body.classList.toggle('open');
+}
+
+// ===== 期限リマインド通知 =====
+async function requestNotifPermission() {
+  if (!('Notification' in window)) return false;
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') return false;
+  const result = await Notification.requestPermission();
+  return result === 'granted';
+}
+
+function checkDeadlines() {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const todayStr = fmtDate(today);
+  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1);
+  const tomorrowStr = fmtDate(tomorrow);
+  const in3days = new Date(today); in3days.setDate(in3days.getDate()+3);
+  const in3daysStr = fmtDate(in3days);
+
+  // 見積有効期限チェック
+  estimates.forEach(e => {
+    if (!e.expiry || e.status === 'accepted') return;
+    const key = `notif_est_${e.id}_${e.expiry}`;
+    if (localStorage.getItem(key)) return;
+    let msg = null;
+    if (e.expiry === todayStr) msg = `見積 ${e.num}（${e.client||'—'}）の有効期限は本日です`;
+    else if (e.expiry === tomorrowStr) msg = `見積 ${e.num}（${e.client||'—'}）の有効期限は明日です`;
+    else if (e.expiry === in3daysStr) msg = `見積 ${e.num}（${e.client||'—'}）の有効期限まであと3日です`;
+    if (msg) {
+      new Notification('ConstructKit 期限アラート', { body: msg, icon: '/favicon.ico' });
+      localStorage.setItem(key, '1');
+    }
+  });
+
+  // 請求支払期限チェック
+  invoices.forEach(i => {
+    if (!i.due || i.status === 'paid') return;
+    const key = `notif_inv_${i.id}_${i.due}`;
+    if (localStorage.getItem(key)) return;
+    let msg = null;
+    if (i.due === todayStr) msg = `請求 ${i.num}（${i.client||'—'}）の支払期限は本日です`;
+    else if (i.due === tomorrowStr) msg = `請求 ${i.num}（${i.client||'—'}）の支払期限は明日です`;
+    else if (i.due === in3daysStr) msg = `請求 ${i.num}（${i.client||'—'}）の支払期限まであと3日です`;
+    if (msg) {
+      new Notification('ConstructKit 期限アラート', { body: msg, icon: '/favicon.ico' });
+      localStorage.setItem(key, '1');
+    }
+  });
+}
+
+// 通知許可ボタン処理
+function enableNotifications() {
+  requestNotifPermission().then(granted => {
+    if (granted) {
+      document.getElementById('notif-banner')?.remove();
+      checkDeadlines();
+    } else {
+      alert('通知が許可されませんでした。ブラウザの設定から通知を許可してください。');
+    }
+  });
+}
 
 window.onload=()=>{
   // Data loading is handled by sb.auth.onAuthStateChange above
