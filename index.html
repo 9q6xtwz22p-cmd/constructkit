@@ -99,36 +99,63 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
   #print-area { display: block !important; font-family: 'Helvetica Neue', Arial, sans-serif; color: #000; font-size: 11px; }
   @page { margin: 15mm 18mm; size: A4; }
   /* ===== エークラフト形式 ===== */
-  .ac-page { position: relative; page-break-inside: avoid; font-family: 'Hiragino Mincho ProN','Yu Mincho',serif; }
+  .ac-page { position: relative; font-family: 'Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif; color: #000; }
   .ac-break { page-break-before: always; }
-  .ac-title { font-size: 22px; font-weight: 700; letter-spacing: 10px; text-align: center; margin-bottom: 4px; }
-  .ac-no { position: absolute; top: 0; right: 0; font-size: 10px; }
+  .ac-titlebar { background: #FBE5D2; text-align: center; font-size: 21px; font-weight: 700; letter-spacing: 9px; padding: 9px 0 7px; }
+  .ac-no { text-align: right; font-size: 10px; padding: 3px 2px 2px; }
+  .ac-rule { border-top: 1.2px solid #000; border-bottom: 1.2px solid #000; height: 2px; margin-bottom: 6px; }
   .ac-date { text-align: right; font-size: 10.5px; margin-bottom: 10px; }
-  .ac-head { display: flex; justify-content: space-between; gap: 18px; margin-bottom: 12px; }
-  .ac-to { flex: 1.25; }
-  .ac-to-name { font-size: 14px; font-weight: 700; border-bottom: 1px solid #000; padding-bottom: 3px; margin-bottom: 8px; }
-  .ac-greet { font-size: 9px; line-height: 1.85; color: #222; text-align: justify; }
-  .ac-from { flex: 0 0 40%; font-size: 10px; line-height: 1.8; }
-  .ac-from-name { font-size: 12.5px; font-weight: 700; margin-bottom: 2px; }
-  .ac-from-staff { margin-top: 5px; font-size: 11px; font-weight: 700; }
-  .ac-lic { font-size: 8.5px; color: #333; margin-top: 3px; }
-  .ac-lbl { font-size: 9.5px; color: #333; margin-right: 8px; }
-  .ac-subject, .ac-secname { border-bottom: 1px solid #000; padding-bottom: 4px; margin-bottom: 8px; }
-  .ac-subject-v, .ac-secname-v { font-size: 13px; font-weight: 700; }
-  .ac-amount { display: flex; align-items: baseline; gap: 10px; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 12px; }
-  .ac-amount-v { font-size: 19px; font-weight: 800; letter-spacing: 0.5px; }
-  .ac-sectotal { text-align: right; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
-  .ac-tbl { width: 100%; border-collapse: collapse; font-size: 10px; }
-  .ac-tbl th { border-top: 1.5px solid #000; border-bottom: 1px solid #000; padding: 5px 4px; font-weight: 700; font-size: 9.5px; }
-  .ac-tbl td { border-bottom: 1px solid #d5d5d5; padding: 4.5px 4px; }
-  .ac-tbl .ac-n { text-align: left; }
-  .ac-tbl .ac-q, .ac-tbl .ac-u { text-align: right; width: 8%; white-space: nowrap; }
-  .ac-tbl .ac-p, .ac-tbl .ac-a { text-align: right; width: 13%; white-space: nowrap; }
-  .ac-tbl tr.ac-sum td { border-bottom: none; padding-top: 5px; font-weight: 700; }
-  .ac-tbl tr.ac-sum:first-of-type td { border-top: 1.5px solid #000; }
-  .ac-tbl tr.ac-grand td { border-top: 1px solid #000; border-bottom: 3px double #000; font-size: 12px; }
-  .ac-notes { font-size: 9px; line-height: 1.8; margin-top: 10px; color: #222; }
-  .ac-foot { margin-top: 14px; padding-top: 8px; border-top: 1px solid #000; font-size: 9.5px; line-height: 2; }
+  .ac-toline { margin: 0 0 10px 22px; }
+  .ac-to-name { font-size: 13px; font-weight: 700; border-bottom: 1.2px solid #000; padding: 0 90px 3px 4px; }
+  .ac-head { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 4px; }
+  .ac-greet { flex: 1.15; font-size: 9px; line-height: 1.85; padding-left: 4px; }
+  .ac-from { flex: 0 0 44%; font-size: 10.5px; line-height: 1.75; position: relative; }
+  .ac-from-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .ac-from-staff { margin-top: 3px; }
+  .ac-lic { font-size: 8.5px; margin-top: 2px; }
+  .ac-seal { display: flex; margin-top: 6px; }
+  .ac-seal span { width: 38px; height: 38px; border: 1px solid #000; margin-left: -1px; display: block; text-align: center; padding: 3px; }
+  .ac-seal img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .ac-lbl { font-size: 11px; font-weight: 700; margin-right: 26px; }
+  .ac-subject { margin: 8px 0 8px 22px; }
+  .ac-subject-v { font-size: 13px; font-weight: 700; }
+  .ac-amount { display: table; border: 1.4px solid #000; background: #FBE5D2; padding: 6px 18px; margin: 0 0 10px 22px; }
+  .ac-amount-l, .ac-amount-v { display: table-cell; vertical-align: baseline; }
+  .ac-amount-l { padding-right: 18px; }
+  .ac-amount-l { font-size: 13px; font-weight: 700; }
+  .ac-amount-v { font-size: 16px; font-weight: 700; }
+  /* 明細テーブル：全セル罫線 */
+  .ac-tbl { width: 100%; border-collapse: collapse; font-size: 9.5px; table-layout: fixed; }
+  .ac-tbl th, .ac-tbl td { border: 1px solid #000; padding: 1.5px 4px; height: 10px; line-height: 1.25; }
+  .ac-tbl th { text-align: center; font-weight: 400; font-size: 9px; letter-spacing: 1px; }
+  .ac-tbl td.ac-n { text-align: left; }
+  .ac-tbl th.ac-n { text-align: center; }
+  .ac-tbl .ac-q { text-align: right; width: 11%; }
+  .ac-tbl .ac-u { text-align: center; width: 9%; }
+  .ac-tbl .ac-p { text-align: right; width: 15%; }
+  .ac-tbl .ac-a { text-align: right; width: 17%; }
+  .ac-tbl tr.ac-blank td { color: transparent; }
+  .ac-tbl tr.ac-disc .ac-n, .ac-tbl tr.ac-disc .ac-a { color: #d00; }
+  .ac-tbl tr.ac-sum .ac-n { text-align: center; letter-spacing: 2px; }
+  .ac-tbl tr.ac-beige td { background: #FBE5D2; }
+  .ac-tbl tr.ac-sum .ac-q, .ac-tbl tr.ac-sum .ac-u, .ac-tbl tr.ac-sum .ac-p { border-left: none; border-right: none; }
+  .ac-notesbox { border: 1px solid #000; border-top: none; font-size: 8.5px; line-height: 1.7; padding: 5px 8px; min-height: 26px; }
+  /* 表紙フッター */
+  .ac-footrow { display: flex; gap: 18px; margin-top: 12px; }
+  .ac-foottbl { flex: 1; border-collapse: collapse; font-size: 9.5px; }
+  .ac-foottbl td { border: 1px solid #000; padding: 3px 6px; }
+  .ac-fl { width: 34%; text-align: center; font-weight: 700; }
+  .ac-bank { flex: 1; border: 1px solid #000; padding: 5px 8px; font-size: 9.5px; line-height: 2; }
+  .ac-bank-l { font-weight: 700; margin-bottom: 3px; }
+  /* 内訳明細の工事名称枠 */
+  .ac-nametbl { border-collapse: collapse; margin: 16px 0 14px 22px; width: 82%; font-size: 11px; }
+  .ac-nametbl td { border: 1.2px solid #000; padding: 6px 8px; }
+  .ac-nl { width: 26%; text-align: center; font-weight: 700; }
+  .ac-nv { text-align: center; font-weight: 700; font-size: 13px; }
+  .ac-nv-big { font-size: 16px; }
+  .ac-remarks { border: 1px solid #000; border-top: none; font-size: 9.5px; padding: 6px 8px; min-height: 105px; }
+  .ac-logo { text-align: center; margin-top: 16px; }
+  .ac-logo img { height: 34px; }
   .pdoc { max-width: 100%; }
   .ph { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 2px solid #111; }
   .ph-co { font-size: 10px; line-height: 1.9; color: #444; }
@@ -238,6 +265,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 <script src="pricedb.js"></script>
+<script src="brand.js"></script>
 </head>
 <body>
 
@@ -859,6 +887,33 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       <div class="form-field"><label>メール</label><input type="email" id="co-email" placeholder="info@example.com"></div>
       <div class="form-field"><label>建設業許可番号</label><input type="text" id="co-license" placeholder="〇〇知事許可（般-00）第00000号"></div>
       <div class="form-field"><label>担当者名（印刷時の担当者欄）</label><input type="text" id="co-staff" placeholder="代表 田中太郎"></div>
+      <div class="form-field"><label>お振込み先（見積書に印刷）</label><textarea id="co-bank" placeholder="城南信用金庫 立会川支店 普通&#10;1234567 株式会社〇〇" style="min-height:60px"></textarea></div>
+      <div class="form-field"><label>御支払い条件</label><input type="text" id="co-payterm" placeholder="お振込みor現金"></div>
+      <div style="border-top:1px solid var(--rule);padding-top:14px;margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;color:var(--ink-sub);letter-spacing:0.5px;margin-bottom:10px">ロゴ・社印（見積書に印刷されます）</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <div style="font-size:11px;color:var(--ink-sub);margin-bottom:6px">会社ロゴ（下部中央）</div>
+            <div id="co-logo-prev" style="border:1.5px dashed var(--rule);border-radius:9px;height:64px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--ink-sub);overflow:hidden;background:#fff">未設定</div>
+            <input type="file" id="co-logo-file" accept="image/*" style="display:none" onchange="uploadBrand(event,'logo')">
+            <div style="display:flex;gap:6px;margin-top:6px">
+              <button class="btn-sm" style="flex:1;justify-content:center" onclick="document.getElementById('co-logo-file').click()">変更</button>
+              <button class="btn-sm" onclick="restoreBrand('logo')" title="同梱のa-Craftロゴに戻す">↺</button>
+              <button class="btn-sm" onclick="clearBrand('logo')" title="印刷しない">✕</button>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--ink-sub);margin-bottom:6px">社印（角の枠内）</div>
+            <div id="co-seal-prev" style="border:1.5px dashed var(--rule);border-radius:9px;height:64px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--ink-sub);overflow:hidden;background:#fff">未設定</div>
+            <input type="file" id="co-seal-file" accept="image/*" style="display:none" onchange="uploadBrand(event,'seal')">
+            <div style="display:flex;gap:6px;margin-top:6px">
+              <button class="btn-sm" style="flex:1;justify-content:center" onclick="document.getElementById('co-seal-file').click()">変更</button>
+              <button class="btn-sm" onclick="restoreBrand('seal')" title="同梱の社印に戻す">↺</button>
+              <button class="btn-sm" onclick="clearBrand('seal')" title="印刷しない">✕</button>
+            </div>
+          </div>
+        </div>
+      </div>
       <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px" onclick="saveCompany()">保存</button>
     </div>
     </div>
@@ -1004,7 +1059,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
           • 「＋ 区分」で工事区分を作ると、区分ごとの小計が右に出ます<br>
           • 明細テンプレートの保存・読み込みでよく使う内容をすぐ呼び出し<br>
           • 仕入単価を入力すると粗利が自動計算されます<br>
-          • 「🖨」の印刷は<strong>表紙（大項目サマリ）＋ 内訳明細書</strong>の2階層フォーマットです<br>
+          • 「🖨」の印刷は<strong>表紙（大項目サマリ）＋ 工事区分ごとの内訳明細書</strong>の2階層。<br>
+          　従来の見積書フォーマット（ベージュの帯・罫線グリッド・振込先枠・ロゴ）をそのまま再現しています<br>
           • 「🖨」ボタンでA4サイズの見積書を印刷・PDF保存<br>
           • 「📧」ボタンで<strong>メール送信・共有</strong>（スマホは共有シート、PCはメールソフトが開きます）<br>
           • 「📊」ボタンでExcelにエクスポートできます
@@ -1050,8 +1106,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
           　💴 経費管理／👷 メンバー管理／👤 アカウント<br>
           <br>
           <strong>その他の設定（▶ をタップで開く）</strong><br>
-          　⚙️ 自社情報　… 会社名・住所・TEL・許可番号など。<br>
-          　　<strong>見積書・請求書に印刷される情報</strong>なので、最初に1回だけ設定してください。未入力のときは設定画面の上に警告が出ます。<br>
+          　⚙️ 自社情報　… 会社名・住所・TEL・許可番号・<strong>お振込み先・支払条件</strong>、<br>
+          　　それに<strong>会社ロゴと社印の画像</strong>も登録できます。<br>
+          　　<strong>すべて見積書・請求書に印刷される情報</strong>なので、最初に1回だけ設定してください。未入力のときは設定画面の上に警告が出ます。<br>
           　🏢 チーム共有　… 招待コードで複数人とデータ共有<br>
           　💾 データバックアップ　… 書き出し・復元
         </div>
@@ -2055,33 +2112,36 @@ function buildAcraftHTML(est) {
   const co=JSON.parse(localStorage.getItem('ck_company')||'{}');
   const secs=groupSections(est.items);
   const taxRate=(est.taxRate!=null?est.taxRate:0.10);
-  const taxPct=Math.round(taxRate*100);
-  const jpDate=d=>{ if(!d) return '—'; const p=String(d).split('-'); return p.length===3?`${p[0]}年${+p[1]}月${+p[2]}日`:d; };
+  const jpDate=d=>{ if(!d) return ''; const p=String(d).split('-'); return p.length===3?`${p[0]}年${+p[1]}月${+p[2]}日`:d; };
   const money=n=>'¥'+commas(n||0);
-  const row=(n,q,u,p,a)=>`<tr><td class="ac-n">${esc(n)}</td><td class="ac-q">${q===''?'':q}</td><td class="ac-u">${esc(u||'')}</td><td class="ac-p">${p===''?'':commas(p)}</td><td class="ac-a">${a===''?'':commas(a)}</td></tr>`;
+  const COVER_ROWS=18, DETAIL_ROWS=27;   // 実物に合わせて枠を下まで引く
 
-  // ---- 表紙の大項目行 ----
-  let cover = secs.map((s,i)=>row(s.name||`工事${i+1}`, 1, '式', s.total, s.total)).join('');
-  if(est.mgmt>0) cover += row('現場管理費', est.mgmtPct, '％', Math.round(est.workSub*0.01)||'', est.mgmt);
-  if(est.misc>0) cover += row('諸経費', est.miscPct, '％', Math.round(est.workSub*0.01)||'', est.misc);
-  if(est.discount>0) cover += `<tr><td class="ac-n">出精値引き</td><td class="ac-q"></td><td class="ac-u"></td><td class="ac-p"></td><td class="ac-a">${commas(est.discount)}</td></tr>`;
-
+  const row=(n,q,u,p,a,cls='')=>`<tr${cls?` class="${cls}"`:''}><td class="ac-n">${esc(n)}</td><td class="ac-q">${q===''||q==null?'':q}</td><td class="ac-u">${esc(u||'')}</td><td class="ac-p">${p===''||p==null?'':commas(p)}</td><td class="ac-a">${a===''||a==null?'':commas(a)}</td></tr>`;
+  const blank=n=>Array.from({length:Math.max(0,n)},()=>'<tr class="ac-blank"><td class="ac-n">&nbsp;</td><td class="ac-q"></td><td class="ac-u"></td><td class="ac-p"></td><td class="ac-a"></td></tr>').join('');
   const totalBlock=(sub,tax,grand)=>`
-    <tr class="ac-sum"><td class="ac-n">小　計</td><td colspan="3"></td><td class="ac-a">${commas(sub)}</td></tr>
-    <tr class="ac-sum"><td class="ac-n">消 費 税 等</td><td colspan="3"></td><td class="ac-a">${commas(tax)}</td></tr>
-    <tr class="ac-sum ac-grand"><td class="ac-n">合　計</td><td colspan="3"></td><td class="ac-a">${commas(grand)}</td></tr>`;
+    <tr class="ac-sum"><td class="ac-n">小　　計</td><td class="ac-q"></td><td class="ac-u"></td><td class="ac-p"></td><td class="ac-a">${commas(sub)}</td></tr>
+    <tr class="ac-sum ac-beige"><td class="ac-n">消 費 税 等</td><td class="ac-q"></td><td class="ac-u"></td><td class="ac-p"></td><td class="ac-a">${commas(tax)}</td></tr>
+    <tr class="ac-sum ac-beige"><td class="ac-n">合　　計</td><td class="ac-q"></td><td class="ac-u"></td><td class="ac-p"></td><td class="ac-a">${commas(grand)}</td></tr>`;
+  const logo = co.logo ? `<div class="ac-logo"><img src="${co.logo}" alt=""></div>` : '';
 
-  // ---- 表紙 ----
+  // ===== 表紙 =====
+  let cover = secs.map((s,i)=>row(s.name||`工事${i+1}`, 1, '式', s.total, s.total)).join('');
+  const unitPct = est.workSub ? Math.round(est.workSub/100) : '';
+  if(est.mgmt>0) cover += row('現場管理費', est.mgmtPct, '％', unitPct, est.mgmt);
+  if(est.misc>0) cover += row('諸経費', est.miscPct, '％', unitPct, est.misc);
+  const usedCover = secs.length + (est.mgmt>0?1:0) + (est.misc>0?1:0);
+  cover += blank(COVER_ROWS - usedCover - 1);
+  cover += `<tr class="ac-disc"><td class="ac-n">出精値引き</td><td class="ac-q"></td><td class="ac-u"></td><td class="ac-p"></td><td class="ac-a">${est.discount>0?commas(est.discount):''}</td></tr>`;
+
   let html=`<div class="ac-page">
-    <div class="ac-title">御 見 積 書</div>
+    <div class="ac-titlebar">御 見 積 書</div>
     <div class="ac-no">No. 01</div>
+    <div class="ac-rule"></div>
     <div class="ac-date">${jpDate(est.date)}</div>
+    <div class="ac-toline"><span class="ac-to-name">${esc(est.client||'')} 様</span></div>
     <div class="ac-head">
-      <div class="ac-to">
-        <div class="ac-to-name">${esc(est.client||'')} 様</div>
-        <div class="ac-greet">謹啓 時下ますますご清栄のこととお慶び申し上げ、また平素の格別のお引き立てに深謝致します。<br>
-        さて、今回下記内容にてお見積りを発行させて頂きました故、何卒ご用命賜りますよう宜しくお取り計らい下さるよう心よりお願い申し上げます。</div>
-      </div>
+      <div class="ac-greet">謹啓　時下ますますご清栄のこととお慶び申し上げ、また平素の格別のお引き立てに深謝致します。<br>
+      さて、今回下記内容にてお見積りを発行させて頂きました故、何卒ご用命賜りますよう宜しくお取り計らい下さるよう心よりお願い申し上げます。</div>
       <div class="ac-from">
         <div class="ac-from-name">${esc(co.name||'')}</div>
         ${co.zip?`<div>〒${esc(co.zip)}</div>`:''}
@@ -2089,37 +2149,52 @@ function buildAcraftHTML(est) {
         ${co.tel?`<div>Tel ${esc(co.tel)}</div>`:''}
         ${co.staff?`<div class="ac-from-staff">${esc(co.staff)}</div>`:''}
         ${co.license?`<div class="ac-lic">${esc(co.license)}</div>`:''}
+        <div class="ac-seal">
+          <span></span><span></span>
+          <span>${co.seal?`<img src="${co.seal}" alt="">`:''}</span>
+        </div>
       </div>
     </div>
     <div class="ac-subject"><span class="ac-lbl">件名</span><span class="ac-subject-v">${esc(est.project||'')}</span></div>
-    <div class="ac-amount"><span class="ac-lbl">御見積金額(消費税別)</span><span class="ac-amount-v">${money(est.sub)}</span></div>
+    <div class="ac-amount"><span class="ac-amount-l">御見積金額(消費税別)</span><span class="ac-amount-v">${money(est.sub)}</span></div>
     <table class="ac-tbl">
-      <thead><tr><th class="ac-n">摘　要</th><th class="ac-q">数量</th><th class="ac-u">単位</th><th class="ac-p">単価</th><th class="ac-a">金　額</th></tr></thead>
+      <thead><tr><th class="ac-n">摘　　要</th><th class="ac-q">数量</th><th class="ac-u">単位</th><th class="ac-p">単価</th><th class="ac-a">金　額</th></tr></thead>
       <tbody>${cover}${totalBlock(est.sub,est.tax,est.grand)}</tbody>
     </table>
-    ${est.notes?`<div class="ac-notes">${esc(est.notes).replace(/\n/g,'<br>')}</div>`:''}
-    <div class="ac-foot">
-      <div><span class="ac-lbl">担当者</span> ${esc(co.staff||est.staff||'')}</div>
-      <div><span class="ac-lbl">場所</span> ${esc(est.address||'')}</div>
-      <div><span class="ac-lbl">見積有効期限</span> ${jpDate(est.expiry)}</div>
+    <div class="ac-notesbox">${est.notes?esc(est.notes).replace(/\n/g,'<br>'):'※項目に無い工事は追加工事となります。'}</div>
+    <div class="ac-footrow">
+      <table class="ac-foottbl">
+        <tr><td class="ac-fl">担当者</td><td class="ac-fv">${esc(co.staff||est.staff||'')}</td></tr>
+        <tr><td class="ac-fl">場所</td><td class="ac-fv">${esc(est.address||'')}</td></tr>
+        <tr><td class="ac-fl">見積有効期限</td><td class="ac-fv">${jpDate(est.expiry)}</td></tr>
+        <tr><td class="ac-fl">御支払い条件</td><td class="ac-fv">${esc(co.payterm||'お振込みor現金')}</td></tr>
+      </table>
+      <div class="ac-bank"><div class="ac-bank-l">お振込み先</div><div class="ac-bank-v">${esc(co.bank||'').replace(/\n/g,'<br>')}</div></div>
     </div>
+    ${logo}
   </div>`;
 
-  // ---- 内訳明細（工事区分ごと1ページ） ----
+  // ===== 内訳明細書 =====
   secs.forEach((s,i)=>{
     const t=Math.round(s.total*taxRate);
     html+=`<div class="ac-page ac-break">
-      <div class="ac-title">内 訳 明 細 書</div>
+      <div class="ac-titlebar">内 訳 明 細 書</div>
       <div class="ac-no">No. ${String(i+2).padStart(2,'0')}</div>
-      <div class="ac-secname"><span class="ac-lbl">工事名称</span><span class="ac-secname-v">${esc(s.name)}</span></div>
-      <div class="ac-sectotal">合計 ${money(s.total)}</div>
+      <div class="ac-rule"></div>
+      <table class="ac-nametbl">
+        <tr><td class="ac-nl">工事名称</td><td class="ac-nv">${esc(s.name)}</td></tr>
+        <tr><td class="ac-nl">合計</td><td class="ac-nv ac-nv-big">${money(s.total)}</td></tr>
+      </table>
       <table class="ac-tbl">
-        <thead><tr><th class="ac-n">摘　要</th><th class="ac-q">数量</th><th class="ac-u">単位</th><th class="ac-p">単価</th><th class="ac-a">金　額</th></tr></thead>
+        <thead><tr><th class="ac-n">摘　　要</th><th class="ac-q">数量</th><th class="ac-u">単位</th><th class="ac-p">単価</th><th class="ac-a">金　額</th></tr></thead>
         <tbody>
           ${s.items.map(it=>row(it.name,it.qty,it.unit,it.price,it.amount)).join('')}
+          ${blank(DETAIL_ROWS - s.items.length)}
           ${totalBlock(s.total,t,s.total+t)}
         </tbody>
       </table>
+      <div class="ac-remarks">備　考：</div>
+      ${logo}
     </div>`;
   });
   return html;
@@ -2706,11 +2781,71 @@ function importBackup(event) {
   event.target.value='';
 }
 function saveCompany() {
-  const co={name:document.getElementById('co-name').value,zip:document.getElementById('co-zip').value,address:document.getElementById('co-address').value,tel:document.getElementById('co-tel').value,fax:document.getElementById('co-fax').value,email:document.getElementById('co-email').value,license:document.getElementById('co-license').value,staff:document.getElementById('co-staff').value};
+  const prev=JSON.parse(localStorage.getItem('ck_company')||'{}');
+  const co={name:document.getElementById('co-name').value,zip:document.getElementById('co-zip').value,address:document.getElementById('co-address').value,tel:document.getElementById('co-tel').value,fax:document.getElementById('co-fax').value,email:document.getElementById('co-email').value,license:document.getElementById('co-license').value,staff:document.getElementById('co-staff').value,
+    bank:document.getElementById('co-bank')?.value||'', payterm:document.getElementById('co-payterm')?.value||'',
+    logo:prev.logo||'', seal:prev.seal||''};
   localStorage.setItem('ck_company',JSON.stringify(co));
   checkCompanyComplete();
   alert('自社情報を保存しました');
 }
+// ===== ロゴ・社印 =====
+// 未設定なら同梱のブランド素材を初期値として入れる（一度消したら復活させない）
+function initBrand() {
+  if(!window.CK_BRAND) return;
+  const co=JSON.parse(localStorage.getItem('ck_company')||'{}');
+  let changed=false;
+  if(co.logo===undefined && CK_BRAND.logo){ co.logo=CK_BRAND.logo; changed=true; }
+  if(co.seal===undefined && CK_BRAND.seal){ co.seal=CK_BRAND.seal; changed=true; }
+  // 会社情報が丸ごと空のときだけ、既存見積書から読み取った値を初期値に入れる
+  if(!co.name && !co.address && !co.tel && CK_BRAND.company){
+    Object.assign(co, CK_BRAND.company); changed=true;
+  }
+  if(changed) localStorage.setItem('ck_company',JSON.stringify(co));
+}
+function restoreBrand(kind) {
+  if(!window.CK_BRAND?.[kind]) { alert('同梱の素材が見つかりません'); return; }
+  const co=JSON.parse(localStorage.getItem('ck_company')||'{}');
+  co[kind]=CK_BRAND[kind];
+  localStorage.setItem('ck_company',JSON.stringify(co));
+  renderBrandPrev();
+}
+function renderBrandPrev() {
+  const co=JSON.parse(localStorage.getItem('ck_company')||'{}');
+  [['logo','会社ロゴ'],['seal','社印']].forEach(([k,label])=>{
+    const el=document.getElementById('co-'+k+'-prev');
+    if(!el) return;
+    el.innerHTML = co[k] ? `<img src="${co[k]}" style="max-width:100%;max-height:100%;object-fit:contain">` : '未設定';
+  });
+}
+function uploadBrand(ev, kind) {
+  const f=ev.target.files?.[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=e=>{
+    // 幅600pxに縮小してlocalStorage肥大を防ぐ
+    const img=new Image();
+    img.onload=()=>{
+      const max=600, sc=Math.min(1, max/img.width);
+      const cv=document.createElement('canvas');
+      cv.width=Math.round(img.width*sc); cv.height=Math.round(img.height*sc);
+      cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+      const co=JSON.parse(localStorage.getItem('ck_company')||'{}');
+      co[kind]=cv.toDataURL('image/png');
+      localStorage.setItem('ck_company',JSON.stringify(co));
+      renderBrandPrev();
+    };
+    img.src=e.target.result;
+  };
+  rd.readAsDataURL(f);
+  ev.target.value='';
+}
+function clearBrand(kind) {
+  const co=JSON.parse(localStorage.getItem('ck_company')||'{}');
+  co[kind]='';   // 空文字＝意図的に消した（initBrandで復活しない）
+  localStorage.setItem('ck_company',JSON.stringify(co));
+  renderBrandPrev();
+}
+
 // 自社情報の必須項目チェック（見積書に印刷される項目）
 function checkCompanyComplete() {
   const co = JSON.parse(localStorage.getItem('ck_company')||'{}');
@@ -2764,6 +2899,9 @@ function loadCompany() {
   document.getElementById('co-email').value=co.email||'';
   document.getElementById('co-license').value=co.license||'';
   document.getElementById('co-staff').value=co.staff||'';
+  if(document.getElementById('co-bank')) document.getElementById('co-bank').value=co.bank||'';
+  if(document.getElementById('co-payterm')) document.getElementById('co-payterm').value=co.payterm||'';
+  renderBrandPrev();
   const emailEl=document.getElementById('settings-user-email');
   if(emailEl&&currentUser)emailEl.textContent=currentUser.email;
   checkCompanyComplete();
@@ -3496,6 +3634,7 @@ function enableNotifications() {
 }
 
 window.onload=()=>{
+  initBrand();
   // Data loading is handled by sb.auth.onAuthStateChange above
 };
 // ページを閉じる直前に未sync分を強制送信
