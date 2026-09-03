@@ -98,6 +98,37 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
   body > *:not(#print-area) { display: none !important; }
   #print-area { display: block !important; font-family: 'Helvetica Neue', Arial, sans-serif; color: #000; font-size: 11px; }
   @page { margin: 15mm 18mm; size: A4; }
+  /* ===== エークラフト形式 ===== */
+  .ac-page { position: relative; page-break-inside: avoid; font-family: 'Hiragino Mincho ProN','Yu Mincho',serif; }
+  .ac-break { page-break-before: always; }
+  .ac-title { font-size: 22px; font-weight: 700; letter-spacing: 10px; text-align: center; margin-bottom: 4px; }
+  .ac-no { position: absolute; top: 0; right: 0; font-size: 10px; }
+  .ac-date { text-align: right; font-size: 10.5px; margin-bottom: 10px; }
+  .ac-head { display: flex; justify-content: space-between; gap: 18px; margin-bottom: 12px; }
+  .ac-to { flex: 1.25; }
+  .ac-to-name { font-size: 14px; font-weight: 700; border-bottom: 1px solid #000; padding-bottom: 3px; margin-bottom: 8px; }
+  .ac-greet { font-size: 9px; line-height: 1.85; color: #222; text-align: justify; }
+  .ac-from { flex: 0 0 40%; font-size: 10px; line-height: 1.8; }
+  .ac-from-name { font-size: 12.5px; font-weight: 700; margin-bottom: 2px; }
+  .ac-from-staff { margin-top: 5px; font-size: 11px; font-weight: 700; }
+  .ac-lic { font-size: 8.5px; color: #333; margin-top: 3px; }
+  .ac-lbl { font-size: 9.5px; color: #333; margin-right: 8px; }
+  .ac-subject, .ac-secname { border-bottom: 1px solid #000; padding-bottom: 4px; margin-bottom: 8px; }
+  .ac-subject-v, .ac-secname-v { font-size: 13px; font-weight: 700; }
+  .ac-amount { display: flex; align-items: baseline; gap: 10px; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 12px; }
+  .ac-amount-v { font-size: 19px; font-weight: 800; letter-spacing: 0.5px; }
+  .ac-sectotal { text-align: right; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+  .ac-tbl { width: 100%; border-collapse: collapse; font-size: 10px; }
+  .ac-tbl th { border-top: 1.5px solid #000; border-bottom: 1px solid #000; padding: 5px 4px; font-weight: 700; font-size: 9.5px; }
+  .ac-tbl td { border-bottom: 1px solid #d5d5d5; padding: 4.5px 4px; }
+  .ac-tbl .ac-n { text-align: left; }
+  .ac-tbl .ac-q, .ac-tbl .ac-u { text-align: right; width: 8%; white-space: nowrap; }
+  .ac-tbl .ac-p, .ac-tbl .ac-a { text-align: right; width: 13%; white-space: nowrap; }
+  .ac-tbl tr.ac-sum td { border-bottom: none; padding-top: 5px; font-weight: 700; }
+  .ac-tbl tr.ac-sum:first-of-type td { border-top: 1.5px solid #000; }
+  .ac-tbl tr.ac-grand td { border-top: 1px solid #000; border-bottom: 3px double #000; font-size: 12px; }
+  .ac-notes { font-size: 9px; line-height: 1.8; margin-top: 10px; color: #222; }
+  .ac-foot { margin-top: 14px; padding-top: 8px; border-top: 1px solid #000; font-size: 9.5px; line-height: 2; }
   .pdoc { max-width: 100%; }
   .ph { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 2px solid #111; }
   .ph-co { font-size: 10px; line-height: 1.9; color: #444; }
@@ -156,6 +187,27 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 .photo-add { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; font-size:11px; color:var(--ink-sub); font-weight:600; cursor:pointer; border:2px dashed var(--rule); }
 .photo-add:active { background:var(--accent-soft); border-color:var(--accent); }
 .photo-cat-tabs { display:flex; gap:6px; padding:10px 16px; border-bottom:1px solid var(--rule); background:#fafafa; }
+/* ===== 単価サジェスト ===== */
+.sug-wrap { position:relative; flex:1; display:flex; }
+.sug-box { position:absolute; top:100%; left:0; right:0; z-index:60; background:var(--surface); border:1.5px solid var(--accent); border-radius:10px; box-shadow:0 6px 20px rgba(0,0,0,.14); max-height:260px; overflow-y:auto; margin-top:2px; }
+.sug-item { padding:9px 11px; border-bottom:1px solid var(--rule); cursor:pointer; }
+.sug-item:last-child { border-bottom:none; }
+.sug-item:active, .sug-item.on { background:var(--accent-soft); }
+.sug-n { font-size:12.5px; font-weight:600; line-height:1.35; }
+.sug-m { font-size:10.5px; color:var(--ink-sub); margin-top:2px; display:flex; gap:8px; flex-wrap:wrap; }
+.sug-p { color:var(--accent); font-weight:800; }
+.sug-hd { padding:6px 11px; font-size:10px; font-weight:700; color:var(--ink-sub); background:#fafafa; border-bottom:1px solid var(--rule); position:sticky; top:0; }
+.pct-inp { width:46px; padding:2px 5px; border:1.5px solid var(--rule); border-radius:6px; font-size:12px; font-family:inherit; outline:none; text-align:right; background:var(--surface); color:var(--ink); }
+.pct-inp:focus { border-color:var(--accent); }
+.sec-sum { font-size:11px; font-weight:800; color:var(--accent); white-space:nowrap; padding-right:4px; }
+/* 合計欄の折りたたみ */
+.fold-btn { width:100%; display:flex; align-items:center; justify-content:space-between; background:none; border:none; padding:6px 0 8px; font-family:inherit; font-size:13px; color:var(--ink-sub); cursor:pointer; }
+.fold-btn .chev { font-size:9px; display:inline-block; transition:transform .18s; margin-right:3px; }
+.fold-btn.open .chev { transform:rotate(90deg); }
+.fold-sum { font-size:12px; font-weight:700; color:var(--ink-sub); }
+.fold-btn.open .fold-sum { opacity:0; }
+.fold-body { display:none; padding-left:2px; }
+.fold-body.open { display:block; }
 /* ===== QUICK ACTIONS ===== */
 .quick-primary { width:100%; display:flex; align-items:center; justify-content:center; gap:8px; background:var(--accent); color:#fff; border:none; border-radius:14px; padding:18px; font-size:16px; font-weight:800; font-family:inherit; cursor:pointer; margin-bottom:10px; box-shadow:0 2px 8px rgba(79,124,255,0.25); -webkit-tap-highlight-color:transparent; }
 .quick-primary:active { transform:scale(0.98); }
@@ -185,6 +237,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+<script src="pricedb.js"></script>
 </head>
 <body>
 
@@ -269,11 +322,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       </div>
     </div>
   </div>
-  <div class="stat-row">
-    <div class="stat-card"><div class="stat-label">見積</div><div class="stat-value" style="color:var(--accent)" id="dash-est-count">0</div><div class="stat-sub">件</div></div>
-    <div class="stat-card"><div class="stat-label">未払い</div><div class="stat-value" style="color:var(--orange)" id="dash-inv-unpaid">0</div><div class="stat-sub">件</div></div>
-    <div class="stat-card"><div class="stat-label">入金済み</div><div class="stat-value" style="color:var(--green);font-size:14px" id="dash-inv-total">¥0</div><div class="stat-sub">合計</div></div>
-  </div>
   <div class="card" id="wb-card">
     <div class="card-header"><h2>📋 今週の配置表</h2></div>
     <div class="wb-nav">
@@ -311,10 +359,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
   </div>
   <!-- 編集 -->
   <div id="est-edit-view" style="display:none">
-    <div class="stat-row">
-      <div class="stat-card"><div class="stat-label">番号</div><div class="stat-value" style="font-size:13px;letter-spacing:0" id="est-num">—</div><div class="stat-sub" id="est-date-sub">—</div></div>
-      <div class="stat-card"><div class="stat-label">行数</div><div class="stat-value" style="color:var(--accent)" id="est-rows">0</div><div class="stat-sub">行</div></div>
-      <div class="stat-card"><div class="stat-label">合計</div><div class="stat-value" style="color:var(--green);font-size:15px" id="est-stat-total">¥0</div><div class="stat-sub">税込</div></div>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:12px;padding:0 2px">
+      <span style="font-size:12px;font-weight:700;color:var(--ink-sub)" id="est-num">—</span>
+      <span style="font-size:11px;color:var(--ink-sub)" id="est-date-sub">—</span>
+      <span style="flex:1"></span>
+      <span style="font-size:17px;font-weight:800;color:var(--accent)" id="est-stat-total">¥0</span>
+      <span style="display:none" id="est-rows">0</span>
     </div>
     <div class="card">
       <div class="card-header">
@@ -355,15 +405,45 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
           <button class="btn-sm accent" onclick="estAddRow()">＋ 追加</button>
         </div>
       </div>
-      <div class="quick-add">
-        <button class="btn-sm" onclick="estAddRow('LGS壁下地','m²',1,2800)">内装</button>
-        <button class="btn-sm" onclick="estAddRow('照明取付','箇所',1,8000)">設備</button>
-        <button class="btn-sm" onclick="estAddRow('現場管理費','式',1,30000)">管理費</button>
-        <button class="btn-sm" onclick="estAddRow('廃材処分費','式',1,15000)">廃材</button>
-      </div>
+      <div class="quick-add" id="est-pkg-bar"></div>
       <div style="padding:0 16px" id="est-items"></div>
       <div class="totals-box">
-        <div class="total-line"><span class="lbl">小計</span><span class="val" id="est-sub">¥0</span></div>
+        <div class="total-line"><span class="lbl">工事小計</span><span class="val" id="est-worksub">¥0</span></div>
+        <!-- 経費・値引き（普段は畳んでおく） -->
+        <button class="fold-btn" id="est-fold-btn" onclick="toggleEstFold()">
+          <span><span class="chev">▶</span> 経費・値引き</span>
+          <span class="fold-sum" id="est-fold-sum">＋¥0</span>
+        </button>
+        <div class="fold-body" id="est-fold-body">
+          <div class="total-line">
+            <span class="lbl">現場管理費
+              <input type="number" id="est-mgmt-pct" value="5" min="0" max="30" step="0.5" oninput="estRecalc()" class="pct-inp">
+              <span style="font-size:11px">%</span>
+            </span>
+            <span class="val" id="est-mgmt-val">¥0</span>
+          </div>
+          <div class="total-line">
+            <span class="lbl">諸経費
+              <input type="number" id="est-misc-pct" value="8" min="0" max="30" step="0.5" oninput="estRecalc()" class="pct-inp">
+              <span style="font-size:11px">%</span>
+            </span>
+            <span class="val" id="est-misc-val">¥0</span>
+          </div>
+          <div class="total-line" style="margin-bottom:0">
+            <span class="lbl">出精値引き
+              <label style="font-size:10px;display:inline-flex;align-items:center;gap:3px;cursor:pointer;color:var(--accent)">
+                <input type="checkbox" id="est-round-on" checked onchange="estRecalc()" style="margin:0">自動
+              </label>
+              <select class="tax-sel" id="est-round-unit" onchange="estRecalc()" style="padding:1px 4px">
+                <option value="1000">千円単位</option>
+                <option value="10000">万円単位</option>
+                <option value="100">百円単位</option>
+              </select>
+            </span>
+            <span class="val" id="est-discount-val" style="color:var(--red)">−¥0</span>
+          </div>
+        </div>
+        <div class="total-line" style="border-top:1px solid var(--rule);padding-top:8px"><span class="lbl" style="font-weight:700">小計</span><span class="val" id="est-sub">¥0</span></div>
         <div class="total-line">
           <span class="lbl">消費税 <select class="tax-sel" id="est-tax" onchange="estRecalc()"><option value="0.10">10%</option><option value="0.08">8%</option><option value="0">非課税</option></select></span>
           <span class="val" id="est-tax-val">¥0</span>
@@ -560,56 +640,67 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       <div class="totals-box"><div class="total-line"><span class="lbl">費用合計</span><span class="val" id="case-total">¥0</span></div></div>
     </div>
     <div class="card">
-      <div class="card-header"><h2>工程表</h2><button class="btn-sm accent" onclick="scheduleAddRow()">＋ 追加</button></div>
-      <div id="schedule-inputs"></div>
-      <div class="gantt-wrap"><div id="gantt-chart"></div></div>
-    </div>
-    <div class="card">
-      <div class="card-header"><h2>現場写真</h2></div>
-      <div class="photo-cat-tabs" id="photo-cat-tabs" style="flex-wrap:wrap">
-        <button class="btn-sm" onclick="triggerPhoto('before')">📷 着工前</button>
-        <button class="btn-sm" onclick="triggerPhoto('during')">📷 施工中</button>
-        <button class="btn-sm" onclick="triggerPhoto('after')">📷 完工</button>
-        <button class="btn-sm" id="photo-cat-add-btn" onclick="togglePhotoCatInput()" style="color:var(--accent);border-color:var(--accent)">＋ カテゴリ</button>
-      </div>
-      <div id="photo-cat-input-row" style="display:none;padding:8px 16px;border-bottom:1px solid var(--rule);background:#fafafa;display:none;gap:8px;align-items:center">
-        <input type="text" id="photo-cat-name" placeholder="カテゴリ名（例: 検査写真）" style="flex:1;border:1.5px solid var(--rule);border-radius:8px;padding:7px 10px;font-size:13px;font-family:inherit">
-        <button class="btn-sm accent" onclick="addPhotoCategory()">追加</button>
-        <button class="btn-sm" onclick="document.getElementById('photo-cat-input-row').style.display='none'">✕</button>
-      </div>
-      <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="handlePhoto(event)">
-      <div class="photo-grid" id="photo-grid"><div class="empty-state" style="padding:20px;font-size:12px;grid-column:1/-1">写真がまだありません</div></div>
-    </div>
-    <div class="card">
-      <div class="card-header"><h2>📐 図面データ</h2><button class="btn-sm accent" onclick="openDrawingOptions()">＋ 追加</button></div>
-      <input type="file" id="drawing-input" accept="image/*,.pdf" style="display:none" onchange="handleDrawing(event)">
-      <div id="drawing-list" style="padding:0 16px 12px"><div class="empty-state" style="padding:16px 0;font-size:12px">図面がまだありません</div></div>
-      <!-- 図面追加オプションシート -->
-      <div id="drawing-options" style="display:none;padding:14px 16px;border-top:1px solid var(--rule);background:#fafafa">
-        <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--ink-sub)">追加方法を選択</div>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <button class="btn-sm" style="justify-content:flex-start;gap:10px;padding:10px 12px" onclick="document.getElementById('drawing-input').click();document.getElementById('drawing-options').style.display='none'">🖼 画像・PDFをアップロード</button>
-          <div style="display:flex;gap:8px">
-            <input type="text" id="drawing-url-name" placeholder="図面名" style="flex:1;border:1.5px solid var(--rule);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit">
-            <input type="url" id="drawing-url-input" placeholder="Google DriveなどのURL" style="flex:2;border:1.5px solid var(--rule);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit">
-            <button class="btn-sm accent" onclick="addDrawingUrl()">追加</button>
-          </div>
-        </div>
-        <button class="btn-sm" style="margin-top:8px;width:100%;justify-content:center" onclick="document.getElementById('drawing-options').style.display='none'">キャンセル</button>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-header"><h2>関連見積</h2><button class="btn-sm accent" onclick="openEstPickerForCase()">＋ 見積を紐づけ</button></div>
-      <div id="case-est-list"><div class="empty-state" style="padding:16px;font-size:12px">紐づけられた見積はありません</div></div>
-    </div>
-    <div class="card">
       <div class="card-header"><h2>💴 現場経費</h2></div>
       <div id="case-exp-list" style="padding:0 16px"><div class="empty-state" style="padding:16px 0;font-size:12px">経費が記録されていません</div></div>
       <div class="totals-box"><div class="total-line"><span class="lbl">経費合計</span><span class="val" id="case-exp-total">¥0</span></div></div>
     </div>
     <div class="card">
-      <div class="card-header"><h2>現場メモ</h2></div>
-      <div class="card-body"><div class="form-field"><textarea id="case-memo" placeholder="進捗・連絡事項など" oninput="saveCaseMemo()"></textarea></div></div>
+      <div class="card-header"><h2>関連見積</h2><button class="btn-sm accent" onclick="openEstPickerForCase()">＋ 見積を紐づけ</button></div>
+      <div id="case-est-list"><div class="empty-state" style="padding:16px;font-size:12px">紐づけられた見積はありません</div></div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--ink-sub);letter-spacing:0.5px;margin:20px 0 8px 4px">記録・資料</div>
+    <div class="card">
+      <button class="collapse-head" onclick="toggleCollapse(this)"><span>📅 工程表</span><span class="chev">▶</span></button>
+      <div class="collapse-body">
+                <div style="padding:10px 16px 0;display:flex;justify-content:flex-end"><button class="btn-sm accent" onclick="scheduleAddRow()">＋ 追加</button></div>
+        <div id="schedule-inputs"></div>
+        <div class="gantt-wrap"><div id="gantt-chart"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <button class="collapse-head" onclick="toggleCollapse(this)"><span>📷 現場写真</span><span class="chev">▶</span></button>
+      <div class="collapse-body">
+                <div class="photo-cat-tabs" id="photo-cat-tabs" style="flex-wrap:wrap">
+          <button class="btn-sm" onclick="triggerPhoto('before')">📷 着工前</button>
+          <button class="btn-sm" onclick="triggerPhoto('during')">📷 施工中</button>
+          <button class="btn-sm" onclick="triggerPhoto('after')">📷 完工</button>
+          <button class="btn-sm" id="photo-cat-add-btn" onclick="togglePhotoCatInput()" style="color:var(--accent);border-color:var(--accent)">＋ カテゴリ</button>
+        </div>
+        <div id="photo-cat-input-row" style="display:none;padding:8px 16px;border-bottom:1px solid var(--rule);background:#fafafa;display:none;gap:8px;align-items:center">
+          <input type="text" id="photo-cat-name" placeholder="カテゴリ名（例: 検査写真）" style="flex:1;border:1.5px solid var(--rule);border-radius:8px;padding:7px 10px;font-size:13px;font-family:inherit">
+          <button class="btn-sm accent" onclick="addPhotoCategory()">追加</button>
+          <button class="btn-sm" onclick="document.getElementById('photo-cat-input-row').style.display='none'">✕</button>
+        </div>
+        <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="handlePhoto(event)">
+        <div class="photo-grid" id="photo-grid"><div class="empty-state" style="padding:20px;font-size:12px;grid-column:1/-1">写真がまだありません</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <button class="collapse-head" onclick="toggleCollapse(this)"><span>📐 図面データ</span><span class="chev">▶</span></button>
+      <div class="collapse-body">
+                <div style="padding:10px 16px 0;display:flex;justify-content:flex-end"><button class="btn-sm accent" onclick="openDrawingOptions()">＋ 追加</button></div>
+        <input type="file" id="drawing-input" accept="image/*,.pdf" style="display:none" onchange="handleDrawing(event)">
+        <div id="drawing-list" style="padding:0 16px 12px"><div class="empty-state" style="padding:16px 0;font-size:12px">図面がまだありません</div></div>
+        <!-- 図面追加オプションシート -->
+        <div id="drawing-options" style="display:none;padding:14px 16px;border-top:1px solid var(--rule);background:#fafafa">
+          <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--ink-sub)">追加方法を選択</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button class="btn-sm" style="justify-content:flex-start;gap:10px;padding:10px 12px" onclick="document.getElementById('drawing-input').click();document.getElementById('drawing-options').style.display='none'">🖼 画像・PDFをアップロード</button>
+            <div style="display:flex;gap:8px">
+              <input type="text" id="drawing-url-name" placeholder="図面名" style="flex:1;border:1.5px solid var(--rule);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit">
+              <input type="url" id="drawing-url-input" placeholder="Google DriveなどのURL" style="flex:2;border:1.5px solid var(--rule);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit">
+              <button class="btn-sm accent" onclick="addDrawingUrl()">追加</button>
+            </div>
+          </div>
+          <button class="btn-sm" style="margin-top:8px;width:100%;justify-content:center" onclick="document.getElementById('drawing-options').style.display='none'">キャンセル</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <button class="collapse-head" onclick="toggleCollapse(this)"><span>📝 現場メモ</span><span class="chev">▶</span></button>
+      <div class="collapse-body">
+                <div class="card-body"><div class="form-field"><textarea id="case-memo" placeholder="進捗・連絡事項など" oninput="saveCaseMemo()"></textarea></div></div>
+      </div>
     </div>
   </div>
 </div>
@@ -882,22 +973,38 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
           • 下請けの場合は元請け会社名・発注番号を入力<br>
           • 着工日・完工予定日を登録するとホームの配置表に反映されます<br>
           • <strong>担当メンバー</strong>を割り当てると配置表に表示されます<br>
-          • 材料・費用のトラッキングができます<br>
-          • 工程表（ガントチャート）で進捗を可視化<br>
-          • 着工前・施工中・完工の<strong>写真</strong>を保存できます<br>
-          • <strong>図面データ</strong>：画像・PDF・外部リンク（Google Driveなど）を登録可能<br>
-          • 「関連見積」で案件に見積を紐づけられます<br>
-          • 現場ごとの<strong>経費</strong>もここで確認できます
+          • 作成時に元請け／下請けを選択、着工日・完工日で配置表に反映<br>
+          <br>
+          <strong>いつも見えている（お金まわり）</strong><br>
+          　材料・費用／現場経費／関連見積<br>
+          <br>
+          <strong>「記録・資料」に畳んであるもの（▶ をタップで開く）</strong><br>
+          　📅 工程表　… ガントチャートで進捗を可視化<br>
+          　📷 現場写真　… 着工前・施工中・完工。カテゴリは自由に追加できます<br>
+          　📐 図面データ　… 画像・PDF・外部リンク（Google Driveなど）<br>
+          　📝 現場メモ
         </div>
       </div>
 
       <div style="margin-bottom:18px">
         <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">📄 見積</div>
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
+          <strong>⚡ 自動見積もり（過去30件の実績から）</strong><br>
+          ① <strong>📦 パッケージボタン</strong>：「ユニットバス改修」「塗装工事」などを押すと、定番の明細がまるごと入ります<br>
+          ② <strong>品目サジェスト</strong>：項目名を打つと過去の実績から候補が出ます。選ぶと<strong>単位・数量・単価が自動入力</strong><br>
+          　（候補には「直近の単価」「相場レンジ」「実績回数」が表示されます）<br>
+          ③ 合計欄の<strong>「▶ 経費・値引き」</strong>を開くと調整できます<br>
+          　・現場管理費／諸経費：% を入れると工事小計から自動計算（初期値 5% / 8%）<br>
+          　・出精値引き：税込合計の端数を自動カットしてキリのいい金額に（千円／万円単位）<br>
+          　※ 普段は畳んだままでOK。閉じていても自動で計算されています<br>
+          <br>
+          <strong>基本操作</strong><br>
           • 「📂 案件から読み込む」で現場情報を自動入力<br>
           • 「👥 選択」で登録済み顧客を呼び出せます<br>
+          • 「＋ 区分」で工事区分を作ると、区分ごとの小計が右に出ます<br>
           • 明細テンプレートの保存・読み込みでよく使う内容をすぐ呼び出し<br>
           • 仕入単価を入力すると粗利が自動計算されます<br>
+          • 「🖨」の印刷は<strong>表紙（大項目サマリ）＋ 内訳明細書</strong>の2階層フォーマットです<br>
           • 「🖨」ボタンでA4サイズの見積書を印刷・PDF保存<br>
           • 「📧」ボタンで<strong>メール送信・共有</strong>（スマホは共有シート、PCはメールソフトが開きます）<br>
           • 「📊」ボタンでExcelにエクスポートできます
@@ -1435,7 +1542,12 @@ function estNewForm() {
   document.getElementById('est-date').value=fmtDate(t);
   document.getElementById('est-expiry').value=fmtDate(e);
   document.getElementById('est-tax').value='0.10';
+  document.getElementById('est-mgmt-pct').value='5';
+  document.getElementById('est-misc-pct').value='8';
+  document.getElementById('est-round-on').checked=true;
+  document.getElementById('est-round-unit').value='1000';
   document.getElementById('est-items').innerHTML='';
+  renderPkgBar();
   estRecalc();
 }
 function estEditForm(id) {
@@ -1456,24 +1568,112 @@ function estEditForm(id) {
   document.getElementById('est-staff').value=est.staff||'';
   document.getElementById('est-notes').value=est.notes||'';
   document.getElementById('est-tax').value=String(est.taxRate||0.10);
+  document.getElementById('est-mgmt-pct').value=(est.mgmtPct!=null?est.mgmtPct:5);
+  document.getElementById('est-misc-pct').value=(est.miscPct!=null?est.miscPct:8);
+  document.getElementById('est-round-on').checked=(est.roundOn!==false);
+  document.getElementById('est-round-unit').value=String(est.roundUnit||1000);
   document.getElementById('est-items').innerHTML='';
   (est.items||[]).forEach(item=>{
     if(item.type==='section') estAddSection(item.name);
     else estAddRow(item.name,item.unit,item.qty,item.price,item.cost||0);
   });
+  renderPkgBar();
   estRecalc();
 }
 function estAddSection(name='セクション名') {
   const w=document.getElementById('est-items'),d=document.createElement('div');
   d.className='section-divider'; d.setAttribute('data-est-sec','1');
-  d.innerHTML=`<span style="color:#9ca3af;font-size:12px">▸</span><input type="text" value="${name}"/><button class="btn-del" onclick="this.parentElement.remove()">✕</button>`;
-  w.appendChild(d);
+  d.innerHTML=`<span style="color:#9ca3af;font-size:12px">▸</span><input type="text" value="${esc(name)}"/><span class="sec-sum">¥0</span><button class="btn-del" onclick="this.parentElement.remove();estRecalc()">✕</button>`;
+  w.appendChild(d); estRecalc();
 }
 function estAddRow(name='',unit='式',qty=1,price=0,cost=0) {
   const w=document.getElementById('est-items'),d=document.createElement('div');
   d.setAttribute('data-item','est');
-  d.innerHTML=`<div class="item-row"><input class="item-name-input" type="text" value="${name}" placeholder="項目名" oninput="estRecalc()"><input class="item-qty-input item-num-input" type="number" value="${qty}" min="0" step="0.1" oninput="estRecalc()"><span class="item-amount">¥0</span><button class="btn-del" onclick="this.closest('[data-item]').remove();estRecalc()">✕</button></div><div class="item-detail"><select onchange="estRecalc()">${unitOpts(unit)}</select><span class="item-detail-label">×</span><input class="item-price-input item-num-input" type="number" value="${price}" min="0" step="100" oninput="estRecalc()" placeholder="売価"><span class="item-detail-label">円</span><span class="item-detail-label" style="margin-left:6px;color:#9ca3af">仕入</span><input class="item-cost-input item-num-input" type="number" value="${cost||''}" min="0" step="100" oninput="estRecalc()" placeholder="0" style="width:60px;color:var(--ink-sub)"><span class="item-detail-label">円</span></div>`;
+  d.innerHTML=`<div class="item-row"><span class="sug-wrap"><input class="item-name-input" type="text" value="${esc(name)}" placeholder="項目名（入力すると候補が出ます）" autocomplete="off" oninput="estRecalc();sugShow(this)" onfocus="sugShow(this)" onblur="sugHideLater(this)" onkeydown="sugKey(event,this)"></span><input class="item-qty-input item-num-input" type="number" value="${qty}" min="0" step="0.1" oninput="estRecalc()"><span class="item-amount">¥0</span><button class="btn-del" onclick="this.closest('[data-item]').remove();estRecalc()">✕</button></div><div class="item-detail"><select onchange="estRecalc()">${unitOpts(unit)}</select><span class="item-detail-label">×</span><input class="item-price-input item-num-input" type="number" value="${price}" min="0" step="100" oninput="estRecalc()" placeholder="売価"><span class="item-detail-label">円</span><span class="item-detail-label" style="margin-left:6px;color:#9ca3af">仕入</span><input class="item-cost-input item-num-input" type="number" value="${cost||''}" min="0" step="100" oninput="estRecalc()" placeholder="0" style="width:60px;color:var(--ink-sub)"><span class="item-detail-label">円</span></div>`;
   w.appendChild(d); estRecalc();
+  return d;
+}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ===== 単価マスタ・サジェスト =====
+const PDB = () => (window.CK_PRICE_DB || {master:[],packages:[]});
+function sugSearch(q, limit=8) {
+  q = (q||'').trim();
+  const ms = PDB().master;
+  if (!q) return ms.slice(0, limit);          // 空なら使用頻度順トップ
+  const lower = q.toLowerCase();
+  const scored = [];
+  for (const m of ms) {
+    const n = m.n.toLowerCase();
+    let s = -1;
+    if (n === lower) s = 1000;
+    else if (n.startsWith(lower)) s = 500;
+    else if (n.includes(lower)) s = 200;
+    else {
+      // 分かち書き的な部分一致（スペース区切りの全語を含む）
+      const parts = lower.split(/[\s　]+/).filter(Boolean);
+      if (parts.length > 1 && parts.every(p => n.includes(p))) s = 100;
+    }
+    if (s > 0) scored.push([s + Math.min(m.c, 20), m]);
+  }
+  scored.sort((a,b)=>b[0]-a[0]);
+  return scored.slice(0, limit).map(x=>x[1]);
+}
+function sugShow(inp) {
+  sugClose();
+  const list = sugSearch(inp.value);
+  if (!list.length) return;
+  const box = document.createElement('div');
+  box.className = 'sug-box'; box.id = 'sug-box';
+  box.innerHTML = `<div class="sug-hd">過去の見積から ${list.length}件</div>` + list.map((m,i)=>{
+    const range = (m.lo !== m.hi) ? `<span>相場 ¥${commas(m.lo)}〜¥${commas(m.hi)}</span>` : '';
+    return `<div class="sug-item" data-i="${i}" onmousedown="event.preventDefault();sugPick(${i})">
+      <div class="sug-n">${esc(m.n)}</div>
+      <div class="sug-m"><span class="sug-p">¥${commas(m.p)}</span><span>/${esc(m.u)}</span>${range}<span>実績${m.c}回</span><span>${esc(m.g)}</span></div>
+    </div>`;
+  }).join('');
+  box._list = list; box._inp = inp; box._sel = -1;
+  inp.parentElement.appendChild(box);
+}
+function sugClose(){ const b=document.getElementById('sug-box'); if(b) b.remove(); }
+function sugHideLater(){ setTimeout(sugClose, 180); }
+function sugPick(i) {
+  const box=document.getElementById('sug-box'); if(!box) return;
+  const m=box._list[i], inp=box._inp;
+  const row=inp.closest('[data-item]');
+  inp.value=m.n;
+  const sel=row.querySelector('select'); if(sel && [...sel.options].some(o=>o.value===m.u)) sel.value=m.u;
+  const p=row.querySelector('.item-price-input'); if(p) p.value=m.p;
+  const q=row.querySelector('.item-qty-input'); if(q && (!q.value || q.value==='1')) q.value=m.q||1;
+  sugClose(); estRecalc();
+}
+function sugKey(e, inp) {
+  const box=document.getElementById('sug-box');
+  if(!box){ if(e.key==='ArrowDown') sugShow(inp); return; }
+  const items=[...box.querySelectorAll('.sug-item')];
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+    e.preventDefault();
+    box._sel = e.key==='ArrowDown' ? Math.min(box._sel+1, items.length-1) : Math.max(box._sel-1, 0);
+    items.forEach((el,i)=>el.classList.toggle('on', i===box._sel));
+    items[box._sel]?.scrollIntoView({block:'nearest'});
+  } else if(e.key==='Enter'){
+    if(box._sel>=0){ e.preventDefault(); sugPick(box._sel); }
+  } else if(e.key==='Escape'){ sugClose(); }
+}
+
+// ===== 工事パッケージ =====
+function renderPkgBar() {
+  const bar=document.getElementById('est-pkg-bar'); if(!bar) return;
+  const pk=PDB().packages;
+  bar.innerHTML = pk.map((p,i)=>`<button class="btn-sm" onclick="insertPackage(${i})" title="${p.items.length}項目を一括挿入（過去${p.docs}件の実績）">📦 ${esc(p.name)}</button>`).join('')
+    + `<button class="btn-sm" onclick="estAddSection()">＋ 区分</button>`
+    + `<button class="btn-sm accent" onclick="estAddRow()">＋ 明細</button>`;
+}
+function insertPackage(i) {
+  const p=PDB().packages[i]; if(!p) return;
+  estAddSection(p.name.replace(/ 一式$/,''));
+  p.items.forEach(it=>estAddRow(it.n, it.u, it.q||1, it.p, 0));
+  estRecalc();
 }
 function collectItems(containerId, secAttr) {
   const items=[];
@@ -1485,31 +1685,76 @@ function collectItems(containerId, secAttr) {
   });
   return items;
 }
-function estRecalc() {
-  const items=document.querySelectorAll('#est-items [data-item]');
-  let sub=0,costTotal=0;
-  items.forEach(d=>{
-    const qty=parseFloat(d.querySelector('.item-qty-input')?.value)||0;
-    const price=parseFloat(d.querySelector('.item-price-input')?.value)||0;
-    const cost=parseFloat(d.querySelector('.item-cost-input')?.value)||0;
-    const t=qty*price; const c=d.querySelector('.item-amount');if(c)c.textContent='¥'+commas(t);
-    sub+=t; costTotal+=qty*cost;
+// 見積の全金額を計算して返す（画面描画とは分離＝印刷・保存から再利用）
+function estCompute() {
+  const wrap=document.getElementById('est-items');
+  const sections=[];               // {name, total, items:[...]}
+  let cur=null, workSub=0, costTotal=0, rows=0;
+  Array.from(wrap.children).forEach(d=>{
+    if(d.hasAttribute('data-est-sec')){
+      cur={name:d.querySelector('input')?.value||'', total:0, items:[], el:d};
+      sections.push(cur);
+    } else if(d.hasAttribute('data-item')){
+      const qty=parseFloat(d.querySelector('.item-qty-input')?.value)||0;
+      const price=parseFloat(d.querySelector('.item-price-input')?.value)||0;
+      const cost=parseFloat(d.querySelector('.item-cost-input')?.value)||0;
+      const amt=Math.round(qty*price);
+      const cell=d.querySelector('.item-amount'); if(cell) cell.textContent='¥'+commas(amt);
+      workSub+=amt; costTotal+=qty*cost; rows++;
+      const it={name:d.querySelector('.item-name-input')?.value||'',unit:d.querySelector('select')?.value||'式',qty,price,cost,amount:amt};
+      if(!cur){ cur={name:'',total:0,items:[],el:null}; sections.push(cur); }
+      cur.items.push(it); cur.total+=amt;
+    }
   });
-  const rate=parseFloat(document.getElementById('est-tax').value),tax=Math.round(sub*rate),grand=sub+tax;
-  document.getElementById('est-sub').textContent='¥'+commas(sub);
-  document.getElementById('est-tax-val').textContent='¥'+commas(tax);
-  document.getElementById('est-grand').textContent='¥'+commas(grand);
-  document.getElementById('est-stat-total').textContent='¥'+commas(grand);
-  document.getElementById('est-rows').textContent=items.length;
+  // 区分ごとの小計を画面に反映
+  sections.forEach(s=>{ if(s.el){ const t=s.el.querySelector('.sec-sum'); if(t) t.textContent='¥'+commas(s.total); } });
+
+  const mgmtPct=parseFloat(document.getElementById('est-mgmt-pct')?.value)||0;
+  const miscPct=parseFloat(document.getElementById('est-misc-pct')?.value)||0;
+  const mgmt=Math.round(workSub*mgmtPct/100);
+  const misc=Math.round(workSub*miscPct/100);
+  const taxRate=parseFloat(document.getElementById('est-tax')?.value ?? 0.10);
+  // 小計＝工事小計＋現場管理費＋諸経費（値引きは含めない ＝ エークラフト方式）
+  const sub=workSub+mgmt+misc;
+  const tax=Math.round(sub*taxRate);
+  const grandRaw=sub+tax;
+  // 出精値引き＝税込合計の端数をそのまま引いてキリのいい金額にする
+  let discount=0;
+  const roundOn=document.getElementById('est-round-on')?.checked;
+  const unit=parseInt(document.getElementById('est-round-unit')?.value)||1000;
+  if(roundOn && grandRaw>=unit) discount=grandRaw%unit;
+  const grand=grandRaw-discount;
+  const profit=sub-discount-costTotal;
+  return {sections,workSub,mgmtPct,miscPct,mgmt,misc,discount,roundUnit:unit,
+          sub,taxRate,tax,grandRaw,grand,costTotal,profit,
+          profitRate: sub>0?Math.round(profit/sub*100):0, rows};
+}
+function estRecalc() {
+  const r=estCompute();
+  const set=(id,v)=>{const e=document.getElementById(id); if(e) e.textContent=v;};
+  set('est-worksub','¥'+commas(r.workSub));
+  set('est-mgmt-val','¥'+commas(r.mgmt));
+  set('est-misc-val','¥'+commas(r.misc));
+  set('est-discount-val','−¥'+commas(r.discount));
+  set('est-fold-sum', (r.mgmt+r.misc-r.discount>=0?'＋¥':'−¥')+commas(Math.abs(r.mgmt+r.misc-r.discount)));
+  set('est-sub','¥'+commas(r.sub));
+  set('est-tax-val','¥'+commas(r.tax));
+  set('est-grand','¥'+commas(r.grand));
+  set('est-stat-total','¥'+commas(r.grand));
+  set('est-rows',r.rows);
   const profitBox=document.getElementById('est-profit-box');
-  if(costTotal>0){const profit=sub-costTotal,pRate=sub>0?Math.round(profit/sub*100):0;document.getElementById('est-cost-val').textContent='¥'+commas(costTotal);document.getElementById('est-profit-val').textContent='¥'+commas(profit)+' ('+pRate+'%)';profitBox.style.display='block';}
-  else{profitBox.style.display='none';}
+  if(r.costTotal>0){
+    set('est-cost-val','¥'+commas(r.costTotal));
+    set('est-profit-val','¥'+commas(r.profit)+' ('+r.profitRate+'%)');
+    profitBox.style.display='block';
+  } else profitBox.style.display='none';
 }
 function saveEstimate() {
-  const sub=parseNum('est-sub'),tax=parseNum('est-tax-val'),grand=parseNum('est-grand');
-  const costVal=document.getElementById('est-cost-val').textContent;const profitVal=document.getElementById('est-profit-val').textContent;
-  const costTotal=parseInt(costVal.replace(/[¥,]/g,''))||0;const profit=sub-costTotal;const profitRate=sub>0?Math.round(profit/sub*100):0;
-  const obj={id:currentEstId||Date.now(),num:document.getElementById('est-num').textContent,client:document.getElementById('est-client').value,project:document.getElementById('est-project').value,date:document.getElementById('est-date').value,expiry:document.getElementById('est-expiry').value,address:document.getElementById('est-address').value,staff:document.getElementById('est-staff').value,notes:document.getElementById('est-notes').value,taxRate:parseFloat(document.getElementById('est-tax').value),items:collectItems('est-items','data-est-sec'),sub,tax,grand,costTotal,profit,profitRate};
+  const r=estCompute();
+  const obj={id:currentEstId||Date.now(),num:document.getElementById('est-num').textContent,client:document.getElementById('est-client').value,project:document.getElementById('est-project').value,date:document.getElementById('est-date').value,expiry:document.getElementById('est-expiry').value,address:document.getElementById('est-address').value,staff:document.getElementById('est-staff').value,notes:document.getElementById('est-notes').value,taxRate:r.taxRate,items:collectItems('est-items','data-est-sec'),
+    workSub:r.workSub, mgmtPct:r.mgmtPct, mgmt:r.mgmt, miscPct:r.miscPct, misc:r.misc,
+    discount:r.discount, roundUnit:r.roundUnit, roundOn:!!document.getElementById('est-round-on')?.checked,
+    sub:r.sub, tax:r.tax, grand:r.grand, costTotal:r.costTotal, profit:r.profit, profitRate:r.profitRate};
   if(currentEstId){const i=estimates.findIndex(e=>String(e.id)===String(currentEstId));if(i>=0)estimates[i]=obj;else estimates.push(obj);}
   else{estimates.push(obj);estCounter++;}
   persist(); setBadge('m-est-badge',estimates.length); updateDashboard(); showEstList();
@@ -1792,10 +2037,99 @@ function buildPrintHTML(type, data) {
   ${footerHTML?`<div class="pfooter">${footerHTML}</div>`:''}
   </div>`;
 }
+// ===== エークラフト形式（表紙＋内訳明細） =====
+// 保存済みの items（section/item の並び）を工事区分ごとにまとめ直す
+function groupSections(items) {
+  const secs=[]; let cur=null;
+  (items||[]).forEach(it=>{
+    if(it.type==='section'){ cur={name:it.name||'', items:[], total:0}; secs.push(cur); }
+    else if(it.type==='item'||!it.type){
+      const amt=Math.round((it.qty||0)*(it.price||0));
+      if(!cur){ cur={name:'工事一式', items:[], total:0}; secs.push(cur); }
+      cur.items.push({...it, amount:amt}); cur.total+=amt;
+    }
+  });
+  return secs.filter(s=>s.items.length);
+}
+function buildAcraftHTML(est) {
+  const co=JSON.parse(localStorage.getItem('ck_company')||'{}');
+  const secs=groupSections(est.items);
+  const taxRate=(est.taxRate!=null?est.taxRate:0.10);
+  const taxPct=Math.round(taxRate*100);
+  const jpDate=d=>{ if(!d) return '—'; const p=String(d).split('-'); return p.length===3?`${p[0]}年${+p[1]}月${+p[2]}日`:d; };
+  const money=n=>'¥'+commas(n||0);
+  const row=(n,q,u,p,a)=>`<tr><td class="ac-n">${esc(n)}</td><td class="ac-q">${q===''?'':q}</td><td class="ac-u">${esc(u||'')}</td><td class="ac-p">${p===''?'':commas(p)}</td><td class="ac-a">${a===''?'':commas(a)}</td></tr>`;
+
+  // ---- 表紙の大項目行 ----
+  let cover = secs.map((s,i)=>row(s.name||`工事${i+1}`, 1, '式', s.total, s.total)).join('');
+  if(est.mgmt>0) cover += row('現場管理費', est.mgmtPct, '％', Math.round(est.workSub*0.01)||'', est.mgmt);
+  if(est.misc>0) cover += row('諸経費', est.miscPct, '％', Math.round(est.workSub*0.01)||'', est.misc);
+  if(est.discount>0) cover += `<tr><td class="ac-n">出精値引き</td><td class="ac-q"></td><td class="ac-u"></td><td class="ac-p"></td><td class="ac-a">${commas(est.discount)}</td></tr>`;
+
+  const totalBlock=(sub,tax,grand)=>`
+    <tr class="ac-sum"><td class="ac-n">小　計</td><td colspan="3"></td><td class="ac-a">${commas(sub)}</td></tr>
+    <tr class="ac-sum"><td class="ac-n">消 費 税 等</td><td colspan="3"></td><td class="ac-a">${commas(tax)}</td></tr>
+    <tr class="ac-sum ac-grand"><td class="ac-n">合　計</td><td colspan="3"></td><td class="ac-a">${commas(grand)}</td></tr>`;
+
+  // ---- 表紙 ----
+  let html=`<div class="ac-page">
+    <div class="ac-title">御 見 積 書</div>
+    <div class="ac-no">No. 01</div>
+    <div class="ac-date">${jpDate(est.date)}</div>
+    <div class="ac-head">
+      <div class="ac-to">
+        <div class="ac-to-name">${esc(est.client||'')} 様</div>
+        <div class="ac-greet">謹啓 時下ますますご清栄のこととお慶び申し上げ、また平素の格別のお引き立てに深謝致します。<br>
+        さて、今回下記内容にてお見積りを発行させて頂きました故、何卒ご用命賜りますよう宜しくお取り計らい下さるよう心よりお願い申し上げます。</div>
+      </div>
+      <div class="ac-from">
+        <div class="ac-from-name">${esc(co.name||'')}</div>
+        ${co.zip?`<div>〒${esc(co.zip)}</div>`:''}
+        ${co.address?`<div>${esc(co.address)}</div>`:''}
+        ${co.tel?`<div>Tel ${esc(co.tel)}</div>`:''}
+        ${co.staff?`<div class="ac-from-staff">${esc(co.staff)}</div>`:''}
+        ${co.license?`<div class="ac-lic">${esc(co.license)}</div>`:''}
+      </div>
+    </div>
+    <div class="ac-subject"><span class="ac-lbl">件名</span><span class="ac-subject-v">${esc(est.project||'')}</span></div>
+    <div class="ac-amount"><span class="ac-lbl">御見積金額(消費税別)</span><span class="ac-amount-v">${money(est.sub)}</span></div>
+    <table class="ac-tbl">
+      <thead><tr><th class="ac-n">摘　要</th><th class="ac-q">数量</th><th class="ac-u">単位</th><th class="ac-p">単価</th><th class="ac-a">金　額</th></tr></thead>
+      <tbody>${cover}${totalBlock(est.sub,est.tax,est.grand)}</tbody>
+    </table>
+    ${est.notes?`<div class="ac-notes">${esc(est.notes).replace(/\n/g,'<br>')}</div>`:''}
+    <div class="ac-foot">
+      <div><span class="ac-lbl">担当者</span> ${esc(co.staff||est.staff||'')}</div>
+      <div><span class="ac-lbl">場所</span> ${esc(est.address||'')}</div>
+      <div><span class="ac-lbl">見積有効期限</span> ${jpDate(est.expiry)}</div>
+    </div>
+  </div>`;
+
+  // ---- 内訳明細（工事区分ごと1ページ） ----
+  secs.forEach((s,i)=>{
+    const t=Math.round(s.total*taxRate);
+    html+=`<div class="ac-page ac-break">
+      <div class="ac-title">内 訳 明 細 書</div>
+      <div class="ac-no">No. ${String(i+2).padStart(2,'0')}</div>
+      <div class="ac-secname"><span class="ac-lbl">工事名称</span><span class="ac-secname-v">${esc(s.name)}</span></div>
+      <div class="ac-sectotal">合計 ${money(s.total)}</div>
+      <table class="ac-tbl">
+        <thead><tr><th class="ac-n">摘　要</th><th class="ac-q">数量</th><th class="ac-u">単位</th><th class="ac-p">単価</th><th class="ac-a">金　額</th></tr></thead>
+        <tbody>
+          ${s.items.map(it=>row(it.name,it.qty,it.unit,it.price,it.amount)).join('')}
+          ${totalBlock(s.total,t,s.total+t)}
+        </tbody>
+      </table>
+    </div>`;
+  });
+  return html;
+}
 function printEst(id) {
   const est=estimates.find(e=>String(e.id)===String(id));
   if(!est)return;
-  document.getElementById('print-area').innerHTML=buildPrintHTML('estimate',est);
+  const style=localStorage.getItem('ck_print_style')||'acraft';
+  document.getElementById('print-area').innerHTML =
+    style==='acraft' ? buildAcraftHTML(est) : buildPrintHTML('estimate',est);
   window.print();
 }
 function printInv(id) {
@@ -2740,14 +3074,10 @@ function updateDashboard() {
   document.getElementById('dash-overdue-label').textContent = overdue ? `⚠️ 期限超過 ${overdue}件` : '';
   document.getElementById('dash-overdue-label').style.color = 'var(--red)';
 
-  document.getElementById('dash-est-count').textContent=estimates.length;
-  document.getElementById('dash-inv-unpaid').textContent=invoices.filter(i=>i.status!=='paid').length;
   document.getElementById('dash-est-list').innerHTML=!estimates.length?'<div class="empty-state">まだ見積がありません</div>'
     :[...estimates].reverse().slice(0,4).map(e=>`<div class="activity-item" onclick="goToEst('${e.id}')"><div class="activity-dot" style="background:var(--accent)"></div><div class="activity-text"><strong>${e.client||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${e.num} · ${e.date||''}</span></div><div class="activity-right" style="font-size:13px;font-weight:700;color:var(--accent)">¥${commas(e.grand||0)}</div></div>`).join('');
   document.getElementById('dash-inv-list').innerHTML=!invoices.length?'<div class="empty-state">まだ請求がありません</div>'
     :[...invoices].reverse().slice(0,4).map(i=>`<div class="activity-item" onclick="goToInv('${i.id}')"><div class="activity-dot" style="background:${S_COLOR[i.status]}"></div><div class="activity-text"><strong>${i.client||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${i.num} · 期限 ${i.due||'—'}</span></div><div class="activity-right"><div style="font-size:13px;font-weight:700;color:${S_COLOR[i.status]}">¥${commas(i.grand||0)}</div><div style="font-size:11px;color:${S_COLOR[i.status]}">${S_LABEL[i.status]}</div></div></div>`).join('');
-  const paid=invoices.filter(i=>i.status==='paid').reduce((s,i)=>s+(i.grand||0),0);
-  document.getElementById('dash-inv-total').textContent='¥'+commas(paid);
   renderWhiteboard();
   // 通知バナー制御
   const banner = document.getElementById('notif-banner');
@@ -3088,6 +3418,12 @@ function quickExpense() {
       document.getElementById('exp-name-input')?.focus();
     }, 80);
   }
+}
+
+// ===== 合計欄の折りたたみ =====
+function toggleEstFold() {
+  document.getElementById('est-fold-btn').classList.toggle('open');
+  document.getElementById('est-fold-body').classList.toggle('open');
 }
 
 // ===== 折りたたみ =====
