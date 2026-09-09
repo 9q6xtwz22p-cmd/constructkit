@@ -1044,10 +1044,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       <div style="margin-bottom:18px">
         <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">📄 見積</div>
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
-          <strong>⚡ 自動見積もり（過去30件の実績から）</strong><br>
+          <strong>⚡ 自動見積もり（2019〜2026年の見積書236件から）</strong><br>
           ① <strong>📦 パッケージボタン</strong>：「ユニットバス改修」「塗装工事」などを押すと、定番の明細がまるごと入ります<br>
-          ② <strong>品目サジェスト</strong>：項目名を打つと過去の実績から候補が出ます。選ぶと<strong>単位・数量・単価が自動入力</strong><br>
-          　（候補には「直近の単価」「相場レンジ」「実績回数」が表示されます）<br>
+          ② <strong>品目サジェスト</strong>：項目名を打つと<strong>2,600品目</strong>の実績から候補が出ます。選ぶと<strong>単位・数量・単価が自動入力</strong><br>
+          　（候補には「直近の単価」「相場レンジ」「実績回数」「直近に使った年月」が出ます）<br>
+          　※ 表記ゆれは統合済み。「産廃処分費」でも「産廃処分・運搬費」でも同じ候補が出ます<br>
           ③ 合計欄の<strong>「▶ 経費・値引き」</strong>を開くと調整できます<br>
           　・現場管理費／諸経費：% を入れると工事小計から自動計算（初期値 5% / 8%）<br>
           　・出精値引き：税込合計の端数を自動カットしてキリのいい金額に（千円／万円単位）<br>
@@ -1659,6 +1660,7 @@ function sugSearch(q, limit=8) {
   const ms = PDB().master;
   if (!q) return ms.slice(0, limit);          // 空なら使用頻度順トップ
   const lower = q.toLowerCase();
+  const parts = lower.split(/[\s　]+/).filter(Boolean);
   const scored = [];
   for (const m of ms) {
     const n = m.n.toLowerCase();
@@ -1666,12 +1668,9 @@ function sugSearch(q, limit=8) {
     if (n === lower) s = 1000;
     else if (n.startsWith(lower)) s = 500;
     else if (n.includes(lower)) s = 200;
-    else {
-      // 分かち書き的な部分一致（スペース区切りの全語を含む）
-      const parts = lower.split(/[\s　]+/).filter(Boolean);
-      if (parts.length > 1 && parts.every(p => n.includes(p))) s = 100;
-    }
-    if (s > 0) scored.push([s + Math.min(m.c, 20), m]);
+    else if (parts.length > 1 && parts.every(p => n.includes(p))) s = 120;
+    else if (m.alt && m.alt.some(a => a.toLowerCase().includes(lower))) s = 80;  // 別表記でも拾う
+    if (s > 0) scored.push([s + Math.min(m.c, 30), m]);
   }
   scored.sort((a,b)=>b[0]-a[0]);
   return scored.slice(0, limit).map(x=>x[1]);
@@ -1682,11 +1681,13 @@ function sugShow(inp) {
   if (!list.length) return;
   const box = document.createElement('div');
   box.className = 'sug-box'; box.id = 'sug-box';
-  box.innerHTML = `<div class="sug-hd">過去の見積から ${list.length}件</div>` + list.map((m,i)=>{
+  const total = PDB().master.length;
+  box.innerHTML = `<div class="sug-hd">過去の見積 ${commas(total)}品目から ${list.length}件</div>` + list.map((m,i)=>{
     const range = (m.lo !== m.hi) ? `<span>相場 ¥${commas(m.lo)}〜¥${commas(m.hi)}</span>` : '';
+    const yr = m.d ? `<span>直近 ${esc(m.d)}</span>` : '';
     return `<div class="sug-item" data-i="${i}" onmousedown="event.preventDefault();sugPick(${i})">
       <div class="sug-n">${esc(m.n)}</div>
-      <div class="sug-m"><span class="sug-p">¥${commas(m.p)}</span><span>/${esc(m.u)}</span>${range}<span>実績${m.c}回</span><span>${esc(m.g)}</span></div>
+      <div class="sug-m"><span class="sug-p">¥${commas(m.p)}</span><span>/${esc(m.u)}</span>${range}<span>実績${m.c}回</span>${yr}<span>${esc(m.g)}</span></div>
     </div>`;
   }).join('');
   box._list = list; box._inp = inp; box._sel = -1;
@@ -1701,7 +1702,7 @@ function sugPick(i) {
   inp.value=m.n;
   const sel=row.querySelector('select'); if(sel && [...sel.options].some(o=>o.value===m.u)) sel.value=m.u;
   const p=row.querySelector('.item-price-input'); if(p) p.value=m.p;
-  const q=row.querySelector('.item-qty-input'); if(q && (!q.value || q.value==='1')) q.value=m.q||1;
+  const q=row.querySelector('.item-qty-input'); if(q && (!q.value || q.value==='1')) q.value=m.q!=null?m.q:1;
   sugClose(); estRecalc();
 }
 function sugKey(e, inp) {
