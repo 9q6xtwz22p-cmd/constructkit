@@ -223,6 +223,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 .sug-n { font-size:12.5px; font-weight:600; line-height:1.35; }
 .sug-m { font-size:10.5px; color:var(--ink-sub); margin-top:2px; display:flex; gap:8px; flex-wrap:wrap; }
 .sug-p { color:var(--accent); font-weight:800; }
+.sug-btns { display:flex; gap:5px; margin-top:5px; flex-wrap:wrap; }
+.sug-b { font-size:11px; font-weight:700; padding:4px 9px; border-radius:7px; border:1.5px solid var(--rule); background:var(--surface); color:var(--accent); font-family:inherit; cursor:pointer; }
+.sug-b:active { background:var(--accent-soft); }
+.sug-warn { color:var(--orange); font-weight:700; }
 .sug-hd { padding:6px 11px; font-size:10px; font-weight:700; color:var(--ink-sub); background:#fafafa; border-bottom:1px solid var(--rule); position:sticky; top:0; }
 .pct-inp { width:46px; padding:2px 5px; border:1.5px solid var(--rule); border-radius:6px; font-size:12px; font-family:inherit; outline:none; text-align:right; background:var(--surface); color:var(--ink); }
 .pct-inp:focus { border-color:var(--accent); }
@@ -321,10 +325,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
     <span style="font-size:22px;line-height:1">＋</span>
     <span>見積を作る</span>
   </button>
-  <div class="quick-row">
+  <div class="quick-row" id="quick-row">
     <button onclick="quickNewInvoice()" class="quick-sub"><span style="font-size:18px">🧾</span>請求を作る</button>
-    <button onclick="quickNewCase()" class="quick-sub"><span style="font-size:18px">🏗</span>現場を追加</button>
-    <button onclick="quickExpense()" class="quick-sub"><span style="font-size:18px">📷</span>経費を記録</button>
+    <button onclick="quickNewCase()" class="quick-sub" data-full><span style="font-size:18px">🏗</span>現場を追加</button>
+    <button onclick="quickExpense()" class="quick-sub" data-full><span style="font-size:18px">📷</span>経費を記録</button>
+    <button onclick="quickClients()" class="quick-sub" data-est><span style="font-size:18px">👥</span>顧客を見る</button>
   </div>
   <!-- 今月サマリー -->
   <div class="card" style="margin-bottom:14px">
@@ -344,13 +349,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
         <div style="font-size:10px;color:var(--ink-sub)" id="dash-month-unpaid-count"></div>
       </div>
       <div style="background:var(--surface);padding:14px 16px">
-        <div style="font-size:10px;font-weight:700;color:var(--ink-sub);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">進行中現場</div>
+        <div style="font-size:10px;font-weight:700;color:var(--ink-sub);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px" id="dash-4th-label">進行中現場</div>
         <div style="font-size:20px;font-weight:800;color:var(--accent)" id="dash-active-cases">0</div>
         <div style="font-size:10px;color:var(--ink-sub)" id="dash-overdue-label"></div>
       </div>
     </div>
   </div>
-  <div class="card" id="wb-card">
+  <div class="card" id="wb-card" data-full>
     <div class="card-header"><h2>📋 今週の配置表</h2></div>
     <div class="wb-nav">
       <button class="btn-sm" onclick="wbPrevWeek()">← 前週</button>
@@ -775,8 +780,35 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
     <button onclick="openCompanySettings()" class="btn btn-primary" style="width:100%;justify-content:center;padding:8px">自社情報を入力する</button>
   </div>
 
+  <!-- 📄 見積の設定 -->
+  <div class="card">
+    <div class="card-header"><h2>📄 見積の設定</h2></div>
+    <div class="card-body">
+      <div class="form-field">
+        <label>候補を選んだときに入れる単価</label>
+        <select id="price-kind-select" onchange="localStorage.setItem('ck_price_kind',this.value)">
+          <option value="p">直近の単価（最後に使った値）</option>
+          <option value="av">平均単価（全実績の平均）</option>
+          <option value="md">中央値（真ん中の値）</option>
+        </select>
+      </div>
+      <p style="font-size:11px;color:var(--ink-sub);margin:-6px 0 16px;line-height:1.7">
+        候補の「直近／平均／中央」ボタンを押せば、その場で別の値も選べます。<br>
+        ※ 単位が「式」の品目は現場規模で額が変わるため、平均が実態とズレることがあります。
+      </p>
+      <div class="form-field" style="margin-bottom:6px">
+        <label>表示する機能</label>
+        <select id="mode-select" onchange="setMode(this.value)">
+          <option value="estimate">見積・請求のみ（シンプル）</option>
+          <option value="full">全機能（現場管理を含む）</option>
+        </select>
+      </div>
+      <p style="font-size:11px;color:var(--ink-sub);line-height:1.7" id="mode-note"></p>
+    </div>
+  </div>
+
   <!-- 💴 経費管理（毎日使う → 最上部） -->
-  <div class="card" id="expense-section">
+  <div class="card" id="expense-section" data-full>
     <div class="card-header"><h2>💴 経費管理</h2></div>
     <div class="card-body">
       <!-- 経費追加フォーム（最初に置く） -->
@@ -838,7 +870,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
   </div>
 
   <!-- 👷 メンバー管理 -->
-  <div class="card">
+  <div class="card" data-full>
     <div class="card-header"><h2>👷 メンバー管理</h2></div>
     <div class="card-body">
       <p style="font-size:12px;color:var(--ink-sub);margin-bottom:16px;line-height:1.7">現場ごとに担当者を割り当てられます。ホームの配置表にも表示されます。</p>
@@ -987,7 +1019,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
     <div style="padding:0 4px">
 
       <div style="background:var(--accent-soft);border-radius:10px;padding:14px;margin-bottom:16px">
-        <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:6px">まず最初に</div>
+        <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:6px">表示モードについて</div>
+        <div style="font-size:12px;color:var(--ink);line-height:1.9">
+          このツールは既定で<strong>「見積・請求のみ」</strong>を表示しています。<br>
+          現場管理（案件・配置表・写真・図面・経費・メンバー）を使いたいときは、<br>
+          ⚙️設定 →「見積の設定」→ <strong>表示する機能</strong> を「全機能」に切り替えてください。<br>
+          <span style="color:var(--ink-sub)">※ 隠れているだけで、登録済みのデータは消えていません</span>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:var(--accent);margin:12px 0 6px">まず最初に</div>
         <div style="font-size:12px;color:var(--ink);line-height:1.9">
           ⚙️ 設定 →「その他の設定」→ <strong>自社情報</strong>を1回だけ入力してください。<br>
           見積書・請求書に印刷される会社名・住所・電話番号です。
@@ -1046,8 +1085,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
           <strong>⚡ 自動見積もり（2019〜2026年の見積書236件から）</strong><br>
           ① <strong>📦 パッケージボタン</strong>：「ユニットバス改修」「塗装工事」などを押すと、定番の明細がまるごと入ります<br>
-          ② <strong>品目サジェスト</strong>：項目名を打つと<strong>2,600品目</strong>の実績から候補が出ます。選ぶと<strong>単位・数量・単価が自動入力</strong><br>
-          　（候補には「直近の単価」「相場レンジ」「実績回数」「直近に使った年月」が出ます）<br>
+          ② <strong>品目サジェスト</strong>：項目名を打つと<strong>2,666品目</strong>の実績から候補が出ます。選ぶと<strong>単位・数量・単価が自動入力</strong><br>
+          　候補の下に<strong>「直近 ／ 平均 ／ 中央」の3つのボタン</strong>が出るので、押した値が入ります。<br>
+          　どれを既定にするかは ⚙️設定 →「見積の設定」で変えられます。<br>
+          　<span style="color:var(--orange);font-weight:700">「幅大」</span>と付いた品目は、現場によって金額の差が3倍以上ある項目です。平均を鵜呑みにせず確認してください<br>
           　※ 表記ゆれは統合済み。「産廃処分費」でも「産廃処分・運搬費」でも同じ候補が出ます<br>
           ③ 合計欄の<strong>「▶ 経費・値引き」</strong>を開くと調整できます<br>
           　・現場管理費／諸経費：% を入れると工事小計から自動計算（初期値 5% / 8%）<br>
@@ -1148,8 +1189,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
   <div class="nav-item active" onclick="navigate('dashboard',this)" data-page="dashboard"><span class="nav-ico">🏠</span>ホーム</div>
   <div class="nav-item" onclick="navigate('estimate',this)" data-page="estimate"><span class="nav-ico">📄</span>見積<span class="nav-badge" id="m-est-badge" style="display:none">0</span></div>
   <div class="nav-item" onclick="navigate('invoice',this)" data-page="invoice"><span class="nav-ico">🧾</span>請求<span class="nav-badge" id="m-inv-badge" style="display:none">0</span></div>
-  <div class="nav-item" onclick="navigate('cases',this)" data-page="cases"><span class="nav-ico">📋</span>案件</div>
-  <div class="nav-item" onclick="navigate('clients',this)" data-page="clients"><span class="nav-ico">👥</span>顧客</div>
+  <div class="nav-item" onclick="navigate('cases',this)" data-page="cases" data-full><span class="nav-ico">📋</span>案件</div>
+  <div class="nav-item" onclick="navigate('clients',this)" data-page="clients" data-full><span class="nav-ico">👥</span>顧客</div>
 </nav>
 
 <script>
@@ -1171,6 +1212,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
     const emailEl = document.getElementById('settings-user-email');
     if (emailEl) emailEl.textContent = session.user.email;
     await loadFromSupabase();
+    applyMode();
     updateDashboard();
     setBadge('m-est-badge', estimates.length);
     setBadge('m-inv-badge', invoices.length);
@@ -1560,7 +1602,11 @@ function navigate(page, el) {
   if(page==='estimate') showEstList();
   if(page==='invoice') showInvList();
   if(page==='clients') showClientList();
-  if(page==='settings') { loadCompany(); renderWorkersList(); updateOrgUI(); loadProfile(); renderExpenseTracker(); }
+  if(page==='settings') {
+    loadCompany(); renderWorkersList(); updateOrgUI(); loadProfile(); renderExpenseTracker();
+    const pk=document.getElementById('price-kind-select'); if(pk) pk.value=defaultPriceKind();
+    applyMode();
+  }
 }
 
 // ===== ESTIMATE =====
@@ -1683,11 +1729,19 @@ function sugShow(inp) {
   box.className = 'sug-box'; box.id = 'sug-box';
   const total = PDB().master.length;
   box.innerHTML = `<div class="sug-hd">過去の見積 ${commas(total)}品目から ${list.length}件</div>` + list.map((m,i)=>{
-    const range = (m.lo !== m.hi) ? `<span>相場 ¥${commas(m.lo)}〜¥${commas(m.hi)}</span>` : '';
-    const yr = m.d ? `<span>直近 ${esc(m.d)}</span>` : '';
+    const av = priceOf(m,'av'), md = priceOf(m,'md');
+    const spread = m.lo>0 ? m.hi/m.lo : 1;
+    const warn = (m.c>1 && spread>=3) ? `<span class="sug-warn" title="現場によって金額の幅が大きい品目です">幅大</span>` : '';
+    const chips = m.c>1
+      ? `<button class="sug-b" onmousedown="event.preventDefault();event.stopPropagation();sugPick(${i},'p')">直近 ¥${commas(m.p)}</button>
+         <button class="sug-b" onmousedown="event.preventDefault();event.stopPropagation();sugPick(${i},'av')">平均 ¥${commas(av)}</button>
+         <button class="sug-b" onmousedown="event.preventDefault();event.stopPropagation();sugPick(${i},'md')">中央 ¥${commas(md)}</button>`
+      : `<button class="sug-b" onmousedown="event.preventDefault();event.stopPropagation();sugPick(${i},'p')">¥${commas(m.p)}</button>`;
+    const range = (m.lo !== m.hi) ? `<span>¥${commas(m.lo)}〜¥${commas(m.hi)}</span>` : '';
     return `<div class="sug-item" data-i="${i}" onmousedown="event.preventDefault();sugPick(${i})">
       <div class="sug-n">${esc(m.n)}</div>
-      <div class="sug-m"><span class="sug-p">¥${commas(m.p)}</span><span>/${esc(m.u)}</span>${range}<span>実績${m.c}回</span>${yr}<span>${esc(m.g)}</span></div>
+      <div class="sug-m"><span>/${esc(m.u)}</span><span>実績${m.c}回</span>${range}${m.d?`<span>直近 ${esc(m.d)}</span>`:''}${warn}</div>
+      <div class="sug-btns">${chips}</div>
     </div>`;
   }).join('');
   box._list = list; box._inp = inp; box._sel = -1;
@@ -1695,13 +1749,21 @@ function sugShow(inp) {
 }
 function sugClose(){ const b=document.getElementById('sug-box'); if(b) b.remove(); }
 function sugHideLater(){ setTimeout(sugClose, 180); }
-function sugPick(i) {
+// 直近(p) / 平均(av) / 中央値(md) を取り出す。省略されている場合は直近にフォールバック
+function priceOf(m, kind) {
+  if(!m) return 0;
+  if(kind==='av') return m.av!=null?m.av:m.p;
+  if(kind==='md') return m.md!=null?m.md:(m.av!=null?m.av:m.p);
+  return m.p;
+}
+function defaultPriceKind(){ return localStorage.getItem('ck_price_kind')||'p'; }
+function sugPick(i, kind) {
   const box=document.getElementById('sug-box'); if(!box) return;
   const m=box._list[i], inp=box._inp;
   const row=inp.closest('[data-item]');
   inp.value=m.n;
   const sel=row.querySelector('select'); if(sel && [...sel.options].some(o=>o.value===m.u)) sel.value=m.u;
-  const p=row.querySelector('.item-price-input'); if(p) p.value=m.p;
+  const p=row.querySelector('.item-price-input'); if(p) p.value=priceOf(m, kind||defaultPriceKind());
   const q=row.querySelector('.item-qty-input'); if(q && (!q.value || q.value==='1')) q.value=m.q!=null?m.q:1;
   sugClose(); estRecalc();
 }
@@ -3205,9 +3267,15 @@ function updateDashboard() {
   const unpaidTotal = unpaidInvs.reduce((s,i)=>s+(i.grand||0),0);
   document.getElementById('dash-month-unpaid').textContent = '¥'+commas(unpaidTotal);
   document.getElementById('dash-month-unpaid-count').textContent = unpaidInvs.length ? `${unpaidInvs.length}件` : '';
-  // 進行中現場
-  const activeCases = cases.filter(c=>c.status==='active').length;
-  document.getElementById('dash-active-cases').textContent = activeCases;
+  // 4つ目の枠：全機能モードは「進行中現場」、見積特化モードは「今月の見積」
+  if(ckMode()==='full'){
+    document.getElementById('dash-4th-label').textContent='進行中現場';
+    document.getElementById('dash-active-cases').textContent = cases.filter(c=>c.status==='active').length;
+  } else {
+    const estThisMonth = estimates.filter(e=>(e.date||'').startsWith(ym));
+    document.getElementById('dash-4th-label').textContent='今月の見積';
+    document.getElementById('dash-active-cases').textContent = estThisMonth.length;
+  }
   // 期限超過の請求
   const overdue = invoices.filter(i=>i.status==='overdue').length;
   document.getElementById('dash-overdue-label').textContent = overdue ? `⚠️ 期限超過 ${overdue}件` : '';
@@ -3217,7 +3285,7 @@ function updateDashboard() {
     :[...estimates].reverse().slice(0,4).map(e=>`<div class="activity-item" onclick="goToEst('${e.id}')"><div class="activity-dot" style="background:var(--accent)"></div><div class="activity-text"><strong>${e.client||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${e.num} · ${e.date||''}</span></div><div class="activity-right" style="font-size:13px;font-weight:700;color:var(--accent)">¥${commas(e.grand||0)}</div></div>`).join('');
   document.getElementById('dash-inv-list').innerHTML=!invoices.length?'<div class="empty-state">まだ請求がありません</div>'
     :[...invoices].reverse().slice(0,4).map(i=>`<div class="activity-item" onclick="goToInv('${i.id}')"><div class="activity-dot" style="background:${S_COLOR[i.status]}"></div><div class="activity-text"><strong>${i.client||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${i.num} · 期限 ${i.due||'—'}</span></div><div class="activity-right"><div style="font-size:13px;font-weight:700;color:${S_COLOR[i.status]}">¥${commas(i.grand||0)}</div><div style="font-size:11px;color:${S_COLOR[i.status]}">${S_LABEL[i.status]}</div></div></div>`).join('');
-  renderWhiteboard();
+  if(ckMode()==='full') renderWhiteboard();
   // 通知バナー制御
   const banner = document.getElementById('notif-banner');
   if (banner) {
@@ -3534,6 +3602,39 @@ function exportInvoices() {
 function parseNum(id){return parseInt(document.getElementById(id).textContent.replace(/[¥,]/g,''))||0;}
 function setBadge(id,count){const el=document.getElementById(id);el.textContent=count;el.style.display=count>0?'block':'none';}
 
+// ===== 表示モード =====
+// 'estimate' … 見積・請求に特化（既定）  /  'full' … 現場管理も含む全機能
+function ckMode(){ return localStorage.getItem('ck_mode')||'estimate'; }
+function applyMode() {
+  const full = ckMode()==='full';
+  document.querySelectorAll('[data-full]').forEach(el=>{ el.style.display = full ? '' : 'none'; });
+  document.querySelectorAll('[data-est]').forEach(el=>{ el.style.display = full ? 'none' : ''; });
+  // クイックアクションの列数を表示数に合わせる
+  const qr=document.getElementById('quick-row');
+  if(qr){
+    const n=[...qr.children].filter(c=>c.style.display!=='none').length;
+    qr.style.gridTemplateColumns=`repeat(${Math.max(1,n)},1fr)`;
+  }
+  // 非表示ページを開いていたらホームへ戻す
+  if(!full){
+    const cur=document.querySelector('.page.active')?.id;
+    if(cur==='page-cases'||cur==='page-clients') navigate('dashboard', document.querySelector('[data-page="dashboard"]'));
+  }
+  const sel=document.getElementById('mode-select');
+  if(sel) sel.value = ckMode();
+  const note=document.getElementById('mode-note');
+  if(note) note.textContent = full
+    ? '現場管理（案件・配置表・写真・図面・経費・メンバー）も表示しています。'
+    : '見積と請求だけを表示しています。現場管理の機能は隠れているだけで、データは残っています。';
+}
+function setMode(v){ localStorage.setItem('ck_mode', v); applyMode(); updateDashboard(); }
+
+// ===== クイックアクション =====
+function quickClients(){
+  navigate('clients', null);
+  showClientList();
+}
+
 // ===== クイックアクション =====
 function quickNewEstimate() {
   navigate('estimate', document.querySelector('[data-page="estimate"]'));
@@ -3636,6 +3737,7 @@ function enableNotifications() {
 
 window.onload=()=>{
   initBrand();
+  applyMode();
   // Data loading is handled by sb.auth.onAuthStateChange above
 };
 // ページを閉じる直前に未sync分を強制送信
