@@ -242,7 +242,23 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 /* ===== QUICK ACTIONS ===== */
 .quick-primary { width:100%; display:flex; align-items:center; justify-content:center; gap:8px; background:var(--accent); color:#fff; border:none; border-radius:14px; padding:18px; font-size:16px; font-weight:800; font-family:inherit; cursor:pointer; margin-bottom:10px; box-shadow:0 2px 8px rgba(79,124,255,0.25); -webkit-tap-highlight-color:transparent; }
 .quick-primary:active { transform:scale(0.98); }
+.quick-secondary { width:100%; display:flex; align-items:center; justify-content:center; gap:8px; background:var(--surface); color:var(--accent); border:1.5px solid var(--accent); border-radius:14px; padding:13px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; margin-bottom:10px; -webkit-tap-highlight-color:transparent; }
+.quick-secondary:active { background:var(--accent-soft); }
+.quick-count { font-size:11px; font-weight:600; color:var(--ink-sub); }
 .quick-row { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
+/* 過去見積ピッカー */
+.past-search { padding:10px 16px; border-bottom:1px solid var(--rule); background:#fafafa; position:sticky; top:0; z-index:2; }
+.past-search input { width:100%; padding:10px 12px; border:1.5px solid var(--rule); border-radius:9px; font-size:14px; font-family:inherit; outline:none; -webkit-appearance:none; }
+.past-chips { display:flex; gap:6px; margin-top:8px; overflow-x:auto; padding-bottom:2px; }
+.past-chip { font-size:11px; font-weight:700; padding:5px 10px; border-radius:20px; border:1.5px solid var(--rule); background:var(--surface); color:var(--ink-sub); white-space:nowrap; cursor:pointer; font-family:inherit; }
+.past-chip.on { background:var(--accent-soft); color:var(--accent); border-color:var(--accent); }
+.past-item { padding:12px 16px; border-bottom:1px solid var(--rule); cursor:pointer; }
+.past-item:active { background:var(--accent-soft); }
+.past-t { font-size:13px; font-weight:700; line-height:1.4; }
+.past-m { font-size:11px; color:var(--ink-sub); margin-top:3px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+.past-amt { font-size:13px; font-weight:800; color:var(--accent); }
+.past-match { font-size:10px; font-weight:700; color:#fff; background:var(--green); border-radius:10px; padding:2px 7px; }
+.past-secs { font-size:10.5px; color:var(--ink-sub); margin-top:4px; }
 .quick-sub { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; background:var(--surface); border:1.5px solid var(--rule); border-radius:12px; padding:12px 4px; font-size:11px; font-weight:700; color:var(--ink); font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
 .quick-sub:active { background:#f3f4f6; }
 /* ===== COLLAPSIBLE ===== */
@@ -270,6 +286,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 <script src="pricedb.js"></script>
 <script src="brand.js"></script>
+<script src="pastdb.js"></script>
 </head>
 <body>
 
@@ -324,6 +341,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
   <button onclick="quickNewEstimate()" class="quick-primary">
     <span style="font-size:22px;line-height:1">＋</span>
     <span>見積を作る</span>
+  </button>
+  <button onclick="quickFromPast()" class="quick-secondary">
+    <span style="font-size:16px">📋</span>
+    <span>過去の見積から作る</span>
+    <span class="quick-count" id="past-count"></span>
   </button>
   <div class="quick-row" id="quick-row">
     <button onclick="quickNewInvoice()" class="quick-sub"><span style="font-size:18px">🧾</span>請求を作る</button>
@@ -432,13 +454,19 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       <div class="card-header">
         <h2>明細</h2>
         <div style="display:flex;gap:6px">
+          <button class="btn-sm accent" onclick="openPastPicker()" title="過去の見積から明細を丸ごと読み込む">📋 過去の見積</button>
           <button class="btn-sm" onclick="openTemplatePicker()" title="テンプレートから読み込む">📂 テンプレ</button>
           <button class="btn-sm" onclick="saveEstTemplate()" title="現在の明細をテンプレートとして保存">💾 保存</button>
-          <button class="btn-sm" onclick="estAddSection()">＋ 区分</button>
-          <button class="btn-sm accent" onclick="estAddRow()">＋ 追加</button>
         </div>
       </div>
       <div class="quick-add" id="est-pkg-bar"></div>
+      <div id="past-hint" style="display:none;align-items:center;justify-content:space-between;gap:8px;padding:9px 16px;background:var(--accent-soft);border-bottom:1px solid var(--rule)">
+        <span style="font-size:12px;font-weight:700;color:var(--accent)"></span>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="btn-sm accent" onclick="openPastPicker()">見る</button>
+          <button class="btn-sm" onclick="this.closest('#past-hint').style.display='none'">✕</button>
+        </div>
+      </div>
       <div style="padding:0 16px" id="est-items"></div>
       <div class="totals-box">
         <div class="total-line"><span class="lbl">工事小計</span><span class="val" id="est-worksub">¥0</span></div>
@@ -1009,6 +1037,21 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
   </div>
 </div>
 
+<!-- 過去の見積ピッカー -->
+<div class="modal-backdrop" id="past-modal">
+  <div class="modal-sheet" style="max-height:88vh;display:flex;flex-direction:column;padding:0">
+    <div class="modal-header" style="padding:14px 16px;margin:0">
+      <h3 style="font-size:15px;font-weight:700">📋 過去の見積から作る</h3>
+      <button class="btn-sm" onclick="closePastPicker()">✕ 閉じる</button>
+    </div>
+    <div class="past-search">
+      <input type="search" id="past-q" placeholder="🔍 顧客名・工事名で検索" oninput="renderPastList()">
+      <div class="past-chips" id="past-chips"></div>
+    </div>
+    <div id="past-list" style="overflow-y:auto;flex:1"></div>
+  </div>
+</div>
+
 <!-- HELP MODAL -->
 <div class="modal-backdrop" id="help-modal">
   <div class="modal-sheet" style="max-height:85vh;overflow-y:auto">
@@ -1084,13 +1127,23 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
         <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">📄 見積</div>
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
           <strong>⚡ 自動見積もり（2019〜2026年の見積書236件から）</strong><br>
-          ① <strong>📦 パッケージボタン</strong>：「ユニットバス改修」「塗装工事」などを押すと、定番の明細がまるごと入ります<br>
-          ② <strong>品目サジェスト</strong>：項目名を打つと<strong>2,666品目</strong>の実績から候補が出ます。選ぶと<strong>単位・数量・単価が自動入力</strong><br>
+          <br>
+          <strong style="color:var(--accent)">① 📋 過去の見積から作る　← 一番速い</strong><br>
+          　ホームの「過去の見積から作る」、または明細の「📋 過去の見積」を押すと、<br>
+          　<strong>207件の過去見積</strong>から選べます。選ぶと<strong>明細が丸ごと入ります</strong>。<br>
+          　あとは数量を現場に合わせて直すだけ。<br>
+          　・顧客名や工事名で検索できます<br>
+          　・工事の種類（造作・設備・電気…）で絞り込めます<br>
+          　<strong>・明細を3つ以上入れると「似た見積があります」と自動でお知らせします</strong><br>
+          　　（過去の見積と6割以上一致したとき。「見る」を押すと一致率順で出ます）<br>
+          <br>
+          ② <strong>📦 パッケージボタン</strong>：「ユニットバス改修」「塗装工事」などを押すと、定番の明細がまるごと入ります<br>
+          ③ <strong>品目サジェスト</strong>：項目名を打つと<strong>2,666品目</strong>の実績から候補が出ます。選ぶと<strong>単位・数量・単価が自動入力</strong><br>
           　候補の下に<strong>「直近 ／ 平均 ／ 中央」の3つのボタン</strong>が出るので、押した値が入ります。<br>
           　どれを既定にするかは ⚙️設定 →「見積の設定」で変えられます。<br>
           　<span style="color:var(--orange);font-weight:700">「幅大」</span>と付いた品目は、現場によって金額の差が3倍以上ある項目です。平均を鵜呑みにせず確認してください<br>
           　※ 表記ゆれは統合済み。「産廃処分費」でも「産廃処分・運搬費」でも同じ候補が出ます<br>
-          ③ 合計欄の<strong>「▶ 経費・値引き」</strong>を開くと調整できます<br>
+          ④ 合計欄の<strong>「▶ 経費・値引き」</strong>を開くと調整できます<br>
           　・現場管理費／諸経費：% を入れると工事小計から自動計算（初期値 5% / 8%）<br>
           　・出精値引き：税込合計の端数を自動カットしてキリのいい金額に（千円／万円単位）<br>
           　※ 普段は畳んだままでOK。閉じていても自動で計算されています<br>
@@ -1651,6 +1704,8 @@ function estNewForm() {
   document.getElementById('est-round-on').checked=true;
   document.getElementById('est-round-unit').value='1000';
   document.getElementById('est-items').innerHTML='';
+  pastHintShown=false;
+  const ph=document.getElementById('past-hint'); if(ph) ph.style.display='none';
   renderPkgBar();
   estRecalc();
 }
@@ -1764,6 +1819,7 @@ function sugPick(i, kind) {
   inp.value=m.n;
   const sel=row.querySelector('select'); if(sel && [...sel.options].some(o=>o.value===m.u)) sel.value=m.u;
   const p=row.querySelector('.item-price-input'); if(p) p.value=priceOf(m, kind||defaultPriceKind());
+  setTimeout(maybeSuggestPast, 50);
   const q=row.querySelector('.item-qty-input'); if(q && (!q.value || q.value==='1')) q.value=m.q!=null?m.q:1;
   sugClose(); estRecalc();
 }
@@ -1779,6 +1835,116 @@ function sugKey(e, inp) {
   } else if(e.key==='Enter'){
     if(box._sel>=0){ e.preventDefault(); sugPick(box._sel); }
   } else if(e.key==='Escape'){ sugClose(); }
+}
+
+// ===== 過去の見積ライブラリ =====
+const PASTDB = () => (window.CK_PAST_DB?.estimates || []);
+let pastFilter = '';
+
+// 現在の明細に入っている品目（マスタindex）の集合
+function currentItemIdx() {
+  const s=new Set();
+  const ms=PDB().master;
+  document.querySelectorAll('#est-items [data-item]').forEach(d=>{
+    const n=(d.querySelector('.item-name-input')?.value||'').trim();
+    const u=d.querySelector('select')?.value||'';
+    if(!n) return;
+    const i=ms.findIndex(m=>m.n===n && m.u===u);
+    if(i>=0) s.add(i);
+  });
+  return s;
+}
+// 一致率（現在の明細と過去見積の重なり）
+function pastMatchRate(e, cur) {
+  if(!cur.size) return 0;
+  const set=new Set(); e.g.forEach(g=>g.i.forEach(([i])=>set.add(i)));
+  let hit=0; cur.forEach(i=>{ if(set.has(i)) hit++; });
+  return hit/cur.size;
+}
+function openPastPicker() {
+  document.getElementById('past-modal').classList.add('show');
+  document.getElementById('past-q').value='';
+  pastFilter='';
+  renderPastChips();
+  renderPastList();
+}
+function closePastPicker(){ document.getElementById('past-modal').classList.remove('show'); }
+function quickFromPast() {
+  navigate('estimate', document.querySelector('[data-page="estimate"]'));
+  estNewForm();
+  setTimeout(openPastPicker, 60);
+}
+function renderPastChips() {
+  const cnt={};
+  PASTDB().forEach(e=>e.g.forEach(g=>{ if(g.n&&g.n!=='未分類') cnt[g.n]=(cnt[g.n]||0)+1; }));
+  const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const el=document.getElementById('past-chips');
+  el.innerHTML=`<button class="past-chip ${pastFilter?'':'on'}" onclick="setPastFilter('')">すべて</button>`
+    + top.map(([n,c])=>`<button class="past-chip ${pastFilter===n?'on':''}" onclick="setPastFilter('${esc(n)}')">${esc(n)} ${c}</button>`).join('');
+}
+function setPastFilter(v){ pastFilter=v; renderPastChips(); renderPastList(); }
+function renderPastList() {
+  const q=(document.getElementById('past-q').value||'').trim().toLowerCase();
+  const cur=currentItemIdx();
+  let list=PASTDB().map(e=>({e, m:pastMatchRate(e,cur)}));
+  if(pastFilter) list=list.filter(x=>x.e.g.some(g=>g.n===pastFilter));
+  if(q) list=list.filter(x=>x.e.t.toLowerCase().includes(q));
+  // 一致率が高い順 → 新しい順
+  list.sort((a,b)=> (b.m-a.m) || (a.e.d<b.e.d?1:-1));
+  const el=document.getElementById('past-list');
+  if(!list.length){ el.innerHTML='<div class="empty-state">該当する見積がありません</div>'; return; }
+  const all=PASTDB();
+  el.innerHTML=list.slice(0,80).map(({e,m})=>{
+    const i=all.indexOf(e);
+    const secs=e.g.filter(g=>g.n&&g.n!=='未分類').map(g=>g.n).slice(0,4).join(' / ');
+    const badge = m>=0.4 ? `<span class="past-match">一致 ${Math.round(m*100)}%</span>` : '';
+    return `<div class="past-item" onclick="applyPast(${i})">
+      <div class="past-t">${esc(e.t)}</div>
+      <div class="past-m"><span>${esc(e.d)}</span><span>${e.n}項目</span><span class="past-amt">¥${commas(e.s)}</span>${badge}</div>
+      ${secs?`<div class="past-secs">${esc(secs)}</div>`:''}
+    </div>`;
+  }).join('') + (list.length>80?`<div class="empty-state" style="font-size:11px">他 ${list.length-80}件（検索で絞り込んでください）</div>`:'');
+}
+function applyPast(i) {
+  const e=PASTDB()[i]; if(!e) return;
+  const has=document.querySelectorAll('#est-items [data-item]').length>0;
+  if(has && !confirm(`現在の明細を「${e.t}」の内容に置き換えますか？`)) return;
+  const ms=PDB().master;
+  document.getElementById('est-items').innerHTML='';
+  e.g.forEach(g=>{
+    if(g.n && g.n!=='未分類') estAddSection(g.n);
+    g.i.forEach(([mi,qty,price])=>{
+      const m=ms[mi]; if(!m) return;
+      estAddRow(m.n, m.u, qty, price, 0);
+    });
+  });
+  closePastPicker();
+  estRecalc();
+  const r=estCompute();
+  showPastToast(`「${e.t}」から ${e.n}項目を読み込みました（工事小計 ¥${commas(r.workSub)}）`);
+}
+function showPastToast(msg) {
+  let t=document.getElementById('ck-toast');
+  if(!t){ t=document.createElement('div'); t.id='ck-toast';
+    t.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:80px;background:var(--ink);color:#fff;padding:11px 16px;border-radius:10px;font-size:12.5px;font-weight:600;z-index:300;max-width:90%;text-align:center;line-height:1.5;box-shadow:0 4px 16px rgba(0,0,0,.25)';
+    document.body.appendChild(t); }
+  t.textContent=msg; t.style.display='block';
+  clearTimeout(t._h); t._h=setTimeout(()=>{t.style.display='none'},4000);
+}
+// 明細を数件入れた時点で「似た見積があります」と知らせる
+let pastHintShown=false;
+function maybeSuggestPast() {
+  if(pastHintShown) return;
+  const cur=currentItemIdx();
+  if(cur.size<3) return;
+  const hits=PASTDB().map(e=>({e,m:pastMatchRate(e,cur)})).filter(x=>x.m>=0.6);
+  if(!hits.length) return;
+  pastHintShown=true;
+  const bar=document.getElementById('past-hint');
+  if(bar){
+    bar.style.display='flex';
+    bar.querySelector('span').textContent=`似た過去の見積が ${hits.length}件あります`;
+  }
 }
 
 // ===== 工事パッケージ =====
@@ -3286,6 +3452,8 @@ function updateDashboard() {
   document.getElementById('dash-inv-list').innerHTML=!invoices.length?'<div class="empty-state">まだ請求がありません</div>'
     :[...invoices].reverse().slice(0,4).map(i=>`<div class="activity-item" onclick="goToInv('${i.id}')"><div class="activity-dot" style="background:${S_COLOR[i.status]}"></div><div class="activity-text"><strong>${i.client||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${i.num} · 期限 ${i.due||'—'}</span></div><div class="activity-right"><div style="font-size:13px;font-weight:700;color:${S_COLOR[i.status]}">¥${commas(i.grand||0)}</div><div style="font-size:11px;color:${S_COLOR[i.status]}">${S_LABEL[i.status]}</div></div></div>`).join('');
   if(ckMode()==='full') renderWhiteboard();
+  const pc=document.getElementById('past-count');
+  if(pc) pc.textContent = PASTDB().length ? `${PASTDB().length}件` : '';
   // 通知バナー制御
   const banner = document.getElementById('notif-banner');
   if (banner) {
