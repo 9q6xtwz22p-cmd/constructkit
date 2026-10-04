@@ -9,13 +9,16 @@
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 :root {
-  --bg: #f0f2f5; --surface: #fff; --accent: #4f7cff; --accent-soft: #eef1ff;
-  --green: #22c55e; --green-soft: #dcfce7; --orange: #f59e0b; --orange-soft: #fef3c7;
-  --red: #ef4444; --red-soft: #fef2f2; --ink: #111827; --ink-sub: #6b7280;
-  --rule: #e5e7eb; --radius: 12px; --shadow: 0 1px 4px rgba(0,0,0,0.08);
-  --bottom-nav-h: 64px; --top-bar-h: 72px;
+  /* 見積書（紙）と地続きの配色。彩度は抑えめ、金額は色で意味づけしない */
+  --bg: #eceae4; --surface: #fdfdfc; --head: #f5f3ee;
+  --accent: #1c4f7c; --accent-soft: #e8eef4;
+  --green: #3f6b3a; --green-soft: #e9efe6; --orange: #8a6320; --orange-soft: #f6f0e2;
+  --red: #9b3226; --red-soft: #f7ebe9; --ink: #1c1a16; --ink-sub: #77726a;
+  --rule: #d8d4ca; --rule-strong: #b8b2a4;
+  --radius: 4px; --shadow: none;
+  --bottom-nav-h: 60px; --top-bar-h: 64px;
 }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; background: var(--bg); color: var(--ink); font-size: 14px; min-height: 100vh; padding-bottom: var(--bottom-nav-h); }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif; font-feature-settings: 'tnum'; background: var(--bg); color: var(--ink); font-size: 14px; min-height: 100vh; padding-bottom: var(--bottom-nav-h); }
 .topbar { position: fixed; top: 0; left: 0; right: 0; height: var(--top-bar-h); background: var(--surface); border-bottom: 1px solid var(--rule); display: flex; align-items: center; padding: 0 16px; gap: 12px; z-index: 100; }
 .topbar-logo { font-family: 'Shippori Mincho', serif; font-size: 18px; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; white-space: nowrap; }
 .topbar-title { font-size: 11px; font-weight: 500; flex: 1; color: var(--ink-sub); }
@@ -23,26 +26,27 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: var(--bottom-nav-h); background: var(--surface); border-top: 1px solid var(--rule); display: flex; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
 .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; color: var(--ink-sub); font-size: 10px; font-weight: 600; transition: color 0.15s; padding: 8px 0; position: relative; }
 .nav-item.active { color: var(--accent); }
-.nav-item .nav-ico { font-size: 22px; line-height: 1; }
-.nav-badge { position: absolute; top: 6px; right: calc(50% - 18px); background: var(--accent); color: #fff; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 20px; min-width: 16px; text-align: center; }
+.nav-item .nav-ico { display:flex; align-items:center; justify-content:center; height:22px; }
+.nav-item .nav-ico svg { width:21px; height:21px; stroke:currentColor; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+.nav-badge { position: absolute; top: 5px; right: calc(50% - 18px); background: var(--accent); color: #fff; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 2px; min-width: 16px; text-align: center; }
 .page { display: none; padding: calc(var(--top-bar-h) + 16px) 16px 16px; }
 .page.active { display: block; }
-.btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; font-family: inherit; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: var(--radius); font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; font-family: inherit; }
 .btn:active { transform: scale(0.95); }
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-ghost { background: transparent; color: var(--ink-sub); border: 1px solid var(--rule); }
 .btn-danger { background: var(--red-soft); color: var(--red); border: none; }
-.btn-sm { padding: 7px 12px; font-size: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; border: 1.5px solid var(--rule); background: var(--surface); color: var(--ink); display: inline-flex; align-items: center; gap: 5px; transition: all 0.15s; font-family: inherit; }
-.btn-sm.accent { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+.btn-sm { padding: 6px 11px; font-size: 12px; border-radius: var(--radius); font-weight: 600; cursor: pointer; border: 1px solid var(--rule-strong); background: var(--surface); color: var(--ink); display: inline-flex; align-items: center; gap: 5px; transition: all 0.15s; font-family: inherit; }
+.btn-sm.accent { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
 .btn-sm.danger { background: var(--red-soft); color: var(--red); border-color: transparent; }
 .btn-del { background: none; border: none; cursor: pointer; color: #d1d5db; font-size: 16px; width: 32px; height: 32px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; }
 .btn-del:active { color: var(--red); background: var(--red-soft); }
-.card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 14px; overflow: hidden; }
-.card-header { padding: 14px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--rule); }
-.card-header h2 { font-size: 14px; font-weight: 700; flex: 1; }
-.card-body { padding: 16px; }
+.card { background: var(--surface); border: 1px solid var(--rule-strong); border-radius: var(--radius); margin-bottom: 12px; overflow: hidden; }
+.card-header { padding: 9px 13px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--rule-strong); background: var(--head); }
+.card-header h2 { font-size: 12.5px; font-weight: 600; letter-spacing: .06em; color: #3d3a33; flex: 1; }
+.card-body { padding: 14px 13px; }
 .stat-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 14px; }
-.stat-card { background: var(--surface); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 4px; }
+.stat-card { background: var(--surface); border: 1px solid var(--rule-strong); border-radius: var(--radius); padding: 11px 13px; display: flex; flex-direction: column; gap: 3px; }
 .stat-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-sub); }
 .stat-value { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
 .stat-sub { font-size: 10px; color: var(--ink-sub); }
@@ -62,19 +66,19 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 .item-detail select { font-size: 12px; padding: 5px 8px; border: 1.5px solid var(--rule); border-radius: 7px; background: var(--bg); color: var(--ink-sub); font-family: inherit; outline: none; -webkit-appearance: none; }
 .item-detail-label { font-size: 11px; color: var(--ink-sub); }
 .section-divider { display: flex; align-items: center; gap: 8px; padding: 10px 0 4px; }
-.section-divider input { flex: 1; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--ink-sub); background: transparent; border: none; outline: none; font-family: inherit; }
+.section-divider input { flex: 1; font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--ink); background: transparent; border: none; outline: none; font-family: inherit; }
 .totals-box { padding: 16px; background: #fafafa; border-top: 1px solid var(--rule); }
 .total-line { display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 8px; }
 .total-line .lbl { color: var(--ink-sub); display: flex; align-items: center; gap: 6px; }
 .total-line .val { font-weight: 600; }
-.total-grand-box { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: var(--accent); border-radius: 12px; color: #fff; margin-top: 10px; }
-.total-grand-box .lbl { font-size: 13px; font-weight: 600; opacity: 0.85; }
-.total-grand-box .val { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+.total-grand-box { display: flex; justify-content: space-between; align-items: baseline; padding: 11px 2px 4px; border-top: 1px solid var(--ink); border-bottom: 3px double var(--ink); margin-top: 10px; }
+.total-grand-box .lbl { font-size: 12.5px; font-weight: 600; color: var(--ink); }
+.total-grand-box .val { font-size: 21px; font-weight: 700; color: var(--ink); }
 .tax-sel { font-size: 11px; border: 1px solid var(--rule); border-radius: 5px; padding: 2px 6px; background: var(--surface); cursor: pointer; outline: none; color: var(--ink-sub); font-family: inherit; }
-.badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
-.badge-blue { background: var(--accent-soft); color: var(--accent); }
-.badge-orange { background: var(--orange-soft); color: #d97706; }
-.badge-green { background: var(--green-soft); color: #16a34a; }
+.badge { font-size: 10.5px; font-weight: 600; padding: 2px 7px; border-radius: 2px; letter-spacing: .04em; }
+.badge-blue { background: transparent; color: var(--ink-sub); border: 1px solid var(--rule-strong); }
+.badge-orange { background: transparent; color: var(--ink-sub); border: 1px solid var(--rule-strong); }
+.badge-green { background: transparent; color: var(--ink-sub); border: 1px solid var(--rule-strong); }
 .badge-red { background: var(--red-soft); color: var(--red); }
 .badge-gray { background: var(--bg); color: var(--ink-sub); }
 .activity-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--rule); cursor: pointer; }
@@ -214,6 +218,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 .photo-add { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; font-size:11px; color:var(--ink-sub); font-weight:600; cursor:pointer; border:2px dashed var(--rule); }
 .photo-add:active { background:var(--accent-soft); border-color:var(--accent); }
 .photo-cat-tabs { display:flex; gap:6px; padding:10px 16px; border-bottom:1px solid var(--rule); background:#fafafa; }
+/* ===== 線画アイコン ===== */
+.ic { display:inline-block; width:1em; height:1em; vertical-align:-0.13em; stroke:currentColor; fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+.ic-lg { width:17px; height:17px; }
 /* ===== 単価サジェスト ===== */
 .sug-wrap { position:relative; flex:1; display:flex; }
 .sug-box { position:absolute; top:100%; left:0; right:0; z-index:60; background:var(--surface); border:1.5px solid var(--accent); border-radius:10px; box-shadow:0 6px 20px rgba(0,0,0,.14); max-height:260px; overflow-y:auto; margin-top:2px; }
@@ -240,14 +247,16 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 .fold-body { display:none; padding-left:2px; }
 .fold-body.open { display:block; }
 /* ===== QUICK ACTIONS ===== */
-.quick-primary { width:100%; display:flex; align-items:center; justify-content:center; gap:8px; background:var(--accent); color:#fff; border:none; border-radius:14px; padding:18px; font-size:16px; font-weight:800; font-family:inherit; cursor:pointer; margin-bottom:10px; box-shadow:0 2px 8px rgba(79,124,255,0.25); -webkit-tap-highlight-color:transparent; }
+.quick-primary { width:100%; display:flex; align-items:center; justify-content:center; gap:7px; background:var(--accent); color:#fff; border:1px solid var(--accent); border-radius:var(--radius); padding:15px; font-size:15px; font-weight:700; font-family:inherit; cursor:pointer; margin-bottom:8px; -webkit-tap-highlight-color:transparent; }
+.quick-primary .ic { width:17px; height:17px; stroke-width:2; }
 .quick-primary:active { transform:scale(0.98); }
-.quick-secondary { width:100%; display:flex; align-items:center; justify-content:center; gap:8px; background:var(--surface); color:var(--accent); border:1.5px solid var(--accent); border-radius:14px; padding:13px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; margin-bottom:10px; -webkit-tap-highlight-color:transparent; }
+.quick-secondary { width:100%; display:flex; align-items:center; justify-content:center; gap:7px; background:var(--surface); color:var(--accent); border:1px solid var(--accent); border-radius:var(--radius); padding:11px; font-size:13.5px; font-weight:600; font-family:inherit; cursor:pointer; margin-bottom:8px; -webkit-tap-highlight-color:transparent; }
+.quick-secondary .ic { width:15px; height:15px; }
 .quick-secondary:active { background:var(--accent-soft); }
 .quick-count { font-size:11px; font-weight:600; color:var(--ink-sub); }
-.quick-row { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
+.quick-row { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-bottom:12px; }
 /* 過去見積ピッカー */
-.past-search { padding:10px 16px; border-bottom:1px solid var(--rule); background:#fafafa; position:sticky; top:0; z-index:2; }
+.past-search { padding:10px 13px; border-bottom:1px solid var(--rule-strong); background:var(--head); position:sticky; top:0; z-index:2; }
 .past-search input { width:100%; padding:10px 12px; border:1.5px solid var(--rule); border-radius:9px; font-size:14px; font-family:inherit; outline:none; -webkit-appearance:none; }
 .past-chips { display:flex; gap:6px; margin-top:8px; overflow-x:auto; padding-bottom:2px; }
 .past-chip { font-size:11px; font-weight:700; padding:5px 10px; border-radius:20px; border:1.5px solid var(--rule); background:var(--surface); color:var(--ink-sub); white-space:nowrap; cursor:pointer; font-family:inherit; }
@@ -259,7 +268,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 .past-amt { font-size:13px; font-weight:800; color:var(--accent); }
 .past-match { font-size:10px; font-weight:700; color:#fff; background:var(--green); border-radius:10px; padding:2px 7px; }
 .past-secs { font-size:10.5px; color:var(--ink-sub); margin-top:4px; }
-.quick-sub { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; background:var(--surface); border:1.5px solid var(--rule); border-radius:12px; padding:12px 4px; font-size:11px; font-weight:700; color:var(--ink); font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.quick-sub { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; background:var(--surface); border:1px solid var(--rule-strong); border-radius:var(--radius); padding:11px 4px; font-size:11px; font-weight:600; color:var(--ink); font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.quick-sub .ic { width:17px; height:17px; color:var(--ink-sub); }
 .quick-sub:active { background:#f3f4f6; }
 /* ===== COLLAPSIBLE ===== */
 .collapse-head { display:flex; align-items:center; justify-content:space-between; width:100%; background:none; border:none; padding:14px 16px; font-family:inherit; font-size:14px; font-weight:700; color:var(--ink); cursor:pointer; text-align:left; }
@@ -281,14 +291,63 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 .wb-nav { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid var(--rule); }
 .wb-nav-title { font-size:13px; font-weight:700; }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+<script>
+// 重いライブラリは使う瞬間まで読まない（起動を軽くするため）
+window.__libs = {};
+// integrity は sha384-... を入れるとCDN改ざん時に実行されなくなる（空なら検証なし）
+const LIBS = {
+  xlsx: { src:'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', global:'XLSX',      integrity:'' },
+  ocr:  { src:'https://cdn.jsdelivr.net/npm/tesseract.js@4.1.4/dist/tesseract.min.js', global:'Tesseract', integrity:'' }
+};
+function loadLib(key) {
+  const L = LIBS[key];
+  if (window[L.global]) return Promise.resolve(window[L.global]);
+  if (__libs[key]) return __libs[key];
+  __libs[key] = new Promise((res, rej) => {
+    const fail = (msg) => { delete __libs[key]; rej(new Error(msg)); };
+    const timer = setTimeout(() => fail('時間内に読み込めませんでした。通信状況を確認してください'), 20000);
+    const el = document.createElement('script');
+    el.src = L.src;
+    el.crossOrigin = 'anonymous';
+    if (L.integrity) el.integrity = L.integrity;
+    el.onload  = () => { clearTimeout(timer); window[L.global] ? res(window[L.global]) : fail('読み込みに失敗しました'); };
+    el.onerror = () => { clearTimeout(timer); fail('通信に失敗しました。オンラインか確認してください'); };
+    document.head.appendChild(el);
+  });
+  return __libs[key];
+}
+const loadXLSX      = () => loadLib('xlsx');
+const loadTesseract = () => loadLib('ocr');
+</script>
 <script src="pricedb.js"></script>
 <script src="brand.js"></script>
 <script src="pastdb.js"></script>
 </head>
 <body>
+<svg style="display:none" aria-hidden="true"><defs>
+<g id="i-home"><path d="M3 9.5 10 3l7 6.5"/><path d="M5 8.5V17h10V8.5"/></g>
+<g id="i-doc"><path d="M5 2.5h6l4 4V17.5H5z"/><path d="M11 2.5v4h4"/><path d="M7.5 10h5M7.5 13h5"/></g>
+<g id="i-bill"><path d="M4 2.5h12v15l-2-1.2-2 1.2-2-1.2-2 1.2-2-1.2-2 1.2z"/><path d="M7 7h6M7 10.5h6"/></g>
+<g id="i-site"><path d="M2.5 17h15"/><path d="M4.5 17V8l5.5-4 5.5 4v9"/><path d="M8 17v-4h4v4"/></g>
+<g id="i-user"><circle cx="10" cy="7" r="3.2"/><path d="M4 17c0-3.3 2.7-5 6-5s6 1.7 6 5"/></g>
+<g id="i-gear"><circle cx="10" cy="10" r="2.6"/><path d="M10 2.6v2M10 15.4v2M17.4 10h-2M4.6 10h-2M15.2 4.8l-1.4 1.4M6.2 13.8l-1.4 1.4M15.2 15.2l-1.4-1.4M6.2 6.2 4.8 4.8"/></g>
+<g id="i-print"><path d="M5.5 7.5V3h9v4.5"/><rect x="3" y="7.5" width="14" height="6" rx="1"/><path d="M5.5 11.5h9V17h-9z"/></g>
+<g id="i-mail"><rect x="2.5" y="4.5" width="15" height="11" rx="1"/><path d="m2.5 6 7.5 5 7.5-5"/></g>
+<g id="i-cam"><path d="M2.5 6.5h3l1.2-2h6.6l1.2 2h3v9h-15z"/><circle cx="10" cy="10.5" r="3"/></g>
+<g id="i-plus"><path d="M10 4v12M4 10h12"/></g>
+<g id="i-trash"><path d="M3.5 5.5h13M8 5.5V3.5h4v2M5 5.5 5.8 17h8.4L15 5.5"/></g>
+<g id="i-save"><path d="M3.5 3.5h10L16.5 6v10.5h-13z"/><path d="M6.5 3.5v4h6v-4M6.5 16.5v-5h7v5"/></g>
+<g id="i-folder"><path d="M2.5 5.5h5l1.5 2h8.5v9h-15z"/></g>
+<g id="i-chart"><path d="M3 17h14"/><path d="M5.5 17V9M9.5 17V4.5M13.5 17v-5.5"/></g>
+<g id="i-image"><rect x="2.5" y="4" width="15" height="12" rx="1"/><circle cx="7" cy="8" r="1.4"/><path d="m3.5 14 4.5-4.5 3.5 3.5 2.5-2 3 3"/></g>
+<g id="i-team"><circle cx="7" cy="7.5" r="2.6"/><path d="M2.5 16c0-2.7 2-4.2 4.5-4.2s4.5 1.5 4.5 4.2"/><circle cx="14.5" cy="8" r="2.2"/><path d="M13 12c2.5 0 4.5 1.4 4.5 4"/></g>
+<g id="i-up"><path d="M10 15.5V5M5.5 9 10 4.5 14.5 9"/><path d="M3.5 17h13"/></g>
+<g id="i-down"><path d="M10 4.5V15M5.5 10.5 10 15l4.5-4.5"/><path d="M3.5 17h13"/></g>
+<g id="i-undo"><path d="M4 9h8a4 4 0 0 1 0 8H8"/><path d="M7 5.5 3.5 9 7 12.5"/></g>
+<g id="i-book"><path d="M3.5 3.5h5A2.5 2.5 0 0 1 10 5.8 2.5 2.5 0 0 1 11.5 3.5h5v12h-5A2.5 2.5 0 0 0 10 17.4a2.5 2.5 0 0 0-1.5-1.9h-5z"/><path d="M10 5.8v11.6"/></g>
+<g id="i-pkg"><path d="M10 2.5 17 6v8l-7 3.5L3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></g>
+</defs></svg>
 
 <!-- ===== AUTH OVERLAY ===== -->
 <div id="auth-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px">
@@ -312,13 +371,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
   <div style="flex:1;display:flex;align-items:center;gap:6px;min-width:0">
     <!-- ユーザーチップ -->
     <div onclick="navigate('settings',document.querySelector('[data-page=settings]'))"
-         style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:4px 8px 4px 4px;border-radius:20px;background:var(--accent-soft);max-width:130px;overflow:hidden;flex-shrink:0">
-      <div id="topbar-avatar" style="width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">—</div>
-      <span id="topbar-name" style="font-size:12px;font-weight:600;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">マイページ</span>
+         style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 8px;border:1px solid var(--rule-strong);border-radius:var(--radius);max-width:130px;overflow:hidden;flex-shrink:0">
+      <div id="topbar-avatar" style="width:20px;height:20px;border-radius:2px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0">—</div>
+      <span id="topbar-name" style="font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">マイページ</span>
     </div>
-    <button onclick="openHelp()" style="background:none;border:none;font-size:17px;cursor:pointer;color:var(--ink-sub);padding:4px 6px;border-radius:50%;line-height:1;flex-shrink:0" title="使い方">？</button>
-    <button onclick="navigate('settings',document.querySelector('[data-page=settings]'))" style="background:none;border:none;font-size:17px;cursor:pointer;color:var(--ink-sub);padding:4px 6px;border-radius:50%;line-height:1;flex-shrink:0" title="設定">⚙️</button>
-    <span id="sync-indicator" style="font-size:10px;font-weight:700;color:var(--green);opacity:0;transition:opacity 0.5s;white-space:nowrap">☁ 保存済み</span>
+    <button onclick="openHelp()" style="background:none;border:none;cursor:pointer;color:var(--ink-sub);padding:5px;line-height:1;flex-shrink:0" title="使い方"><svg class="ic ic-lg" viewBox="0 0 20 20"><use href="#i-book"/></svg></button>
+    <button onclick="navigate('settings',document.querySelector('[data-page=settings]'))" style="background:none;border:none;cursor:pointer;color:var(--ink-sub);padding:5px;line-height:1;flex-shrink:0" title="設定"><svg class="ic ic-lg" viewBox="0 0 20 20"><use href="#i-gear"/></svg></button>
+    <span id="sync-indicator" style="font-size:10px;font-weight:600;color:var(--ink-sub);opacity:0;transition:opacity 0.5s;white-space:nowrap">保存済み</span>
   </div>
   <img src="2044D66D-EA6B-4314-9CA7-8F4B3C0A6E94.PNG" alt="まとめる現場" style="height:66px;width:auto;object-fit:contain;position:absolute;left:50%;transform:translateX(-50%)">
   <div style="flex:1;display:flex;justify-content:flex-end" id="topbar-actions"></div>
@@ -331,7 +390,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 <div class="page active" id="page-dashboard">
   <!-- 通知許可バナー -->
   <div id="notif-banner" style="display:none;background:var(--accent);color:#fff;padding:10px 14px;border-radius:10px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px">
-    <span style="font-size:13px">🔔 期限リマインダーを有効にしますか？</span>
+    <span style="font-size:13px">期限リマインダーを有効にしますか？</span>
     <div style="display:flex;gap:8px">
       <button onclick="enableNotifications()" style="background:#fff;color:var(--accent);border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer">許可する</button>
       <button onclick="this.closest('#notif-banner').style.display='none'" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.5);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer">後で</button>
@@ -339,46 +398,46 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
   </div>
   <!-- クイックアクション -->
   <button onclick="quickNewEstimate()" class="quick-primary">
-    <span style="font-size:22px;line-height:1">＋</span>
+    <svg class="ic" viewBox="0 0 20 20"><use href="#i-plus"/></svg>
     <span>見積を作る</span>
   </button>
   <button onclick="quickFromPast()" class="quick-secondary">
-    <span style="font-size:16px">📋</span>
+    <svg class="ic" viewBox="0 0 20 20"><use href="#i-site"/></svg>
     <span>過去の見積から作る</span>
     <span class="quick-count" id="past-count"></span>
   </button>
   <div class="quick-row" id="quick-row">
-    <button onclick="quickNewInvoice()" class="quick-sub"><span style="font-size:18px">🧾</span>請求を作る</button>
-    <button onclick="quickNewCase()" class="quick-sub" data-full><span style="font-size:18px">🏗</span>現場を追加</button>
-    <button onclick="quickExpense()" class="quick-sub" data-full><span style="font-size:18px">📷</span>経費を記録</button>
-    <button onclick="quickClients()" class="quick-sub" data-est><span style="font-size:18px">👥</span>顧客を見る</button>
+    <button onclick="quickNewInvoice()" class="quick-sub"><svg class="ic" viewBox="0 0 20 20"><use href="#i-bill"/></svg>請求を作る</button>
+    <button onclick="quickNewCase()" class="quick-sub" data-full><svg class="ic" viewBox="0 0 20 20"><use href="#i-site"/></svg>現場を追加</button>
+    <button onclick="quickExpense()" class="quick-sub" data-full><svg class="ic" viewBox="0 0 20 20"><use href="#i-cam"/></svg>経費を記録</button>
+    <button onclick="quickClients()" class="quick-sub" data-est><svg class="ic" viewBox="0 0 20 20"><use href="#i-user"/></svg>顧客を見る</button>
   </div>
   <!-- 今月サマリー -->
   <div class="card" style="margin-bottom:14px">
-    <div class="card-header"><h2>📊 今月の経営サマリー</h2><span id="dash-month-label" style="font-size:11px;color:var(--ink-sub)"></span></div>
+    <div class="card-header"><h2>今月の経営サマリー</h2><span id="dash-month-label" style="font-size:11px;color:var(--ink-sub)"></span></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule)">
       <div style="background:var(--surface);padding:14px 16px">
         <div style="font-size:10px;font-weight:700;color:var(--ink-sub);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">今月売上（入金済）</div>
-        <div style="font-size:20px;font-weight:800;color:var(--green)" id="dash-month-paid">¥0</div>
+        <div style="font-size:20px;font-weight:800;color:var(--ink)" id="dash-month-paid">¥0</div>
       </div>
       <div style="background:var(--surface);padding:14px 16px">
         <div style="font-size:10px;font-weight:700;color:var(--ink-sub);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">今月粗利</div>
-        <div style="font-size:20px;font-weight:800;color:var(--accent)" id="dash-month-profit">¥0</div>
+        <div style="font-size:20px;font-weight:800;color:var(--ink)" id="dash-month-profit">¥0</div>
       </div>
       <div style="background:var(--surface);padding:14px 16px">
         <div style="font-size:10px;font-weight:700;color:var(--ink-sub);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">未払い請求</div>
-        <div style="font-size:20px;font-weight:800;color:var(--orange)" id="dash-month-unpaid">¥0</div>
+        <div style="font-size:20px;font-weight:800;color:var(--ink)" id="dash-month-unpaid">¥0</div>
         <div style="font-size:10px;color:var(--ink-sub)" id="dash-month-unpaid-count"></div>
       </div>
       <div style="background:var(--surface);padding:14px 16px">
         <div style="font-size:10px;font-weight:700;color:var(--ink-sub);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px" id="dash-4th-label">進行中現場</div>
-        <div style="font-size:20px;font-weight:800;color:var(--accent)" id="dash-active-cases">0</div>
+        <div style="font-size:20px;font-weight:800;color:var(--ink)" id="dash-active-cases">0</div>
         <div style="font-size:10px;color:var(--ink-sub)" id="dash-overdue-label"></div>
       </div>
     </div>
   </div>
   <div class="card" id="wb-card" data-full>
-    <div class="card-header"><h2>📋 今週の配置表</h2></div>
+    <div class="card-header"><h2>今週の配置表</h2></div>
     <div class="wb-nav">
       <button class="btn-sm" onclick="wbPrevWeek()">← 前週</button>
       <span class="wb-nav-title" id="wb-week-label">—</span>
@@ -403,13 +462,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
     <div class="card">
       <div class="card-header">
         <h2>見積一覧</h2>
-        <button class="btn-sm" onclick="exportEstimates()" title="Excel出力">📊</button>
+        <button class="btn-sm" onclick="exportEstimates()" title="Excel出力"><svg class="ic" viewBox="0 0 20 20"><use href="#i-chart"/></svg> </button>
         <button class="btn-sm accent" onclick="estNewForm()">＋ 新規作成</button>
       </div>
       <div style="padding:10px 16px;border-bottom:1px solid var(--rule)">
-        <input type="search" id="est-search" placeholder="🔍 顧客名・案件名で検索" oninput="renderEstList()" style="width:100%;padding:9px 12px;border:1.5px solid var(--rule);border-radius:9px;font-size:14px;font-family:inherit;outline:none;background:#fafafa;-webkit-appearance:none">
+        <input type="search" id="est-search" placeholder="顧客名・案件名で検索" oninput="renderEstList()" style="width:100%;padding:9px 12px;border:1.5px solid var(--rule);border-radius:9px;font-size:14px;font-family:inherit;outline:none;background:#fafafa;-webkit-appearance:none">
       </div>
-      <div id="est-list-body"><div class="empty-state"><div class="empty-ico">📄</div>まだ見積がありません</div></div>
+      <div id="est-list-body"><div class="empty-state"><div class="empty-ico"><svg class="ic" viewBox="0 0 20 20"><use href="#i-doc"/></svg></div>まだ見積がありません</div></div>
     </div>
   </div>
   <!-- 編集 -->
@@ -418,7 +477,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       <span style="font-size:12px;font-weight:700;color:var(--ink-sub)" id="est-num">—</span>
       <span style="font-size:11px;color:var(--ink-sub)" id="est-date-sub">—</span>
       <span style="flex:1"></span>
-      <span style="font-size:17px;font-weight:800;color:var(--accent)" id="est-stat-total">¥0</span>
+      <span style="font-size:17px;font-weight:800;color:var(--ink)" id="est-stat-total">¥0</span>
       <span style="display:none" id="est-rows">0</span>
     </div>
     <div class="card">
@@ -429,24 +488,30 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       </div>
       <div class="card-body">
         <div class="form-field" style="margin-bottom:8px">
-          <button class="btn-sm" onclick="openCasePickerForEst()" style="width:100%;justify-content:center;padding:8px">📂 案件から読み込む</button>
+          <button class="btn-sm" onclick="openCasePickerForEst()" style="width:100%;justify-content:center;padding:8px"><svg class="ic" viewBox="0 0 20 20"><use href="#i-folder"/></svg> 案件から読み込む</button>
         </div>
         <div class="form-field"><label>顧客名</label>
           <div style="display:flex;gap:8px">
             <input type="text" id="est-client" placeholder="株式会社〇〇" style="flex:1">
-            <button class="btn-sm" onclick="openPicker('est')" style="white-space:nowrap">👥 選択</button>
+            <button class="btn-sm" onclick="openPicker('est')" style="white-space:nowrap"><svg class="ic" viewBox="0 0 20 20"><use href="#i-user"/></svg> 選択</button>
           </div>
         </div>
         <div class="form-field"><label>案件名</label><input type="text" id="est-project" placeholder="〇〇リノベーション工事"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div class="form-field"><label>見積日</label><input type="date" id="est-date"></div>
-          <div class="form-field"><label>有効期限</label><input type="date" id="est-expiry"></div>
+        <button class="fold-btn" id="est-info-btn" onclick="toggleEstInfo()">
+          <span><span class="chev">▶</span> 日付・住所・備考</span>
+          <span class="fold-sum" id="est-info-sum"></span>
+        </button>
+        <div class="fold-body" id="est-info-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="form-field"><label>見積日</label><input type="date" id="est-date"></div>
+            <div class="form-field"><label>有効期限</label><input type="date" id="est-expiry" oninput="updateEstInfoSum()"></div>
+          </div>
+          <div class="form-field"><label>現場住所</label><input type="text" id="est-address" oninput="updateEstInfoSum()" placeholder="千葉県〇〇市…"></div>
+          <div class="form-field"><label>担当者</label><input type="text" id="est-staff" placeholder="未入力なら自社情報の担当者"></div>
+          <div class="form-field"><label>備考</label><textarea id="est-notes" oninput="updateEstInfoSum()" placeholder="支払条件・工期・特記事項など"></textarea></div>
         </div>
-        <div class="form-field"><label>現場住所</label><input type="text" id="est-address" placeholder="千葉県〇〇市…"></div>
-        <div class="form-field"><label>担当者</label><input type="text" id="est-staff" placeholder="担当者名"></div>
-        <div class="form-field"><label>備考</label><textarea id="est-notes" placeholder="支払条件・工期・特記事項など"></textarea></div>
         <div id="est-delete-wrap" style="display:none;margin-top:4px">
-          <button class="btn btn-danger" style="width:100%;justify-content:center" onclick="deleteEstimate()">🗑 この見積を削除</button>
+          <button class="btn btn-danger" style="width:100%;justify-content:center" onclick="deleteEstimate()"><svg class="ic" viewBox="0 0 20 20"><use href="#i-trash"/></svg> この見積を削除</button>
         </div>
       </div>
     </div>
@@ -454,9 +519,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       <div class="card-header">
         <h2>明細</h2>
         <div style="display:flex;gap:6px">
-          <button class="btn-sm accent" onclick="openPastPicker()" title="過去の見積から明細を丸ごと読み込む">📋 過去の見積</button>
-          <button class="btn-sm" onclick="openTemplatePicker()" title="テンプレートから読み込む">📂 テンプレ</button>
-          <button class="btn-sm" onclick="saveEstTemplate()" title="現在の明細をテンプレートとして保存">💾 保存</button>
+          <button class="btn-sm accent" onclick="openPastPicker()" title="過去の見積から明細を丸ごと読み込む"><svg class="ic" viewBox="0 0 20 20"><use href="#i-site"/></svg> 過去の見積</button>
+          <button class="btn-sm" onclick="openTemplatePicker()" title="テンプレートから読み込む"><svg class="ic" viewBox="0 0 20 20"><use href="#i-folder"/></svg> テンプレ</button>
+          <button class="btn-sm" onclick="saveEstTemplate()" title="現在の明細をテンプレートとして保存"><svg class="ic" viewBox="0 0 20 20"><use href="#i-save"/></svg> 保存</button>
         </div>
       </div>
       <div class="quick-add" id="est-pkg-bar"></div>
@@ -526,11 +591,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
     <div class="card">
       <div class="card-header">
         <h2>請求一覧</h2>
-        <button class="btn-sm" onclick="exportInvoices()" title="Excel出力">📊</button>
+        <button class="btn-sm" onclick="exportInvoices()" title="Excel出力"><svg class="ic" viewBox="0 0 20 20"><use href="#i-chart"/></svg> </button>
         <button class="btn-sm accent" onclick="invNewForm()">＋ 新規作成</button>
       </div>
       <div style="padding:10px 16px;border-bottom:1px solid var(--rule);display:flex;gap:8px">
-        <input type="search" id="inv-search" placeholder="🔍 顧客名で検索" oninput="renderInvList()" style="flex:1;padding:9px 12px;border:1.5px solid var(--rule);border-radius:9px;font-size:14px;font-family:inherit;outline:none;background:#fafafa;-webkit-appearance:none">
+        <input type="search" id="inv-search" placeholder="顧客名で検索" oninput="renderInvList()" style="flex:1;padding:9px 12px;border:1.5px solid var(--rule);border-radius:9px;font-size:14px;font-family:inherit;outline:none;background:#fafafa;-webkit-appearance:none">
         <select id="inv-filter" onchange="renderInvList()" style="padding:9px 10px;border:1.5px solid var(--rule);border-radius:9px;font-size:13px;font-family:inherit;outline:none;background:#fafafa;color:var(--ink);-webkit-appearance:none">
           <option value="">すべて</option>
           <option value="draft">下書き</option>
@@ -539,7 +604,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
           <option value="overdue">期限超過</option>
         </select>
       </div>
-      <div id="inv-list-body"><div class="empty-state"><div class="empty-ico">🧾</div>まだ請求がありません</div></div>
+      <div id="inv-list-body"><div class="empty-state"><div class="empty-ico"><svg class="ic" viewBox="0 0 20 20"><use href="#i-bill"/></svg></div>まだ請求がありません</div></div>
     </div>
   </div>
   <!-- 編集 -->
@@ -547,7 +612,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
     <div class="stat-row">
       <div class="stat-card"><div class="stat-label">番号</div><div class="stat-value" style="font-size:13px;letter-spacing:0" id="inv-num">—</div><div class="stat-sub" id="inv-date-sub">—</div></div>
       <div class="stat-card"><div class="stat-label">期限</div><div class="stat-value" style="color:var(--orange);font-size:13px;letter-spacing:0" id="inv-due-val">—</div><div class="stat-sub">支払期限</div></div>
-      <div class="stat-card"><div class="stat-label">請求額</div><div class="stat-value" style="color:var(--green);font-size:15px" id="inv-stat-total">¥0</div><div class="stat-sub">税込</div></div>
+      <div class="stat-card"><div class="stat-label">請求額</div><div class="stat-value" style="color:var(--ink);font-size:15px" id="inv-stat-total">¥0</div><div class="stat-sub">税込</div></div>
     </div>
     <div class="card">
       <div class="card-header">
@@ -559,7 +624,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
         <div class="form-field"><label>請求先</label>
           <div style="display:flex;gap:8px">
             <input type="text" id="inv-client" placeholder="株式会社〇〇" style="flex:1">
-            <button class="btn-sm" onclick="openPicker('inv')" style="white-space:nowrap">👥 選択</button>
+            <button class="btn-sm" onclick="openPicker('inv')" style="white-space:nowrap"><svg class="ic" viewBox="0 0 20 20"><use href="#i-user"/></svg> 選択</button>
           </div>
         </div>
         <div class="form-field"><label>件名</label><input type="text" id="inv-project" placeholder="〇〇工事 請求"></div>
@@ -578,7 +643,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
         </div>
         <div class="form-field"><label>備考</label><textarea id="inv-notes" placeholder="振込手数料はご負担ください、など"></textarea></div>
         <div id="inv-delete-wrap" style="display:none;margin-top:4px">
-          <button class="btn btn-danger" style="width:100%;justify-content:center" onclick="deleteInvoice()">🗑 この請求を削除</button>
+          <button class="btn btn-danger" style="width:100%;justify-content:center" onclick="deleteInvoice()"><svg class="ic" viewBox="0 0 20 20"><use href="#i-trash"/></svg> この請求を削除</button>
         </div>
       </div>
     </div>
@@ -591,7 +656,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
         </div>
       </div>
       <div class="quick-add">
-        <button class="btn-sm" onclick="openEstPicker()">📄 見積から転記</button>
+        <button class="btn-sm" onclick="openEstPicker()">見積から転記</button>
       </div>
       <div style="padding:0 16px" id="inv-items"></div>
       <div class="totals-box">
@@ -615,7 +680,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
   <div id="cases-list-view">
     <div class="card">
       <div class="card-header"><h2>現場一覧</h2><button class="btn-sm accent" onclick="showNewCaseForm()">＋ 新規現場</button></div>
-      <div id="cases-list"><div class="empty-state"><div class="empty-ico">🏗</div>現場がまだありません</div></div>
+      <div id="cases-list"><div class="empty-state"><div class="empty-ico"><svg class="ic" viewBox="0 0 20 20"><use href="#i-site"/></svg></div>現場がまだありません</div></div>
     </div>
   </div>
   <div id="cases-new-view" style="display:none">
@@ -674,7 +739,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
         <h2 style="margin-left:8px" id="detail-case-name">—</h2>
         <span class="badge" id="detail-case-badge">進行中</span>
         <span class="badge" id="detail-case-type-badge" style="background:var(--ink-sub);color:#fff"></span>
-        <button class="btn-sm" style="margin-left:auto;color:var(--red);border-color:var(--red)" onclick="deleteCase()">🗑 削除</button>
+        <button class="btn-sm" style="margin-left:auto;color:var(--red);border-color:var(--red)" onclick="deleteCase()"><svg class="ic" viewBox="0 0 20 20"><use href="#i-trash"/></svg> 削除</button>
       </div>
       <div style="padding:14px 16px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:6px">
         <div style="font-size:12px;color:var(--ink-sub)" id="detail-case-client">—</div>
@@ -701,7 +766,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       <div class="totals-box"><div class="total-line"><span class="lbl">費用合計</span><span class="val" id="case-total">¥0</span></div></div>
     </div>
     <div class="card">
-      <div class="card-header"><h2>💴 現場経費</h2></div>
+      <div class="card-header"><h2>現場経費</h2></div>
       <div id="case-exp-list" style="padding:0 16px"><div class="empty-state" style="padding:16px 0;font-size:12px">経費が記録されていません</div></div>
       <div class="totals-box"><div class="total-line"><span class="lbl">経費合計</span><span class="val" id="case-exp-total">¥0</span></div></div>
     </div>
@@ -711,7 +776,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
     </div>
     <div style="font-size:11px;font-weight:700;color:var(--ink-sub);letter-spacing:0.5px;margin:20px 0 8px 4px">記録・資料</div>
     <div class="card">
-      <button class="collapse-head" onclick="toggleCollapse(this)"><span>📅 工程表</span><span class="chev">▶</span></button>
+      <button class="collapse-head" onclick="toggleCollapse(this)"><span>工程表</span><span class="chev">▶</span></button>
       <div class="collapse-body">
                 <div style="padding:10px 16px 0;display:flex;justify-content:flex-end"><button class="btn-sm accent" onclick="scheduleAddRow()">＋ 追加</button></div>
         <div id="schedule-inputs"></div>
@@ -719,12 +784,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       </div>
     </div>
     <div class="card">
-      <button class="collapse-head" onclick="toggleCollapse(this)"><span>📷 現場写真</span><span class="chev">▶</span></button>
+      <button class="collapse-head" onclick="toggleCollapse(this)"><span>現場写真</span><span class="chev">▶</span></button>
       <div class="collapse-body">
                 <div class="photo-cat-tabs" id="photo-cat-tabs" style="flex-wrap:wrap">
-          <button class="btn-sm" onclick="triggerPhoto('before')">📷 着工前</button>
-          <button class="btn-sm" onclick="triggerPhoto('during')">📷 施工中</button>
-          <button class="btn-sm" onclick="triggerPhoto('after')">📷 完工</button>
+          <button class="btn-sm" onclick="triggerPhoto('before')"><svg class="ic" viewBox="0 0 20 20"><use href="#i-cam"/></svg> 着工前</button>
+          <button class="btn-sm" onclick="triggerPhoto('during')"><svg class="ic" viewBox="0 0 20 20"><use href="#i-cam"/></svg> 施工中</button>
+          <button class="btn-sm" onclick="triggerPhoto('after')"><svg class="ic" viewBox="0 0 20 20"><use href="#i-cam"/></svg> 完工</button>
           <button class="btn-sm" id="photo-cat-add-btn" onclick="togglePhotoCatInput()" style="color:var(--accent);border-color:var(--accent)">＋ カテゴリ</button>
         </div>
         <div id="photo-cat-input-row" style="display:none;padding:8px 16px;border-bottom:1px solid var(--rule);background:#fafafa;display:none;gap:8px;align-items:center">
@@ -737,7 +802,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       </div>
     </div>
     <div class="card">
-      <button class="collapse-head" onclick="toggleCollapse(this)"><span>📐 図面データ</span><span class="chev">▶</span></button>
+      <button class="collapse-head" onclick="toggleCollapse(this)"><span>図面データ</span><span class="chev">▶</span></button>
       <div class="collapse-body">
                 <div style="padding:10px 16px 0;display:flex;justify-content:flex-end"><button class="btn-sm accent" onclick="openDrawingOptions()">＋ 追加</button></div>
         <input type="file" id="drawing-input" accept="image/*,.pdf" style="display:none" onchange="handleDrawing(event)">
@@ -746,7 +811,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
         <div id="drawing-options" style="display:none;padding:14px 16px;border-top:1px solid var(--rule);background:#fafafa">
           <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--ink-sub)">追加方法を選択</div>
           <div style="display:flex;flex-direction:column;gap:8px">
-            <button class="btn-sm" style="justify-content:flex-start;gap:10px;padding:10px 12px" onclick="document.getElementById('drawing-input').click();document.getElementById('drawing-options').style.display='none'">🖼 画像・PDFをアップロード</button>
+            <button class="btn-sm" style="justify-content:flex-start;gap:10px;padding:10px 12px" onclick="document.getElementById('drawing-input').click();document.getElementById('drawing-options').style.display='none'"><svg class="ic" viewBox="0 0 20 20"><use href="#i-image"/></svg> 画像・PDFをアップロード</button>
             <div style="display:flex;gap:8px">
               <input type="text" id="drawing-url-name" placeholder="図面名" style="flex:1;border:1.5px solid var(--rule);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit">
               <input type="url" id="drawing-url-input" placeholder="Google DriveなどのURL" style="flex:2;border:1.5px solid var(--rule);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit">
@@ -758,7 +823,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       </div>
     </div>
     <div class="card">
-      <button class="collapse-head" onclick="toggleCollapse(this)"><span>📝 現場メモ</span><span class="chev">▶</span></button>
+      <button class="collapse-head" onclick="toggleCollapse(this)"><span>現場メモ</span><span class="chev">▶</span></button>
       <div class="collapse-body">
                 <div class="card-body"><div class="form-field"><textarea id="case-memo" placeholder="進捗・連絡事項など" oninput="saveCaseMemo()"></textarea></div></div>
       </div>
@@ -771,7 +836,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
   <div id="client-list-view">
     <div class="card">
       <div class="card-header"><h2>顧客一覧</h2><button class="btn-sm accent" onclick="clientNewForm()">＋ 新規登録</button></div>
-      <div id="client-list-body"><div class="empty-state"><div class="empty-ico">👥</div>まだ顧客が登録されていません</div></div>
+      <div id="client-list-body"><div class="empty-state"><div class="empty-ico"><svg class="ic" viewBox="0 0 20 20"><use href="#i-user"/></svg></div>まだ顧客が登録されていません</div></div>
     </div>
   </div>
   <div id="client-edit-view" style="display:none">
@@ -803,14 +868,23 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 <div class="page" id="page-settings">
   <!-- 自社情報 未入力アラート -->
   <div id="co-incomplete-banner" style="display:none;background:#fff7ed;border:1.5px solid var(--orange);border-radius:12px;padding:12px 14px;margin-bottom:12px">
-    <div style="font-size:13px;font-weight:700;color:var(--orange);margin-bottom:4px">⚠️ 自社情報が未入力です</div>
+    <div style="font-size:13px;font-weight:700;color:var(--orange);margin-bottom:4px">自社情報が未入力です</div>
     <div style="font-size:12px;color:var(--ink-sub);line-height:1.7;margin-bottom:8px">会社名・住所・電話番号は見積書／請求書に印刷されます。一度だけ設定してください。</div>
     <button onclick="openCompanySettings()" class="btn btn-primary" style="width:100%;justify-content:center;padding:8px">自社情報を入力する</button>
   </div>
 
-  <!-- 📄 見積の設定 -->
+  <!-- 見積作成の記録 -->
   <div class="card">
-    <div class="card-header"><h2>📄 見積の設定</h2></div>
+    <div class="card-header"><h2>見積作成の記録</h2></div>
+    <div class="card-body">
+      
+      <div id="metric-body"></div>
+    </div>
+  </div>
+
+  <!-- 見積の設定 -->
+  <div class="card">
+    <div class="card-header"><h2>見積の設定</h2></div>
     <div class="card-body">
       <div class="form-field">
         <label>候補を選んだときに入れる単価</label>
@@ -820,10 +894,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
           <option value="md">中央値（真ん中の値）</option>
         </select>
       </div>
-      <p style="font-size:11px;color:var(--ink-sub);margin:-6px 0 16px;line-height:1.7">
-        候補の「直近／平均／中央」ボタンを押せば、その場で別の値も選べます。<br>
-        ※ 単位が「式」の品目は現場規模で額が変わるため、平均が実態とズレることがあります。
-      </p>
+      <p style="font-size:11px;color:var(--ink-sub);margin:-6px 0 16px;line-height:1.6">候補の「直近／平均／中央」からその場で選び直せる。単位が「式」の品目は現場規模で額が変わるため平均は目安。</p>
       <div class="form-field" style="margin-bottom:6px">
         <label>表示する機能</label>
         <select id="mode-select" onchange="setMode(this.value)">
@@ -835,9 +906,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
     </div>
   </div>
 
-  <!-- 💴 経費管理（毎日使う → 最上部） -->
+  <!-- 経費管理（毎日使う → 最上部） -->
   <div class="card" id="expense-section" data-full>
-    <div class="card-header"><h2>💴 経費管理</h2></div>
+    <div class="card-header"><h2>経費管理</h2></div>
     <div class="card-body">
       <!-- 経費追加フォーム（最初に置く） -->
       <div style="display:flex;gap:8px;margin-bottom:8px">
@@ -857,11 +928,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
             style="width:100%;padding:10px 8px 10px 22px;border:1.5px solid var(--rule);border-radius:9px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box">
         </div>
         <button id="exp-camera-btn" onclick="captureReceipt()" title="レシートを撮影して読み取り"
-          style="background:var(--surface);border:1.5px solid var(--rule);border-radius:9px;font-size:19px;cursor:pointer;padding:9px 11px;line-height:1;flex-shrink:0">📷</button>
+          style="background:var(--surface);border:1.5px solid var(--rule);border-radius:9px;font-size:19px;cursor:pointer;padding:9px 11px;line-height:1;flex-shrink:0"><svg class="ic" viewBox="0 0 20 20"><use href="#i-cam"/></svg> </button>
         <button onclick="addExpItem()" class="btn btn-primary" style="padding:10px 14px;white-space:nowrap;flex-shrink:0">＋追加</button>
       </div>
       <div id="exp-ocr-status" style="display:none;font-size:12px;color:var(--accent);text-align:center;padding:6px;margin-bottom:8px;border-radius:8px;background:var(--accent-soft)">
-        📷 レシートを読み取り中...
+        レシートを読み取り中...
       </div>
       <!-- 進捗バー -->
       <div style="margin-bottom:14px;border-top:1px solid var(--rule);padding-top:14px">
@@ -897,11 +968,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
     </div>
   </div>
 
-  <!-- 👷 メンバー管理 -->
+  <!-- メンバー管理 -->
   <div class="card" data-full>
-    <div class="card-header"><h2>👷 メンバー管理</h2></div>
+    <div class="card-header"><h2>メンバー管理</h2></div>
     <div class="card-body">
-      <p style="font-size:12px;color:var(--ink-sub);margin-bottom:16px;line-height:1.7">現場ごとに担当者を割り当てられます。ホームの配置表にも表示されます。</p>
+      
       <div id="workers-list" style="margin-bottom:16px"></div>
       <div style="border-top:1px solid var(--rule);padding-top:16px">
         <div style="font-size:12px;font-weight:700;margin-bottom:10px">メンバーを追加</div>
@@ -912,16 +983,16 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
     </div>
   </div>
 
-  <!-- 👤 アカウント -->
+  <!-- アカウント -->
   <div class="card">
-    <div class="card-header"><h2>👤 アカウント</h2></div>
+    <div class="card-header"><h2>アカウント</h2></div>
     <div class="card-body">
       <p style="font-size:12px;color:var(--ink-sub);margin-bottom:16px;line-height:1.7">ログイン中：<strong id="settings-user-email" style="color:var(--ink);font-size:13px"></strong></p>
       <div class="form-field">
         <label>氏名（表示名）</label>
         <input type="text" id="profile-display-name" placeholder="山田 太郎" style="width:100%;padding:10px 12px;border:1.5px solid var(--rule);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box">
       </div>
-      <p style="font-size:11px;color:var(--ink-sub);margin:-4px 0 14px;line-height:1.6">経費の支払者名・案件担当として表示されます</p>
+      
       <button onclick="saveProfile()" class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:14px">保存</button>
       <button onclick="logout()" class="btn btn-danger" style="width:100%;justify-content:center">ログアウト</button>
     </div>
@@ -933,7 +1004,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
   <!-- ▸ 自社情報（折りたたみ） -->
   <div class="card">
     <button class="collapse-head" id="co-collapse-head" onclick="toggleCollapse(this)">
-      <span>⚙️ 自社情報（見積書に印刷される）</span><span class="chev">▶</span>
+      <span>自社情報（見積書に印刷される）</span><span class="chev">▶</span>
     </button>
     <div class="collapse-body" id="co-collapse-body">
     <div class="card-body" style="border-top:1px solid var(--rule)">
@@ -958,7 +1029,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
             <input type="file" id="co-logo-file" accept="image/*" style="display:none" onchange="uploadBrand(event,'logo')">
             <div style="display:flex;gap:6px;margin-top:6px">
               <button class="btn-sm" style="flex:1;justify-content:center" onclick="document.getElementById('co-logo-file').click()">変更</button>
-              <button class="btn-sm" onclick="restoreBrand('logo')" title="同梱のa-Craftロゴに戻す">↺</button>
+              <button class="btn-sm" onclick="restoreBrand('logo')" title="同梱のa-Craftロゴに戻す"><svg class="ic" viewBox="0 0 20 20"><use href="#i-undo"/></svg> </button>
               <button class="btn-sm" onclick="clearBrand('logo')" title="印刷しない">✕</button>
             </div>
           </div>
@@ -968,7 +1039,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
             <input type="file" id="co-seal-file" accept="image/*" style="display:none" onchange="uploadBrand(event,'seal')">
             <div style="display:flex;gap:6px;margin-top:6px">
               <button class="btn-sm" style="flex:1;justify-content:center" onclick="document.getElementById('co-seal-file').click()">変更</button>
-              <button class="btn-sm" onclick="restoreBrand('seal')" title="同梱の社印に戻す">↺</button>
+              <button class="btn-sm" onclick="restoreBrand('seal')" title="同梱の社印に戻す"><svg class="ic" viewBox="0 0 20 20"><use href="#i-undo"/></svg> </button>
               <button class="btn-sm" onclick="clearBrand('seal')" title="印刷しない">✕</button>
             </div>
           </div>
@@ -982,7 +1053,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
   <!-- ▸ チーム共有（折りたたみ） -->
   <div class="card">
     <button class="collapse-head" onclick="toggleCollapse(this)">
-      <span>🏢 チーム共有</span><span class="chev">▶</span>
+      <span>チーム共有</span><span class="chev">▶</span>
     </button>
     <div class="collapse-body">
     <div class="card-body" style="border-top:1px solid var(--rule)">
@@ -998,9 +1069,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       </div>
       <!-- 未参加の場合に表示（デフォルト表示） -->
       <div id="org-create-section">
-        <p style="font-size:12px;color:var(--ink-sub);margin-bottom:16px;line-height:1.7">チームを作成すると複数人でデータを共有できます。招待コードをメンバーに送るだけで参加できます。</p>
+        
         <div class="form-field"><label>会社名（チームを作成）</label><input type="text" id="org-name-input" placeholder="株式会社まとめる現場"></div>
-        <button onclick="createOrg()" class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:16px">🏢 チームを作成する</button>
+        <button onclick="createOrg()" class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:16px"><svg class="ic" viewBox="0 0 20 20"><use href="#i-team"/></svg> チームを作成する</button>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px"><div style="flex:1;height:1px;background:var(--rule)"></div><span style="font-size:11px;color:var(--ink-sub)">または</span><div style="flex:1;height:1px;background:var(--rule)"></div></div>
         <div class="form-field"><label>招待コードで参加</label><input type="text" id="org-code-input-create" placeholder="ABC123" style="text-transform:uppercase;letter-spacing:3px;font-size:18px;font-weight:800;text-align:center" oninput="this.value=this.value.toUpperCase()"></div>
         <button onclick="joinOrgFromCreate()" class="btn" style="width:100%;justify-content:center;border:1.5px solid var(--rule)">参加する</button>
@@ -1012,15 +1083,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
   <!-- ▸ データバックアップ（折りたたみ） -->
   <div class="card">
     <button class="collapse-head" onclick="toggleCollapse(this)">
-      <span>💾 データバックアップ</span><span class="chev">▶</span>
+      <span>データバックアップ</span><span class="chev">▶</span>
     </button>
     <div class="collapse-body">
     <div class="card-body" style="border-top:1px solid var(--rule)">
-      <p style="font-size:12px;color:var(--ink-sub);margin-bottom:16px;line-height:1.7">データはクラウドに自動同期されています。念のためローカルバックアップも定期的に取ることをお勧めします。</p>
-      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:10px" onclick="exportBackup()">📤 バックアップを書き出す</button>
-      <button class="btn" style="width:100%;justify-content:center;border:1px solid var(--rule)" onclick="document.getElementById('import-file').click()">📥 バックアップから復元する</button>
+      
+      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:10px" onclick="exportBackup()"><svg class="ic" viewBox="0 0 20 20"><use href="#i-up"/></svg> バックアップを書き出す</button>
+      <button class="btn" style="width:100%;justify-content:center;border:1px solid var(--rule)" onclick="document.getElementById('import-file').click()"><svg class="ic" viewBox="0 0 20 20"><use href="#i-down"/></svg> バックアップから復元する</button>
       <input type="file" id="import-file" accept=".json" style="display:none" onchange="importBackup(event)">
-      <p style="font-size:11px;color:var(--red);margin-top:10px;line-height:1.6">⚠️ 復元すると現在のデータはすべて上書きされます</p>
+      <p style="font-size:11px;color:var(--red);margin-top:10px;line-height:1.6">復元すると現在のデータはすべて上書きされます</p>
     </div>
     </div>
   </div>
@@ -1041,11 +1112,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 <div class="modal-backdrop" id="past-modal">
   <div class="modal-sheet" style="max-height:88vh;display:flex;flex-direction:column;padding:0">
     <div class="modal-header" style="padding:14px 16px;margin:0">
-      <h3 style="font-size:15px;font-weight:700">📋 過去の見積から作る</h3>
+      <h3 style="font-size:15px;font-weight:700">過去の見積から作る</h3>
       <button class="btn-sm" onclick="closePastPicker()">✕ 閉じる</button>
     </div>
     <div class="past-search">
-      <input type="search" id="past-q" placeholder="🔍 顧客名・工事名で検索" oninput="renderPastList()">
+      <input type="search" id="past-q" placeholder="顧客名・工事名で検索" oninput="renderPastList()">
       <div class="past-chips" id="past-chips"></div>
     </div>
     <div id="past-list" style="overflow-y:auto;flex:1"></div>
@@ -1056,7 +1127,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 <div class="modal-backdrop" id="help-modal">
   <div class="modal-sheet" style="max-height:85vh;overflow-y:auto">
     <div class="modal-header" style="position:sticky;top:0;background:var(--surface);z-index:1;padding-bottom:12px">
-      <h3 style="font-size:15px;font-weight:700">📖 使い方ガイド</h3>
+      <h3 style="font-size:15px;font-weight:700">使い方ガイド</h3>
       <button class="btn-sm" onclick="closeHelp()">✕ 閉じる</button>
     </div>
     <div style="padding:0 4px">
@@ -1066,45 +1137,43 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
         <div style="font-size:12px;color:var(--ink);line-height:1.9">
           このツールは既定で<strong>「見積・請求のみ」</strong>を表示しています。<br>
           現場管理（案件・配置表・写真・図面・経費・メンバー）を使いたいときは、<br>
-          ⚙️設定 →「見積の設定」→ <strong>表示する機能</strong> を「全機能」に切り替えてください。<br>
+          placeholder="️設定 →「見積の設定」→ <strong>表示する機能</strong> を「全機能」に切り替えてください。<br>
           <span style="color:var(--ink-sub)">※ 隠れているだけで、登録済みのデータは消えていません</span>
         </div>
         <div style="font-size:13px;font-weight:700;color:var(--accent);margin:12px 0 6px">まず最初に</div>
-        <div style="font-size:12px;color:var(--ink);line-height:1.9">
-          ⚙️ 設定 →「その他の設定」→ <strong>自社情報</strong>を1回だけ入力してください。<br>
+        <div style="font-size:12px;color:var(--ink);line-height:1.9">設定 →「その他の設定」→ <strong>自社情報</strong>を1回だけ入力してください。<br>
           見積書・請求書に印刷される会社名・住所・電話番号です。
         </div>
         <div style="font-size:13px;font-weight:700;color:var(--accent);margin:12px 0 6px">基本の流れ</div>
-        <div style="font-size:12px;color:var(--ink);line-height:1.9">
-          🏗 現場を追加　→　👷 メンバー割当　→　📄 見積作成　→　🧾 請求書送付
+        <div style="font-size:12px;color:var(--ink);line-height:1.9">現場を追加　→　メンバー割当　→　見積作成　→　請求書送付
         </div>
       </div>
 
       <div style="margin-bottom:18px">
-        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">🏠 ホーム</div>
+        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">ホーム</div>
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
           <strong>一番上のボタンから、よく使う操作にすぐ行けます</strong><br>
           　<strong>＋ 見積を作る</strong>（青い大きいボタン）<br>
-          　🧾 請求を作る　／　🏗 現場を追加　／　📷 経費を記録<br>
+          　請求を作る　／　現場を追加　／　経費を記録<br>
           <br>
-          • <strong>📊 今月の経営サマリー</strong>：売上・粗利・未払い・進行中の現場<br>
+          • <strong>今月の経営サマリー</strong>：売上・粗利・未払い・進行中の現場<br>
           　　※ 粗利は仕入単価を入れた請求だけで計算します。未入力だと「—」表示<br>
-          • <strong>📋 今週の配置表</strong>：メンバーがどの現場に入っているか一覧で確認<br>
+          • <strong>今週の配置表</strong>：メンバーがどの現場に入っているか一覧で確認<br>
           　　← 前週 / 次週 → で週を切り替えられます<br>
           • 最近の見積・請求もここから確認できます<br>
           <br>
-          <strong>📋 配置表を使うには2ステップ</strong><br>
+          <strong>配置表を使うには2ステップ</strong><br>
           ① 設定 → メンバー管理 で職人・スタッフを登録<br>
           ② 案件に<strong>着工日・完工日</strong>と<strong>担当メンバー</strong>を設定<br>
           → 該当期間に自動でメンバーの現場名が表示されます<br>
           <br>
-          <strong>🔔 期限リマインダー</strong><br>
+          <strong>期限リマインダー</strong><br>
           初回に出る「許可する」を押すと、見積の有効期限・請求の支払期限が近づいたとき（3日前・前日・当日）に通知が届きます。
         </div>
       </div>
 
       <div style="margin-bottom:18px">
-        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">🏗 案件管理</div>
+        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">案件管理</div>
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
           • 作成時に<strong>元請け／下請け</strong>を選択できます<br>
           • 下請けの場合は元請け会社名・発注番号を入力<br>
@@ -1116,20 +1185,20 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
           　材料・費用／現場経費／関連見積<br>
           <br>
           <strong>「記録・資料」に畳んであるもの（▶ をタップで開く）</strong><br>
-          　📅 工程表　… ガントチャートで進捗を可視化<br>
-          　📷 現場写真　… 着工前・施工中・完工。カテゴリは自由に追加できます<br>
-          　📐 図面データ　… 画像・PDF・外部リンク（Google Driveなど）<br>
-          　📝 現場メモ
+          　工程表　… ガントチャートで進捗を可視化<br>
+          　現場写真　… 着工前・施工中・完工。カテゴリは自由に追加できます<br>
+          　図面データ　… 画像・PDF・外部リンク（Google Driveなど）<br>
+          　現場メモ
         </div>
       </div>
 
       <div style="margin-bottom:18px">
-        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">📄 見積</div>
+        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">見積</div>
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
-          <strong>⚡ 自動見積もり（2019〜2026年の見積書236件から）</strong><br>
+          <strong>自動見積もり（2019〜2026年の見積書236件から）</strong><br>
           <br>
-          <strong style="color:var(--accent)">① 📋 過去の見積から作る　← 一番速い</strong><br>
-          　ホームの「過去の見積から作る」、または明細の「📋 過去の見積」を押すと、<br>
+          <strong style="color:var(--accent)">① 過去の見積から作る　← 一番速い</strong><br>
+          　ホームの「過去の見積から作る」、または明細の「過去の見積」を押すと、<br>
           　<strong>207件の過去見積</strong>から選べます。選ぶと<strong>明細が丸ごと入ります</strong>。<br>
           　あとは数量を現場に合わせて直すだけ。<br>
           　・顧客名や工事名で検索できます<br>
@@ -1137,10 +1206,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
           　<strong>・明細を3つ以上入れると「似た見積があります」と自動でお知らせします</strong><br>
           　　（過去の見積と6割以上一致したとき。「見る」を押すと一致率順で出ます）<br>
           <br>
-          ② <strong>📦 パッケージボタン</strong>：「ユニットバス改修」「塗装工事」などを押すと、定番の明細がまるごと入ります<br>
+          ② <strong>パッケージボタン</strong>：「ユニットバス改修」「塗装工事」などを押すと、定番の明細がまるごと入ります<br>
           ③ <strong>品目サジェスト</strong>：項目名を打つと<strong>2,666品目</strong>の実績から候補が出ます。選ぶと<strong>単位・数量・単価が自動入力</strong><br>
           　候補の下に<strong>「直近 ／ 平均 ／ 中央」の3つのボタン</strong>が出るので、押した値が入ります。<br>
-          　どれを既定にするかは ⚙️設定 →「見積の設定」で変えられます。<br>
+          　どれを既定にするかは placeholder="️設定 →「見積の設定」で変えられます。<br>
           　<span style="color:var(--orange);font-weight:700">「幅大」</span>と付いた品目は、現場によって金額の差が3倍以上ある項目です。平均を鵜呑みにせず確認してください<br>
           　※ 表記ゆれは統合済み。「産廃処分費」でも「産廃処分・運搬費」でも同じ候補が出ます<br>
           ④ 合計欄の<strong>「▶ 経費・値引き」</strong>を開くと調整できます<br>
@@ -1149,70 +1218,79 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
           　※ 普段は畳んだままでOK。閉じていても自動で計算されています<br>
           <br>
           <strong>基本操作</strong><br>
-          • 「📂 案件から読み込む」で現場情報を自動入力<br>
-          • 「👥 選択」で登録済み顧客を呼び出せます<br>
+          • 打つのは<strong>顧客名と案件名の2つだけ</strong>。見積日・有効期限・現場住所・担当者・備考は<br>
+          　「▶ 日付・住所・備考」に畳んであります。日付は自動で入り、担当者は空なら自社情報の担当者が印刷されます<br>
+          • 「案件から読み込む」で現場情報を自動入力<br>
+          • 「選択」で登録済み顧客を呼び出せます<br>
           • 「＋ 区分」で工事区分を作ると、区分ごとの小計が右に出ます<br>
           • 明細テンプレートの保存・読み込みでよく使う内容をすぐ呼び出し<br>
           • 仕入単価を入力すると粗利が自動計算されます<br>
-          • 「🖨」の印刷は<strong>表紙（大項目サマリ）＋ 工事区分ごとの内訳明細書</strong>の2階層。<br>
+          • 「placeholder="」の印刷は<strong>表紙（大項目サマリ）＋ 工事区分ごとの内訳明細書</strong>の2階層。<br>
           　従来の見積書フォーマット（ベージュの帯・罫線グリッド・振込先枠・ロゴ）をそのまま再現しています<br>
-          • 「🖨」ボタンでA4サイズの見積書を印刷・PDF保存<br>
-          • 「📧」ボタンで<strong>メール送信・共有</strong>（スマホは共有シート、PCはメールソフトが開きます）<br>
-          • 「📊」ボタンでExcelにエクスポートできます
+          • 「placeholder="」ボタンでA4サイズの見積書を印刷・PDF保存<br>
+          • 「placeholder="」ボタンで<strong>メール送信・共有</strong>（スマホは共有シート、PCはメールソフトが開きます）<br>
+          • 「placeholder="」ボタンでExcelにエクスポートできます
         </div>
       </div>
 
       <div style="margin-bottom:18px">
-        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">🧾 請求</div>
+        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">請求</div>
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
           • 見積から明細を転記して請求書をすぐ作成<br>
           • ステータス管理：下書き → 送付済み → 入金済み<br>
-          • 「🖨」ボタンで請求書を印刷・PDF保存<br>
-          • 「📧」ボタンで<strong>メール送信・共有</strong><br>
-          • 「📊」ボタンでExcelにエクスポートできます
+          • 「placeholder="」ボタンで請求書を印刷・PDF保存<br>
+          • 「placeholder="」ボタンで<strong>メール送信・共有</strong><br>
+          • 「placeholder="」ボタンでExcelにエクスポートできます
         </div>
       </div>
 
       <div style="margin-bottom:18px">
-        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">👥 顧客管理</div>
+        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">顧客管理</div>
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
           • 顧客情報（会社名・担当者・電話・住所）を登録<br>
-          • 見積・請求フォームから「👥 選択」で呼び出せます
+          • 見積・請求フォームから「選択」で呼び出せます
         </div>
       </div>
 
       <div style="margin-bottom:18px">
-        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">💴 経費管理（⚙️設定の一番上）</div>
+        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">経費管理（placeholder="️設定の一番上）</div>
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
-          • ホームの<strong>「📷 経費を記録」</strong>から直接ジャンプできます<br>
+          • ホームの<strong>「経費を記録」</strong>から直接ジャンプできます<br>
           • 項目名・現場・金額を入れて「＋追加」<br>
-          • 📷 ボタンでレシートを撮影すると金額を自動読み取り（OCR）<br>
+          • ボタンでレシートを撮影すると金額を自動読み取り（OCR）<br>
           • 月予算を設定すると、使用状況がバーで確認できます<br>
           • 月別・現場別に絞り込んで一覧できます
         </div>
       </div>
 
       <div style="margin-bottom:18px">
-        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">⚙️ 設定の構成</div>
+        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">設定の構成</div>
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
           よく使うものが上、たまにしか使わないものは<strong>「その他の設定」</strong>に畳んであります。<br>
           <br>
           <strong>いつも見えている</strong><br>
-          　💴 経費管理／👷 メンバー管理／👤 アカウント<br>
+          　見積作成の記録／見積の設定／経費管理／メンバー管理／アカウント<br>
+          <br>
+          <strong>見積作成の記録</strong>について<br>
+          　見積を保存するたびに、かかった時間と「どこから入力したか」を自動で記録します。<br>
+          　・<strong>自動入力率</strong>：明細のうち、過去の実績から入った割合<br>
+          　・過去の見積から複製／パッケージ／候補から選択／手入力　の内訳<br>
+          　・「直近10件」が全期間より高ければ、使うほど速くなっているということです<br>
+          　記録はこの端末の中だけに残ります。CSVで書き出せます。<br>
           <br>
           <strong>その他の設定（▶ をタップで開く）</strong><br>
-          　⚙️ 自社情報　… 会社名・住所・TEL・許可番号・<strong>お振込み先・支払条件</strong>、<br>
+          　placeholder="️ 自社情報　… 会社名・住所・TEL・許可番号・<strong>お振込み先・支払条件</strong>、<br>
           　　それに<strong>会社ロゴと社印の画像</strong>も登録できます。<br>
           　　<strong>すべて見積書・請求書に印刷される情報</strong>なので、最初に1回だけ設定してください。未入力のときは設定画面の上に警告が出ます。<br>
-          　🏢 チーム共有　… 招待コードで複数人とデータ共有<br>
-          　💾 データバックアップ　… 書き出し・復元
+          　チーム共有　… 招待コードで複数人とデータ共有<br>
+          　データバックアップ　… 書き出し・復元
         </div>
       </div>
 
       <div style="margin-bottom:18px">
-        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">🏢 チーム共有</div>
+        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">チーム共有</div>
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
-          • 設定 → その他の設定 → 🏢 チーム共有 を開く<br>
+          • 設定 → その他の設定 → チーム共有 を開く<br>
           • 「チームを作成する」→ 6文字の招待コードが発行されます<br>
           • メンバーは招待コードを入力するだけで参加できます<br>
           • チーム参加後は案件・メンバーデータがリアルタイムで共有されます
@@ -1220,17 +1298,17 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
       </div>
 
       <div style="margin-bottom:18px">
-        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">☁ クラウド同期</div>
+        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">クラウド同期</div>
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
           • データは入力のたびにクラウドへ自動保存されます<br>
-          • 画面上部の「☁ 保存済み」が表示されたら保存完了のサインです<br>
+          • 画面上部の「保存済み」が表示されたら保存完了のサインです<br>
           • スマホ・PC・タブレットなど複数デバイスで同じデータを使えます<br>
           • ログアウトしてもデータは消えません。再ログインで復元されます
         </div>
       </div>
 
       <div style="background:var(--green-soft);border-radius:10px;padding:14px;font-size:12px;color:var(--ink);line-height:1.8">
-        💡 <strong>まず試してほしい3ステップ</strong><br>
+        <strong>まず試してほしい3ステップ</strong><br>
         ① 設定でメンバーを登録　② 案件を1件作って担当者を割り当て　③ 見積書を作って印刷してみる
       </div>
     </div>
@@ -1239,11 +1317,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-se
 
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav">
-  <div class="nav-item active" onclick="navigate('dashboard',this)" data-page="dashboard"><span class="nav-ico">🏠</span>ホーム</div>
-  <div class="nav-item" onclick="navigate('estimate',this)" data-page="estimate"><span class="nav-ico">📄</span>見積<span class="nav-badge" id="m-est-badge" style="display:none">0</span></div>
-  <div class="nav-item" onclick="navigate('invoice',this)" data-page="invoice"><span class="nav-ico">🧾</span>請求<span class="nav-badge" id="m-inv-badge" style="display:none">0</span></div>
-  <div class="nav-item" onclick="navigate('cases',this)" data-page="cases" data-full><span class="nav-ico">📋</span>案件</div>
-  <div class="nav-item" onclick="navigate('clients',this)" data-page="clients" data-full><span class="nav-ico">👥</span>顧客</div>
+  <div class="nav-item active" onclick="navigate('dashboard',this)" data-page="dashboard"><span class="nav-ico"><svg class="ic" viewBox="0 0 20 20"><use href="#i-home"/></svg></span>ホーム</div>
+  <div class="nav-item" onclick="navigate('estimate',this)" data-page="estimate"><span class="nav-ico"><svg class="ic" viewBox="0 0 20 20"><use href="#i-doc"/></svg></span>見積<span class="nav-badge" id="m-est-badge" style="display:none">0</span></div>
+  <div class="nav-item" onclick="navigate('invoice',this)" data-page="invoice"><span class="nav-ico"><svg class="ic" viewBox="0 0 20 20"><use href="#i-bill"/></svg></span>請求<span class="nav-badge" id="m-inv-badge" style="display:none">0</span></div>
+  <div class="nav-item" onclick="navigate('cases',this)" data-page="cases" data-full><span class="nav-ico"><svg class="ic" viewBox="0 0 20 20"><use href="#i-site"/></svg></span>案件</div>
+  <div class="nav-item" onclick="navigate('clients',this)" data-page="clients" data-full><span class="nav-ico"><svg class="ic" viewBox="0 0 20 20"><use href="#i-user"/></svg></span>顧客</div>
 </nav>
 
 <script>
@@ -1441,9 +1519,9 @@ function scheduleRetry() {
 function showSyncError(msg) {
   const el = document.getElementById('sync-indicator');
   if (!el) return;
-  el.textContent = '⚠ ' + msg;
+  el.textContent = '' + msg;
   el.style.opacity = '1';
-  el.style.color = 'var(--orange,#f59e0b)';
+  el.style.color = 'var(--orange)';
   clearTimeout(el._t);
   el._t = setTimeout(() => { el.style.opacity = '0'; }, 5000);
 }
@@ -1451,7 +1529,7 @@ function showSyncError(msg) {
 function showSyncDone() {
   const el = document.getElementById('sync-indicator');
   if (!el) return;
-  el.textContent = '☁ 保存済み';
+  el.textContent = '保存済み';
   el.style.opacity = '1';
   el.style.color = 'var(--green)';
   clearTimeout(el._t);
@@ -1535,7 +1613,7 @@ function updateOrgUI() {
       const org = m.organizations;
       const isOwner = org.owner_id === currentUser?.id;
       return `<div style="background:var(--accent-soft);border-radius:12px;padding:16px;margin-bottom:12px">
-        <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:4px">TEAM MODE ☁</div>
+        <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:4px">TEAM MODE placeholder="</div>
         <div style="font-size:16px;font-weight:700;margin-bottom:6px">${org.name}</div>
         <div style="font-size:12px;color:var(--ink-sub)">招待コード</div>
         <div style="font-size:22px;font-weight:800;letter-spacing:4px;color:var(--ink);margin-top:2px">${org.invite_code}</div>
@@ -1574,7 +1652,7 @@ async function createOrg() {
   currentUserOrgs = [...currentUserOrgs, { org_id: org.id, role: 'owner', organizations: org }];
   await syncToSupabase();
   updateOrgUI();
-  alert(`✅ チーム「${name}」を作成しました！\n\n招待コード: ${invite_code}\n\nこのコードをメンバーに共有してください。`);
+  alert(`チーム「${name}」を作成しました！\n\n招待コード: ${invite_code}\n\nこのコードをメンバーに共有してください。`);
 }
 
 async function joinOrg() {
@@ -1599,7 +1677,7 @@ async function joinOrg() {
   setBadge('m-est-badge', estimates.length);
   setBadge('m-inv-badge', invoices.length);
   updateOrgUI();
-  alert(`✅ チーム「${org.name}」に参加しました！\nデータが共有されています。`);
+  alert(`チーム「${org.name}」に参加しました！\nデータが共有されています。`);
 }
 
 async function leaveOrg(orgId) {
@@ -1658,6 +1736,7 @@ function navigate(page, el) {
   if(page==='settings') {
     loadCompany(); renderWorkersList(); updateOrgUI(); loadProfile(); renderExpenseTracker();
     const pk=document.getElementById('price-kind-select'); if(pk) pk.value=defaultPriceKind();
+    renderMetrics();
     applyMode();
   }
 }
@@ -1674,15 +1753,15 @@ function renderEstList() {
   const q=(document.getElementById('est-search')?.value||'').toLowerCase();
   let list=[...estimates].reverse();
   if(q) list=list.filter(e=>(e.client||'').toLowerCase().includes(q)||(e.project||'').toLowerCase().includes(q)||(e.num||'').toLowerCase().includes(q));
-  if(!list.length){el.innerHTML=q?'<div class="empty-state">検索結果がありません</div>':'<div class="empty-state"><div class="empty-ico">📄</div>まだ見積がありません</div>';return;}
+  if(!list.length){el.innerHTML=q?'<div class="empty-state">検索結果がありません</div>':'<div class="empty-state"><div class="empty-ico"><svg class="ic" viewBox="0 0 20 20"><use href="#i-doc"/></svg></div>まだ見積がありません</div>';return;}
   el.innerHTML=list.map(e=>`
     <div class="activity-item" onclick="estEditForm('${e.id}')">
       <div class="activity-dot" style="background:var(--accent)"></div>
       <div class="activity-text"><strong>${e.client||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${e.num} · ${e.project||'—'} · ${e.date||''}</span></div>
       <div class="activity-right">
-        <div style="font-size:13px;font-weight:700;color:var(--accent)">¥${commas(e.grand||0)}</div>
+        <div style="font-size:13px;font-weight:700">¥${commas(e.grand||0)}</div>
         ${e.profit?`<div style="font-size:10px;color:var(--green)">粗利 ${e.profitRate||0}%</div>`:''}
-        <button class="btn-sm" style="margin-top:4px;font-size:10px;padding:4px 8px" onclick="event.stopPropagation();printEst('${e.id}')">🖨 PDF</button>
+        <button class="btn-sm" style="margin-top:4px;font-size:10px;padding:4px 8px" onclick="event.stopPropagation();printEst('${e.id}')"><svg class="ic" viewBox="0 0 20 20"><use href="#i-print"/></svg> PDF</button>
       </div>
     </div>`).join('');
 }
@@ -1706,7 +1785,11 @@ function estNewForm() {
   document.getElementById('est-items').innerHTML='';
   pastHintShown=false;
   const ph=document.getElementById('past-hint'); if(ph) ph.style.display='none';
+  document.getElementById('est-info-btn')?.classList.remove('open');
+  document.getElementById('est-info-body')?.classList.remove('open');
   renderPkgBar();
+  metricStart();
+  updateEstInfoSum();
   estRecalc();
 }
 function estEditForm(id) {
@@ -1715,7 +1798,7 @@ function estEditForm(id) {
   currentEstId=id;
   document.getElementById('est-list-view').style.display='none';
   document.getElementById('est-edit-view').style.display='block';
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-ghost" onclick="shareEst('${id}')" style="padding:8px 12px;font-size:13px" title="メール送信">📧</button><button class="btn btn-ghost" onclick="printEst('${id}')" style="padding:8px 12px;font-size:13px">🖨</button><button class="btn btn-primary" onclick="saveEstimate()" style="padding:8px 14px;font-size:13px">保存</button>`;
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-ghost" onclick="shareEst('${id}')" style="padding:8px 12px;font-size:13px" title="メール送信"><svg class="ic" viewBox="0 0 20 20"><use href="#i-mail"/></svg> </button><button class="btn btn-ghost" onclick="printEst('${id}')" style="padding:8px 12px;font-size:13px"><svg class="ic" viewBox="0 0 20 20"><use href="#i-print"/></svg> </button><button class="btn btn-primary" onclick="saveEstimate()" style="padding:8px 14px;font-size:13px">保存</button>`;
   document.getElementById('est-delete-wrap').style.display='block';
   document.getElementById('est-num').textContent=est.num;
   document.getElementById('est-date-sub').textContent='作成日: '+(est.date||'');
@@ -1737,6 +1820,7 @@ function estEditForm(id) {
     else estAddRow(item.name,item.unit,item.qty,item.price,item.cost||0);
   });
   renderPkgBar();
+  updateEstInfoSum();
   estRecalc();
 }
 function estAddSection(name='セクション名') {
@@ -1821,7 +1905,7 @@ function sugPick(i, kind) {
   const p=row.querySelector('.item-price-input'); if(p) p.value=priceOf(m, kind||defaultPriceKind());
   setTimeout(maybeSuggestPast, 50);
   const q=row.querySelector('.item-qty-input'); if(q && (!q.value || q.value==='1')) q.value=m.q!=null?m.q:1;
-  sugClose(); estRecalc();
+  sugClose(); metricCount('sug'); estRecalc();
 }
 function sugKey(e, inp) {
   const box=document.getElementById('sug-box');
@@ -1835,6 +1919,116 @@ function sugKey(e, inp) {
   } else if(e.key==='Enter'){
     if(box._sel>=0){ e.preventDefault(); sugPick(box._sel); }
   } else if(e.key==='Escape'){ sugClose(); }
+}
+
+// ===== 計測（見積作成の実績を記録） =====
+// 目的：サジェスト・過去見積の複製が実際に入力を減らしているかを数字で確かめる
+let estMetric = null;
+function metricStart() {
+  estMetric = { t0: Date.now(), sug: 0, past: 0, pkg: 0, active: Date.now() };
+}
+function metricTouch() { if (estMetric) estMetric.active = Date.now(); }
+function metricCount(kind, n) {
+  if (!estMetric) metricStart();
+  estMetric[kind] = (estMetric[kind] || 0) + (n || 1);
+  metricTouch();
+}
+function loadMetrics() { try { return JSON.parse(localStorage.getItem('ck_metrics') || '[]'); } catch(e) { return []; } }
+function metricSave(est, rows) {
+  if (!estMetric || !rows) return;
+  const auto = estMetric.sug + estMetric.past + estMetric.pkg;
+  const rec = {
+    id: String(est.id), num: est.num, date: fmtDate(new Date()),
+    min: Math.max(1, Math.round((estMetric.active - estMetric.t0) / 60000)),  // 最後に触った時刻まで
+    rows,
+    sug: estMetric.sug, past: estMetric.past, pkg: estMetric.pkg,
+    manual: Math.max(0, rows - auto),
+    grand: est.grand || 0
+  };
+  const all = loadMetrics().filter(m => m.id !== rec.id);   // 上書き保存に対応
+  all.push(rec);
+  localStorage.setItem('ck_metrics', JSON.stringify(all.slice(-500)));
+  estMetric = null;
+}
+function metricSummary() {
+  const all = loadMetrics();
+  if (!all.length) return null;
+  const sum = k => all.reduce((s, m) => s + (m[k] || 0), 0);
+  const rows = sum('rows'), auto = sum('sug') + sum('past') + sum('pkg');
+  const recent = all.slice(-10);
+  const rRows = recent.reduce((s,m)=>s+(m.rows||0),0);
+  const rAuto = recent.reduce((s,m)=>s+(m.sug||0)+(m.past||0)+(m.pkg||0),0);
+  return {
+    n: all.length,
+    avgMin: Math.round(all.reduce((s, m) => s + (m.min || 0), 0) / all.length),
+    rows, auto,
+    autoRate: rows ? Math.round(auto / rows * 100) : 0,
+    recentRate: rRows ? Math.round(rAuto / rRows * 100) : 0,
+    bySug: sum('sug'), byPast: sum('past'), byPkg: sum('pkg'), manual: sum('manual')
+  };
+}
+function renderMetrics() {
+  const el = document.getElementById('metric-body');
+  if (!el) return;
+  const s = metricSummary();
+  if (!s) { el.innerHTML = '<div class="empty-state" style="padding:18px 0;font-size:12px">まだ記録がありません。見積を保存すると自動で記録されます。</div>'; return; }
+  const bar = (label, v, color) => {
+    const p = s.rows ? Math.round(v / s.rows * 100) : 0;
+    return `<div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px">
+        <span style="color:var(--ink-sub)">${label}</span><span style="font-weight:700">${v}項目 (${p}%)</span>
+      </div>
+      <div style="height:7px;background:var(--rule);border-radius:99px;overflow:hidden">
+        <div style="height:100%;width:${p}%;background:${color};border-radius:99px"></div>
+      </div>
+    </div>`;
+  };
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule);margin-bottom:16px;border-radius:10px;overflow:hidden">
+      <div style="background:var(--surface);padding:12px 14px">
+        <div style="font-size:10px;font-weight:700;color:var(--ink-sub);letter-spacing:.5px;margin-bottom:3px">作成した見積</div>
+        <div style="font-size:19px;font-weight:800">${s.n}<span style="font-size:12px;font-weight:600;color:var(--ink-sub)">件</span></div>
+      </div>
+      <div style="background:var(--surface);padding:12px 14px">
+        <div style="font-size:10px;font-weight:700;color:var(--ink-sub);letter-spacing:.5px;margin-bottom:3px">平均作成時間</div>
+        <div style="font-size:19px;font-weight:800">${s.avgMin}<span style="font-size:12px;font-weight:600;color:var(--ink-sub)">分</span></div>
+      </div>
+      <div style="background:var(--surface);padding:12px 14px">
+        <div style="font-size:10px;font-weight:700;color:var(--ink-sub);letter-spacing:.5px;margin-bottom:3px">自動入力率（全期間）</div>
+        <div style="font-size:19px;font-weight:800;color:var(--accent)">${s.autoRate}<span style="font-size:12px;font-weight:600">%</span></div>
+      </div>
+      <div style="background:var(--surface);padding:12px 14px">
+        <div style="font-size:10px;font-weight:700;color:var(--ink-sub);letter-spacing:.5px;margin-bottom:3px">直近10件</div>
+        <div style="font-size:19px;font-weight:800;color:${s.recentRate>=s.autoRate?'var(--green)':'var(--orange)'}">${s.recentRate}<span style="font-size:12px;font-weight:600">%</span></div>
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--ink-sub);margin-bottom:8px">明細 ${s.rows}項目の内訳</div>
+    ${bar('過去の見積から複製', s.byPast, 'var(--accent)')}
+    ${bar('パッケージ', s.byPkg, '#8b5cf6')}
+    ${bar('候補から選択', s.bySug, 'var(--green)')}
+    ${bar('手入力', s.manual, 'var(--ink-sub)')}
+    <button class="btn-sm" style="width:100%;justify-content:center;margin-top:12px" onclick="exportMetrics()"><svg class="ic" viewBox="0 0 20 20"><use href="#i-chart"/></svg> 記録をCSVで書き出す</button>
+    <button class="btn-sm" style="width:100%;justify-content:center;margin-top:6px;color:var(--red)" onclick="clearMetrics()">記録を消す</button>`;
+}
+function exportMetrics() {
+  const all = loadMetrics();
+  if (!all.length) { alert('記録がありません'); return; }
+  const head = ['保存日','見積番号','作成分数','明細数','過去見積から','パッケージから','候補から','手入力','自動入力率%','税込合計'];
+  const rows = all.map(m => {
+    const auto = (m.sug||0)+(m.past||0)+(m.pkg||0);
+    return [m.date, m.num, m.min, m.rows, m.past||0, m.pkg||0, m.sug||0, m.manual||0,
+            m.rows?Math.round(auto/m.rows*100):0, m.grand||0];
+  });
+  const csv = '﻿' + [head, ...rows].map(r => r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+  a.download = `見積作成記録_${fmtDate(new Date())}.csv`;
+  a.click();
+}
+function clearMetrics() {
+  if (!confirm('見積作成の記録をすべて消しますか？\n（見積そのものは消えません）')) return;
+  localStorage.removeItem('ck_metrics');
+  renderMetrics();
 }
 
 // ===== 過去の見積ライブラリ =====
@@ -1911,13 +2105,17 @@ function applyPast(i) {
   if(has && !confirm(`現在の明細を「${e.t}」の内容に置き換えますか？`)) return;
   const ms=PDB().master;
   document.getElementById('est-items').innerHTML='';
+  if(estMetric){ estMetric.sug=0; estMetric.pkg=0; }   // 置き換えなので入力元をリセット
+  let n=0;
   e.g.forEach(g=>{
     if(g.n && g.n!=='未分類') estAddSection(g.n);
     g.i.forEach(([mi,qty,price])=>{
       const m=ms[mi]; if(!m) return;
-      estAddRow(m.n, m.u, qty, price, 0);
+      estAddRow(m.n, m.u, qty, price, 0); n++;
     });
   });
+  if(estMetric) estMetric.past=n;
+  metricTouch();
   closePastPicker();
   estRecalc();
   const r=estCompute();
@@ -1951,7 +2149,7 @@ function maybeSuggestPast() {
 function renderPkgBar() {
   const bar=document.getElementById('est-pkg-bar'); if(!bar) return;
   const pk=PDB().packages;
-  bar.innerHTML = pk.map((p,i)=>`<button class="btn-sm" onclick="insertPackage(${i})" title="${p.items.length}項目を一括挿入（過去${p.docs}件の実績）">📦 ${esc(p.name)}</button>`).join('')
+  bar.innerHTML = pk.map((p,i)=>`<button class="btn-sm" onclick="insertPackage(${i})" title="${p.items.length}項目を一括挿入（過去${p.docs}件の実績）"><svg class="ic" viewBox="0 0 20 20"><use href="#i-pkg"/></svg> ${esc(p.name)}</button>`).join('')
     + `<button class="btn-sm" onclick="estAddSection()">＋ 区分</button>`
     + `<button class="btn-sm accent" onclick="estAddRow()">＋ 明細</button>`;
 }
@@ -1959,6 +2157,7 @@ function insertPackage(i) {
   const p=PDB().packages[i]; if(!p) return;
   estAddSection(p.name.replace(/ 一式$/,''));
   p.items.forEach(it=>estAddRow(it.n, it.u, it.q||1, it.p, 0));
+  metricCount('pkg', p.items.length);
   estRecalc();
 }
 function collectItems(containerId, secAttr) {
@@ -2016,6 +2215,7 @@ function estCompute() {
           profitRate: sub>0?Math.round(profit/sub*100):0, rows};
 }
 function estRecalc() {
+  metricTouch();
   const r=estCompute();
   const set=(id,v)=>{const e=document.getElementById(id); if(e) e.textContent=v;};
   set('est-worksub','¥'+commas(r.workSub));
@@ -2043,6 +2243,7 @@ function saveEstimate() {
     sub:r.sub, tax:r.tax, grand:r.grand, costTotal:r.costTotal, profit:r.profit, profitRate:r.profitRate};
   if(currentEstId){const i=estimates.findIndex(e=>String(e.id)===String(currentEstId));if(i>=0)estimates[i]=obj;else estimates.push(obj);}
   else{estimates.push(obj);estCounter++;}
+  metricSave(obj, r.rows);
   persist(); setBadge('m-est-badge',estimates.length); updateDashboard(); showEstList();
 }
 function deleteEstimate() {
@@ -2065,13 +2266,13 @@ function renderInvList() {
   let list=[...invoices].reverse();
   if(q) list=list.filter(i=>(i.client||'').toLowerCase().includes(q)||(i.num||'').toLowerCase().includes(q));
   if(f) list=list.filter(i=>i.status===f);
-  if(!list.length){el.innerHTML=(q||f)?'<div class="empty-state">検索結果がありません</div>':'<div class="empty-state"><div class="empty-ico">🧾</div>まだ請求がありません</div>';return;}
+  if(!list.length){el.innerHTML=(q||f)?'<div class="empty-state">検索結果がありません</div>':'<div class="empty-state"><div class="empty-ico"><svg class="ic" viewBox="0 0 20 20"><use href="#i-bill"/></svg></div>まだ請求がありません</div>';return;}
   el.innerHTML=list.map(i=>`
     <div class="activity-item" onclick="invEditForm('${i.id}')">
       <div class="activity-dot" style="background:${S_COLOR[i.status]}"></div>
       <div class="activity-text"><strong>${i.client||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${i.num} · 期限 ${i.due||'—'}</span></div>
       <div class="activity-right">
-        <div style="font-size:13px;font-weight:700;color:${S_COLOR[i.status]}">¥${commas(i.grand||0)}</div>
+        <div style="font-size:13.5px;font-weight:700">¥${commas(i.grand||0)}</div>
         <span class="badge ${S_BADGE[i.status]}" style="font-size:10px">${S_LABEL[i.status]}</span>
       </div>
     </div>`).join('');
@@ -2098,7 +2299,7 @@ function invEditForm(id) {
   currentInvId=id;
   document.getElementById('inv-list-view').style.display='none';
   document.getElementById('inv-edit-view').style.display='block';
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-ghost" onclick="shareInv('${id}')" style="padding:8px 12px;font-size:13px" title="メール送信">📧</button><button class="btn btn-ghost" onclick="printInv('${id}')" style="padding:8px 12px;font-size:13px">🖨</button><button class="btn btn-primary" onclick="saveInvoice()" style="padding:8px 14px;font-size:13px">保存</button>`;
+  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-ghost" onclick="shareInv('${id}')" style="padding:8px 12px;font-size:13px" title="メール送信"><svg class="ic" viewBox="0 0 20 20"><use href="#i-mail"/></svg> </button><button class="btn btn-ghost" onclick="printInv('${id}')" style="padding:8px 12px;font-size:13px"><svg class="ic" viewBox="0 0 20 20"><use href="#i-print"/></svg> </button><button class="btn btn-primary" onclick="saveInvoice()" style="padding:8px 14px;font-size:13px">保存</button>`;
   document.getElementById('inv-delete-wrap').style.display='block';
   document.getElementById('inv-num').textContent=inv.num;
   document.getElementById('inv-client').value=inv.client||'';
@@ -2173,10 +2374,10 @@ function showClientList() {
 }
 function renderClientList() {
   const el=document.getElementById('client-list-body');
-  if(!customers.length){el.innerHTML='<div class="empty-state"><div class="empty-ico">👥</div>まだ顧客が登録されていません</div>';return;}
+  if(!customers.length){el.innerHTML='<div class="empty-state"><div class="empty-ico"><svg class="ic" viewBox="0 0 20 20"><use href="#i-user"/></svg></div>まだ顧客が登録されていません</div>';return;}
   el.innerHTML=customers.map(c=>`
     <div class="activity-item" onclick="clientEditForm('${c.id}')">
-      <div style="width:36px;height:36px;border-radius:50%;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">👤</div>
+      <div style="width:30px;height:30px;border-radius:2px;border:1px solid var(--rule-strong);background:var(--head);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--ink-sub);flex-shrink:0">${(c.company||c.name||'—').charAt(0)}</div>
       <div class="activity-text"><strong>${c.company||c.name||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${c.name||''} ${c.tel?'· '+c.tel:''}</span></div>
       <div style="color:var(--ink-sub);font-size:14px">›</div>
     </div>`).join('');
@@ -2228,7 +2429,7 @@ function openPicker(target) {
   } else {
     el.innerHTML=customers.map(c=>`
       <div class="activity-item" onclick="applyCustomer('${c.id}')">
-        <div style="width:36px;height:36px;border-radius:50%;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:18px">👤</div>
+        <div style="width:30px;height:30px;border-radius:2px;border:1px solid var(--rule-strong);background:var(--head);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--ink-sub)">${(c.company||c.name||'—').charAt(0)}</div>
         <div class="activity-text"><strong>${c.company||c.name||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${c.address||''}</span></div>
       </div>`).join('');
   }
@@ -2547,9 +2748,9 @@ function showCaseDetail(idx) {
   document.getElementById('cases-new-view').style.display='none';
   document.getElementById('cases-detail-view').style.display='block';
   document.getElementById('detail-case-name').textContent=c.name;
-  document.getElementById('detail-case-client').textContent='👤 '+(c.client||'—');
-  document.getElementById('detail-case-address').textContent='📍 '+(c.address||'—');
-  document.getElementById('detail-case-period').textContent='📅 '+(c.start||'—')+' 〜 '+(c.end||'—');
+  document.getElementById('detail-case-client').textContent=''+(c.client||'—');
+  document.getElementById('detail-case-address').textContent=''+(c.address||'—');
+  document.getElementById('detail-case-period').textContent=''+(c.start||'—')+' 〜 '+(c.end||'—');
   const badge=document.getElementById('detail-case-badge');
   const sC={active:'badge-blue',pending:'badge-orange',done:'badge-green'};
   const sL={active:'進行中',pending:'着工前',done:'完工'};
@@ -2559,7 +2760,7 @@ function showCaseDetail(idx) {
   typeBadge.textContent=isSub?'下請け':'元請け';
   typeBadge.style.background=isSub?'var(--orange)':'var(--accent)';
   const primeEl=document.getElementById('detail-case-prime');
-  if(isSub&&c.primeCompany){primeEl.style.display='block';primeEl.textContent='🏢 元請け: '+c.primeCompany+(c.orderNum?' / 発注No.'+c.orderNum:'');}
+  if(isSub&&c.primeCompany){primeEl.style.display='block';primeEl.textContent='元請け: '+c.primeCompany+(c.orderNum?' / 発注No.'+c.orderNum:'');}
   else{primeEl.style.display='none';}
   // 担当メンバー表示
   renderDetailAssignees();
@@ -2617,7 +2818,7 @@ function renderCasesList() {
     filterBar.innerHTML=
       `<button class="btn-sm${caseFilter==='all'?' accent':''}" onclick="caseFilter='all';renderCasesList()" style="white-space:nowrap">すべて</button>`+
       `<button class="btn-sm${caseFilter==='personal'?' accent':''}" onclick="caseFilter='personal';renderCasesList()" style="white-space:nowrap">個人</button>`+
-      currentUserOrgs.map(m=>`<button class="btn-sm${caseFilter===m.org_id?' accent':''}" onclick="caseFilter='${m.org_id}';renderCasesList()" style="white-space:nowrap">🏢 ${m.organizations.name}</button>`).join('');
+      currentUserOrgs.map(m=>`<button class="btn-sm${caseFilter===m.org_id?' accent':''}" onclick="caseFilter='${m.org_id}';renderCasesList()" style="white-space:nowrap"><svg class="ic" viewBox="0 0 20 20"><use href="#i-team"/></svg> ${m.organizations.name}</button>`).join('');
   } else {
     filterBar.style.display='none';
     caseFilter='all';
@@ -2628,7 +2829,7 @@ function renderCasesList() {
   if(caseFilter==='personal') filtered=cases.filter(c=>!c.org_id);
   else if(caseFilter!=='all') filtered=cases.filter(c=>c.org_id===caseFilter);
 
-  if(!filtered.length){el.innerHTML='<div class="empty-state"><div class="empty-ico">🏗</div>現場がまだありません</div>';return;}
+  if(!filtered.length){el.innerHTML='<div class="empty-state"><div class="empty-ico"><svg class="ic" viewBox="0 0 20 20"><use href="#i-site"/></svg></div>現場がまだありません</div>';return;}
   const sC={active:'var(--accent)',pending:'var(--orange)',done:'var(--green)'};
   const sL={active:'進行中',pending:'着工前',done:'完工'};
   el.innerHTML=filtered.map(c=>{
@@ -2637,7 +2838,7 @@ function renderCasesList() {
     return `
     <div class="activity-item" onclick="showCaseDetail(${globalIdx})">
       <div class="activity-dot" style="background:${sC[c.status]||'var(--accent)'}"></div>
-      <div class="activity-text"><strong>${c.name}</strong>${orgName?`<span style="font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:5px;padding:1px 6px;margin-left:5px">🏢 ${orgName}</span>`:''}<br><span style="color:var(--ink-sub);font-size:11px">${c.client||'—'} · ${c.start||'—'}</span></div>
+      <div class="activity-text"><strong>${c.name}</strong>${orgName?`<span style="font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:5px;padding:1px 6px;margin-left:5px">${orgName}</span>`:''}<br><span style="color:var(--ink-sub);font-size:11px">${c.client||'—'} · ${c.start||'—'}</span></div>
       <div style="font-size:11px;font-weight:700;color:${sC[c.status]}">${sL[c.status]||'—'} ›</div>
     </div>`;
   }).join('');
@@ -2698,7 +2899,7 @@ function openEstPickerForCase() {
     <div class="activity-item" onclick="applyEstToCase('${e.id}')" style="cursor:pointer">
       <div class="activity-dot" style="background:var(--accent)"></div>
       <div class="activity-text"><strong>${e.client||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${e.num} · ${e.date||''}</span></div>
-      <div class="activity-right" style="font-size:13px;font-weight:700;color:var(--accent)">¥${commas(e.grand||0)}</div>
+      <div class="activity-right" style="font-size:13.5px;font-weight:700">¥${commas(e.grand||0)}</div>
     </div>`).join('')
     :'<div class="empty-state">紐づけ可能な見積がありません</div>';
   document.getElementById('picker-title').textContent='見積を選択';
@@ -2809,7 +3010,7 @@ function renderDetailAssignees() {
   const el=document.getElementById('detail-case-assignees'); if(!el) return;
   const assigned=(c.assignees||[]).map(id=>workers.find(w=>w.id===id)).filter(Boolean);
   el.innerHTML='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
-    +'<span style="font-size:11px;color:var(--ink-sub)">👷 担当</span>'
+    +'<span style="font-size:11px;color:var(--ink-sub)">担当</span>'
     +(assigned.length
       ? assigned.map(w=>`<span style="font-size:12px;background:var(--accent-soft);color:var(--accent);padding:3px 10px;border-radius:20px;font-weight:700">${w.name}</span>`).join('')
       : '<span style="font-size:12px;color:var(--ink-sub)">未設定</span>')
@@ -2827,7 +3028,7 @@ function openAssigneesEdit() {
     return `<div id="dtog-${w.id}" onclick="toggleDetailWorker(${w.id})" data-sel="${sel?1:0}"
       style="display:flex;align-items:center;gap:12px;cursor:pointer;padding:10px 12px;border-radius:10px;border:1.5px solid ${sel?'var(--accent)':'var(--rule)'};background:${sel?'var(--accent-soft)':''};user-select:none">
       <div id="dchk-${w.id}" style="width:22px;height:22px;border-radius:6px;border:2px solid ${sel?'var(--accent)':'var(--rule)'};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;background:${sel?'var(--accent)':''}">
-        ${sel?'✓':''}
+        ${sel?'&#10003;':''}
       </div>
       <div style="flex:1"><div style="font-size:13px;font-weight:700">${w.name}</div>${w.company?`<div style="font-size:11px;color:var(--ink-sub)">${w.company}</div>`:''}</div>
     </div>`;
@@ -2843,7 +3044,7 @@ function toggleDetailWorker(id) {
   tog.style.background=sel?'':'var(--accent-soft)';
   chk.style.background=sel?'':'var(--accent)';
   chk.style.borderColor=sel?'var(--rule)':'var(--accent)';
-  chk.textContent=sel?'':'✓';
+  chk.textContent=sel?'':'\u2713';
 }
 function saveAssignees() {
   const c=cases[currentCaseIdx]; if(!c) return;
@@ -2883,7 +3084,7 @@ function toggleWorkerSel(id) {
     tog.style.background='var(--accent-soft)';
     chk.style.background='var(--accent)';
     chk.style.borderColor='var(--accent)';
-    chk.textContent='✓';
+    chk.textContent='\u2713';
   } else {
     tog.style.borderColor='var(--rule)';
     tog.style.background='';
@@ -2943,7 +3144,7 @@ function saveEstTemplate() {
 }
 function openTemplatePicker() {
   loadTemplates();
-  if(!templates.length){alert('テンプレートがまだありません。先に明細を作って「💾 保存」してください');return;}
+  if(!templates.length){alert('テンプレートがまだありません。先に明細を作って「保存」してください');return;}
   document.getElementById('picker-title').textContent='テンプレートを選択';
   document.getElementById('picker-body').innerHTML=templates.map(t=>`
     <div class="activity-item">
@@ -3149,16 +3350,17 @@ function captureReceipt() {
     const camBtn = document.getElementById('exp-camera-btn');
     const setStatus = (msg) => { if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = msg; } };
     const clearStatus = () => { if (statusEl) statusEl.style.display = 'none'; };
-    setStatus('📷 モデル読み込み中...');
-    if (camBtn) { camBtn.disabled = true; camBtn.textContent = '⏳'; }
+    setStatus('モデル読み込み中...');
+    if (camBtn) { camBtn.disabled = true; camBtn.textContent = '…'; }
     try {
       // engのみ（数字・¥は英数字モデルで十分、jpnは重くてモバイルでタイムアウトしやすい）
+      await loadTesseract();
       const worker = await Tesseract.createWorker('eng', 1, {
         workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/worker.min.js',
         corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@4/tesseract-core-simd-lstm.wasm.js',
         langPath: 'https://tessdata.projectnaptha.com/4.0.0',
       });
-      setStatus('📷 読み取り中...');
+      setStatus('読み取り中...');
       const { data: { text } } = await worker.recognize(file);
       await worker.terminate();
       console.log('[OCR text]', text);
@@ -3174,7 +3376,7 @@ function captureReceipt() {
       clearStatus();
       showToast('読み取りに失敗しました（' + (err.message||'不明なエラー') + '）');
     }
-    if (camBtn) { camBtn.disabled = false; camBtn.textContent = '📷'; }
+    if (camBtn) { camBtn.disabled = false; camBtn.innerHTML = '<svg class=\"ic\" viewBox=\"0 0 20 20\"><use href=\"#i-cam\"/></svg>'; }
   };
   input.click();
 }
@@ -3303,7 +3505,7 @@ function renderExpenseTracker() {
   const isThisMonth = selectedMonth === curMonth && !selectedCase;
   const remain = monthBudget - spent;
   const pct = (isThisMonth && monthBudget > 0) ? Math.min(100, Math.round(spent / monthBudget * 100)) : 0;
-  const barColor = pct >= 100 ? 'var(--red,#ef4444)' : pct >= 80 ? 'var(--orange,#f59e0b)' : 'var(--green)';
+  const barColor = pct >= 100 ? 'var(--red)' : pct >= 80 ? 'var(--orange)' : 'var(--green)';
   const spentEl = document.getElementById('exp-spent-label');
   const remainEl = document.getElementById('exp-remain-label');
   const barEl = document.getElementById('exp-progress-bar');
@@ -3321,7 +3523,7 @@ function renderExpenseTracker() {
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:600">${e.name}</div>
         <div style="font-size:11px;color:var(--ink-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-          ${e.date||''}${e.paidBy ? ' · ' + e.paidBy : ''}${linkedCase ? ' · 📋' + linkedCase.name : ' · 立替'}
+          ${e.date||''}${e.paidBy ? ' · ' + e.paidBy : ''}${linkedCase ? ' · ' + linkedCase.name : ' · 立替'}
         </div>
       </div>
       <div style="font-size:14px;font-weight:700;color:var(--ink)">¥${commas(e.amount)}</div>
@@ -3332,8 +3534,8 @@ function renderExpenseTracker() {
 // ===== WHITEBOARD =====
 let wbWeekOffset = 0;
 const WB_COLORS = [
-  ['#4f7cff','#eef1ff'],['#22c55e','#dcfce7'],['#f59e0b','#fef3c7'],
-  ['#ef4444','#fef2f2'],['#8b5cf6','#ede9fe'],['#06b6d4','#cffafe'],
+  ['#1c4f7c','#e4ebf1'],['#3f6b3a','#e7ede5'],['#8a6320','#f2ebdc'],
+  ['#9b3226','#f3e6e4'],['#5a4a78','#eae7f0'],['#1f6b6b','#e2eeee'],
   ['#ec4899','#fce7f3'],['#f97316','#ffedd5']
 ];
 function wbPrevWeek() { wbWeekOffset--; renderWhiteboard(); }
@@ -3394,7 +3596,7 @@ function renderWhiteboard() {
         html += `<div class="wb-day" style="background:${bg};min-height:36px"></div>`;
       } else {
         const chips = assigned.map(c => {
-          const [fg,cbg] = caseColorMap[c.id] || ['#4f7cff','#eef1ff'];
+          const [fg,cbg] = caseColorMap[c.id] || ['#1c4f7c','#e4ebf1'];
           const short = c.name.length > 6 ? c.name.slice(0,5)+'…' : c.name;
           return `<div class="wb-chip" style="background:${cbg};color:${fg}">${short}</div>`;
         }).join('');
@@ -3444,13 +3646,13 @@ function updateDashboard() {
   }
   // 期限超過の請求
   const overdue = invoices.filter(i=>i.status==='overdue').length;
-  document.getElementById('dash-overdue-label').textContent = overdue ? `⚠️ 期限超過 ${overdue}件` : '';
+  document.getElementById('dash-overdue-label').textContent = overdue ? `期限超過 ${overdue}件` : '';
   document.getElementById('dash-overdue-label').style.color = 'var(--red)';
 
   document.getElementById('dash-est-list').innerHTML=!estimates.length?'<div class="empty-state">まだ見積がありません</div>'
-    :[...estimates].reverse().slice(0,4).map(e=>`<div class="activity-item" onclick="goToEst('${e.id}')"><div class="activity-dot" style="background:var(--accent)"></div><div class="activity-text"><strong>${e.client||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${e.num} · ${e.date||''}</span></div><div class="activity-right" style="font-size:13px;font-weight:700;color:var(--accent)">¥${commas(e.grand||0)}</div></div>`).join('');
+    :[...estimates].reverse().slice(0,4).map(e=>`<div class="activity-item" onclick="goToEst('${e.id}')"><div class="activity-dot" style="background:var(--accent)"></div><div class="activity-text"><strong>${e.client||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${e.num} · ${e.date||''}</span></div><div class="activity-right" style="font-size:13.5px;font-weight:700">¥${commas(e.grand||0)}</div></div>`).join('');
   document.getElementById('dash-inv-list').innerHTML=!invoices.length?'<div class="empty-state">まだ請求がありません</div>'
-    :[...invoices].reverse().slice(0,4).map(i=>`<div class="activity-item" onclick="goToInv('${i.id}')"><div class="activity-dot" style="background:${S_COLOR[i.status]}"></div><div class="activity-text"><strong>${i.client||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${i.num} · 期限 ${i.due||'—'}</span></div><div class="activity-right"><div style="font-size:13px;font-weight:700;color:${S_COLOR[i.status]}">¥${commas(i.grand||0)}</div><div style="font-size:11px;color:${S_COLOR[i.status]}">${S_LABEL[i.status]}</div></div></div>`).join('');
+    :[...invoices].reverse().slice(0,4).map(i=>`<div class="activity-item" onclick="goToInv('${i.id}')"><div class="activity-dot" style="background:${S_COLOR[i.status]}"></div><div class="activity-text"><strong>${i.client||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${i.num} · 期限 ${i.due||'—'}</span></div><div class="activity-right"><div style="font-size:13.5px;font-weight:700">¥${commas(i.grand||0)}</div><div style="font-size:11px;color:${S_COLOR[i.status]}">${S_LABEL[i.status]}</div></div></div>`).join('');
   if(ckMode()==='full') renderWhiteboard();
   const pc=document.getElementById('past-count');
   if(pc) pc.textContent = PASTDB().length ? `${PASTDB().length}件` : '';
@@ -3471,7 +3673,7 @@ function goToEst(id){const n=document.querySelector('[data-page="estimate"]');na
 function goToInv(id){const n=document.querySelector('[data-page="invoice"]');navigate('invoice',n);invEditForm(id);}
 
 // ===== SCHEDULE (Gantt) =====
-const GANTT_COLORS=['#4f7cff','#22c55e','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#f97316'];
+const GANTT_COLORS=['#1c4f7c','#3f6b3a','#8a6320','#9b3226','#5a4a78','#1f6b6b','#7a3d5c','#8a5520'];
 let photoTarget='before';
 
 function scheduleAddRow(name='',start='',end='') {
@@ -3564,8 +3766,8 @@ function renderPhotoCats() {
     {id:'after',  label:'完工'}
   ];
   tabs.innerHTML =
-    defaults.map(d=>`<button class="btn-sm" onclick="triggerPhoto('${d.id}')">📷 ${d.label}</button>`).join('') +
-    custom.map(name=>`<button class="btn-sm" style="position:relative" onclick="triggerPhoto('${name}')">📷 ${name}<span onclick="event.stopPropagation();deletePhotoCategory('${name}')" style="margin-left:4px;color:var(--ink-sub);font-size:10px">✕</span></button>`).join('') +
+    defaults.map(d=>`<button class="btn-sm" onclick="triggerPhoto('${d.id}')"><svg class="ic" viewBox="0 0 20 20"><use href="#i-cam"/></svg> ${d.label}</button>`).join('') +
+    custom.map(name=>`<button class="btn-sm" style="position:relative" onclick="triggerPhoto('${name}')">${name}<span onclick="event.stopPropagation();deletePhotoCategory('${name}')" style="margin-left:4px;color:var(--ink-sub);font-size:10px">✕</span></button>`).join('') +
     `<button class="btn-sm" onclick="togglePhotoCatInput()" style="color:var(--accent);border-color:var(--accent)">＋ カテゴリ</button>`;
 }
 function deletePhotoCategory(name) {
@@ -3688,7 +3890,7 @@ function renderDrawings() {
     return;
   }
   el.innerHTML = drawings.map((d, i) => {
-    const icon = d.type === 'url' ? '🔗' : d.fileType === 'pdf' ? '📄' : '🖼';
+    const icon = d.type === 'url' ? '<svg class=\"ic\" viewBox=\"0 0 20 20\"><use href=\"#i-link\"/></svg>' : d.fileType === 'pdf' ? '<svg class=\"ic\" viewBox=\"0 0 20 20\"><use href=\"#i-doc\"/></svg>' : '<svg class=\"ic\" viewBox=\"0 0 20 20\"><use href=\"#i-image\"/></svg>';
     const action = d.type === 'url'
       ? `onclick="window.open('${d.url}','_blank')"`
       : d.fileType === 'pdf'
@@ -3721,8 +3923,9 @@ function deleteDrawing(i) {
 }
 
 // ===== EXCEL EXPORT =====
-function exportEstimates() {
+async function exportEstimates() {
   if(!estimates.length){alert('見積がありません');return;}
+  try { await loadXLSX(); } catch(e) { alert('Excel出力の準備に失敗しました: '+e.message); return; }
   const wb=XLSX.utils.book_new();
   // Summary sheet
   const summaryRows=[['番号','顧客名','案件名','見積日','有効期限','小計','消費税','合計（税込）','原価合計','粗利','粗利率(%)']];
@@ -3744,8 +3947,9 @@ function exportEstimates() {
   });
   XLSX.writeFile(wb,'見積_'+fmtDate(new Date())+'.xlsx');
 }
-function exportInvoices() {
+async function exportInvoices() {
   if(!invoices.length){alert('請求がありません');return;}
+  try { await loadXLSX(); } catch(e) { alert('Excel出力の準備に失敗しました: '+e.message); return; }
   const wb=XLSX.utils.book_new();
   const summaryRows=[['番号','請求先','件名','請求日','支払期限','小計','消費税','合計（税込）','ステータス']];
   const sLbl={draft:'下書き',sent:'送付済み',paid:'入金済み',overdue:'期限超過'};
@@ -3826,6 +4030,22 @@ function quickExpense() {
       document.getElementById('exp-name-input')?.focus();
     }, 80);
   }
+}
+
+// ===== 案件情報の折りたたみ =====
+function toggleEstInfo() {
+  document.getElementById('est-info-btn').classList.toggle('open');
+  document.getElementById('est-info-body').classList.toggle('open');
+}
+// 畳んだままでも中身が分かるように要約を出す
+function updateEstInfoSum() {
+  const el=document.getElementById('est-info-sum'); if(!el) return;
+  const v=id=>(document.getElementById(id)?.value||'').trim();
+  const parts=[];
+  if(v('est-expiry')) parts.push('期限 '+v('est-expiry').replace(/^\d{4}-/,''));
+  if(v('est-address')) parts.push('住所あり');
+  if(v('est-notes')) parts.push('備考あり');
+  el.textContent=parts.join(' · ');
 }
 
 // ===== 合計欄の折りたたみ =====
