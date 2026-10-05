@@ -2244,7 +2244,7 @@ function maybeSuggestPast() {
 // ===== AI見積もり補助 =====
 // 自社の単価マスタ・過去の見積から近いものを渡して、Claudeに明細を提案させる。
 // 単価はマスタ/過去実績で上書きし、実績がないものだけ「AI推定」として要確認で出す。
-const AI_MODEL = 'claude-sonnet-4-5';
+const AI_MODEL = 'claude-sonnet-5-5';
 const AI_KEY = () => localStorage.getItem('ck_ai_key') || '';
 function aiSaveKey(v) {
   v = (v || '').trim();
