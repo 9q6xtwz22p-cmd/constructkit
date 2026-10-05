@@ -927,15 +927,7 @@ const loadTesseract = () => loadLib('ocr');
         </select>
       </div>
       <p style="font-size:11px;color:var(--ink-sub);line-height:1.7" id="mode-note"></p>
-      <div class="form-field" style="margin-top:16px;margin-bottom:6px">
-        <label>AI見積もり（Claude APIキー）　<span class="ai-key-st" style="font-weight:400;color:var(--ink-sub)"></span></label>
-        <div style="display:flex;gap:6px">
-          <input type="password" id="ai-key-input" placeholder="sk-ant-...（貼り付けて保存）" autocomplete="off" style="flex:1">
-          <button class="btn-sm accent" onclick="const i=document.getElementById('ai-key-input');aiSaveKey(i.value);i.value=''">保存</button>
-          <button class="btn-sm" onclick="aiSaveKey('')">削除</button>
-        </div>
-      </div>
-      <p style="font-size:11px;color:var(--ink-sub);line-height:1.7">明細の「✨ AI」ボタンで使います。キーはこの端末のブラウザにだけ保存され、バックアップやクラウド保存には含まれません。料金は1回あたり数円程度（Anthropicの従量課金）。</p>
+      <p style="font-size:11px;color:var(--ink-sub);line-height:1.7;margin-top:14px">明細の「✨ AI」ボタンは設定不要で使えます。AIへの問い合わせは中継サーバー経由で、端末側に鍵は持ちません。利用は1端末あたり1日50回までです。</p>
     </div>
   </div>
 
@@ -1158,11 +1150,6 @@ const loadTesseract = () => loadLib('ocr');
     </div>
     <div style="overflow-y:auto;flex:1">
       <div style="padding:12px 16px">
-        <div id="ai-key-wrap" class="form-field" style="display:none">
-          <label>Claude APIキー（初回のみ）</label>
-          <input type="password" id="ai-key-inline" placeholder="sk-ant-..." autocomplete="off">
-          <div style="font-size:11px;color:var(--ink-sub);margin-top:4px;line-height:1.6">console.anthropic.com で発行したキー。この端末のブラウザにだけ保存されます（設定 →「見積の設定」で変更・削除）。</div>
-        </div>
         <div class="form-field">
           <label>工事の内容（広さ・数量がわかれば書く）</label>
           <textarea id="ai-q" rows="4" placeholder="例）マンション浴室 1216ユニットバス交換、在来浴室の解体あり。洗面所のクロス・CF張替え 約3畳"></textarea>
@@ -1830,7 +1817,6 @@ function navigate(page, el) {
   if(page==='settings') {
     loadCompany(); renderWorkersList(); updateOrgUI(); loadProfile(); renderExpenseTracker();
     const pk=document.getElementById('price-kind-select'); if(pk) pk.value=defaultPriceKind();
-    aiRenderKeyState();
     renderMetrics();
     updateBackupAge();
     applyMode();
@@ -2244,23 +2230,12 @@ function maybeSuggestPast() {
 // ===== AI見積もり補助 =====
 // 自社の単価マスタ・過去の見積から近いものを渡して、Claudeに明細を提案させる。
 // 単価はマスタ/過去実績で上書きし、実績がないものだけ「AI推定」として要確認で出す。
-const AI_MODEL = 'claude-sonnet-5-5';
-const AI_KEY = () => localStorage.getItem('ck_ai_key') || '';
-function aiSaveKey(v) {
-  v = (v || '').trim();
-  if (v) localStorage.setItem('ck_ai_key', v); else localStorage.removeItem('ck_ai_key');
-  aiRenderKeyState();
-  showPastToast(v ? 'APIキーを保存しました' : 'APIキーを削除しました');
-}
-function aiRenderKeyState() {
-  const k = AI_KEY();
-  document.querySelectorAll('.ai-key-st').forEach(el => {
-    el.textContent = k ? `登録済み（…${k.slice(-4)}）` : '未登録';
-  });
-}
+// APIキーはこのファイルには持たない。中継のWorkerだけが持っていて、ブラウザには降りてこない。
+// Worker側の中身とモデル指定は worker/worker.js
+const AI_ENDPOINT = 'https://matomeru-genba-ai.shutterarchivejapan.workers.dev';
+try { localStorage.removeItem('ck_ai_key'); } catch (e) {}   // 旧版で端末に残ったキーを消す
 function openAiEst() {
   document.getElementById('ai-modal').classList.add('open');
-  document.getElementById('ai-key-wrap').style.display = AI_KEY() ? 'none' : '';
   document.getElementById('ai-result').innerHTML = '';
   document.getElementById('ai-foot').style.display = 'none';
   aiSetStatus('');
@@ -2331,11 +2306,6 @@ let aiProposal = null;
 async function runAiEst() {
   const q = (document.getElementById('ai-q').value || '').trim();
   if (!q) { aiSetStatus('工事の内容を入力してください', 'err'); return; }
-  const inlineKey = (document.getElementById('ai-key-inline').value || '').trim();
-  if (inlineKey) { aiSaveKey(inlineKey); document.getElementById('ai-key-inline').value = ''; document.getElementById('ai-key-wrap').style.display = 'none'; }
-  const key = AI_KEY();
-  if (!key) { aiSetStatus('APIキーを入力してください', 'err'); return; }
-
   const btn = document.getElementById('ai-go');
   btn.disabled = true;
   aiSetStatus('自社の実績から候補を探して、AIに相談しています…');
@@ -2375,27 +2345,16 @@ ${q}
 {"sections":[{"name":"解体工事","items":[{"idx":123,"qty":1,"note":""},{"idx":null,"name":"〇〇","unit":"式","qty":1,"price":30000,"note":"候補になし"}]}],"assumptions":"仮定した条件"}`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch(AI_ENDPOINT, {
       method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: AI_MODEL,
-        max_tokens: 4000,
-        messages: [{ role: 'user', content: prompt }]
-      })
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ prompt })
     });
     if (!res.ok) {
+      // Worker側が日本語の理由を返すので、それをそのまま見せる
       let detail = '';
-      try { const j = await res.json(); detail = j.error?.message || ''; } catch (e) {}
-      if (res.status === 401) throw new Error('APIキーが正しくないようです。設定から入れ直してください');
-      if (res.status === 429) throw new Error('リクエストが混み合っています。少し待ってからもう一度お試しください');
-      if (res.status === 400 && /credit|balance/i.test(detail)) throw new Error('Anthropicの残高が不足しています。console.anthropic.com で確認してください');
-      throw new Error(`AIの応答エラー（${res.status}）${detail ? '：' + detail : ''}`);
+      try { const j = await res.json(); detail = j.error || ''; } catch (e) {}
+      throw new Error(detail || `AIに接続できませんでした（${res.status}）`);
     }
     const data = await res.json();
     const text = (data.content || []).map(c => c.text || '').join('');

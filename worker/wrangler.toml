@@ -1,0 +1,8 @@
+name = "matomeru-genba-ai"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+# 1IPあたりの利用回数を数えるだけの入れ物
+[[kv_namespaces]]
+binding = "RL"
+id = "b150f74ed4004c14a168e70109db11dd"
