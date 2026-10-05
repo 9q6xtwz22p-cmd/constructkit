@@ -267,6 +267,19 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic Pro
 .past-m { font-size:11px; color:var(--ink-sub); margin-top:3px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
 .past-amt { font-size:13px; font-weight:800; color:var(--accent); }
 .past-match { font-size:10px; font-weight:700; color:#fff; background:var(--green); border-radius:10px; padding:2px 7px; }
+.ai-sec { padding:8px 16px 4px; font-size:11px; font-weight:800; color:var(--ink-sub); background:var(--head); border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); }
+.ai-item { display:flex; gap:10px; align-items:flex-start; padding:10px 16px; border-bottom:1px solid var(--rule); cursor:pointer; }
+.ai-item input { margin-top:3px; width:17px; height:17px; flex-shrink:0; accent-color:var(--accent); }
+.ai-item.off { opacity:.45; }
+.ai-n { font-size:13px; font-weight:600; line-height:1.4; }
+.ai-m { font-size:11px; color:var(--ink-sub); margin-top:2px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.ai-amt { margin-left:auto; font-size:13px; font-weight:800; white-space:nowrap; }
+.ai-b { font-size:10px; font-weight:700; border-radius:10px; padding:1px 7px; color:#fff; }
+.ai-b.master { background:var(--green); }
+.ai-b.past { background:var(--accent); }
+.ai-b.estimate { background:var(--orange); }
+.ai-note { font-size:11px; color:var(--ink-sub); margin-top:3px; line-height:1.5; }
+.ai-assume { margin:10px 16px 14px; padding:10px 12px; background:var(--orange-soft); border-radius:9px; font-size:11.5px; line-height:1.7; }
 .past-secs { font-size:10.5px; color:var(--ink-sub); margin-top:4px; }
 .quick-sub { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; background:var(--surface); border:1px solid var(--rule-strong); border-radius:var(--radius); padding:11px 4px; font-size:11px; font-weight:600; color:var(--ink); font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
 .quick-sub .ic { width:17px; height:17px; color:var(--ink-sub); }
@@ -350,8 +363,8 @@ const loadTesseract = () => loadLib('ocr');
 </defs></svg>
 
 <!-- ===== AUTH OVERLAY ===== -->
-<div id="auth-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px">
-  <div style="background:var(--surface);border-radius:20px;padding:32px 28px;width:100%;max-width:380px;box-shadow:0 8px 40px rgba(0,0,0,0.16)">
+<div id="auth-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:9999;display:none;align-items:center;justify-content:center;padding:24px">
+  <div style="background:var(--surface);border:1px solid var(--rule-strong);border-radius:var(--radius);padding:28px 24px;width:100%;max-width:380px">
     <div style="text-align:center;margin-bottom:28px">
       <img src="2044D66D-EA6B-4314-9CA7-8F4B3C0A6E94.PNG" alt="まとめる現場" style="height:72px;width:auto">
     </div>
@@ -364,6 +377,8 @@ const loadTesseract = () => loadLib('ocr');
     <div id="auth-error" style="color:var(--red);font-size:12px;margin-bottom:10px;display:none;line-height:1.5;padding:8px 12px;background:var(--red-soft);border-radius:8px"></div>
     <div id="auth-info" style="color:#16a34a;font-size:12px;margin-bottom:10px;display:none;line-height:1.5;padding:8px 12px;background:var(--green-soft);border-radius:8px"></div>
     <button id="auth-submit-btn" onclick="submitAuth()" class="btn btn-primary" style="width:100%;justify-content:center;font-size:15px;padding:13px">ログイン</button>
+    <button onclick="closeAuth()" class="btn-sm" style="width:100%;justify-content:center;margin-top:10px;border:none;color:var(--ink-sub)">あとでにする</button>
+    <p style="font-size:11px;color:var(--ink-sub);line-height:1.7;margin-top:14px;text-align:center">ログインしなくても見積は作れます。<br>複数の端末で同じデータを見たいときだけ必要です。</p>
   </div>
 </div>
 
@@ -394,6 +409,14 @@ const loadTesseract = () => loadLib('ocr');
     <div style="display:flex;gap:8px">
       <button onclick="enableNotifications()" style="background:#fff;color:var(--accent);border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer">許可する</button>
       <button onclick="this.closest('#notif-banner').style.display='none'" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.5);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer">後で</button>
+    </div>
+  </div>
+  <!-- バックアップの催促 -->
+  <div id="backup-reminder" style="display:none;align-items:center;justify-content:space-between;gap:10px;background:var(--orange-soft);border:1px solid var(--orange);border-radius:var(--radius);padding:10px 13px;margin-bottom:10px">
+    <span class="br-msg" style="font-size:12.5px;color:var(--ink);line-height:1.5"></span>
+    <div style="display:flex;gap:6px;flex-shrink:0">
+      <button class="btn-sm accent" onclick="exportBackup()">書き出す</button>
+      <button class="btn-sm" onclick="dismissBackupReminder()" style="border:none;color:var(--ink-sub)">今はしない</button>
     </div>
   </div>
   <!-- クイックアクション -->
@@ -519,6 +542,7 @@ const loadTesseract = () => loadLib('ocr');
       <div class="card-header">
         <h2>明細</h2>
         <div style="display:flex;gap:6px">
+          <button class="btn-sm accent" onclick="openAiEst()" title="工事内容を書くとAIが明細を提案">✨ AI</button>
           <button class="btn-sm accent" onclick="openPastPicker()" title="過去の見積から明細を丸ごと読み込む"><svg class="ic" viewBox="0 0 20 20"><use href="#i-site"/></svg> 過去の見積</button>
           <button class="btn-sm" onclick="openTemplatePicker()" title="テンプレートから読み込む"><svg class="ic" viewBox="0 0 20 20"><use href="#i-folder"/></svg> テンプレ</button>
           <button class="btn-sm" onclick="saveEstTemplate()" title="現在の明細をテンプレートとして保存"><svg class="ic" viewBox="0 0 20 20"><use href="#i-save"/></svg> 保存</button>
@@ -903,6 +927,15 @@ const loadTesseract = () => loadLib('ocr');
         </select>
       </div>
       <p style="font-size:11px;color:var(--ink-sub);line-height:1.7" id="mode-note"></p>
+      <div class="form-field" style="margin-top:16px;margin-bottom:6px">
+        <label>AI見積もり（Claude APIキー）　<span class="ai-key-st" style="font-weight:400;color:var(--ink-sub)"></span></label>
+        <div style="display:flex;gap:6px">
+          <input type="password" id="ai-key-input" placeholder="sk-ant-...（貼り付けて保存）" autocomplete="off" style="flex:1">
+          <button class="btn-sm accent" onclick="const i=document.getElementById('ai-key-input');aiSaveKey(i.value);i.value=''">保存</button>
+          <button class="btn-sm" onclick="aiSaveKey('')">削除</button>
+        </div>
+      </div>
+      <p style="font-size:11px;color:var(--ink-sub);line-height:1.7">明細の「✨ AI」ボタンで使います。キーはこの端末のブラウザにだけ保存され、バックアップやクラウド保存には含まれません。料金は1回あたり数円程度（Anthropicの従量課金）。</p>
     </div>
   </div>
 
@@ -985,16 +1018,9 @@ const loadTesseract = () => loadLib('ocr');
 
   <!-- アカウント -->
   <div class="card">
-    <div class="card-header"><h2>アカウント</h2></div>
-    <div class="card-body">
-      <p style="font-size:12px;color:var(--ink-sub);margin-bottom:16px;line-height:1.7">ログイン中：<strong id="settings-user-email" style="color:var(--ink);font-size:13px"></strong></p>
-      <div class="form-field">
-        <label>氏名（表示名）</label>
-        <input type="text" id="profile-display-name" placeholder="山田 太郎" style="width:100%;padding:10px 12px;border:1.5px solid var(--rule);border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box">
-      </div>
-      
-      <button onclick="saveProfile()" class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:14px">保存</button>
-      <button onclick="logout()" class="btn btn-danger" style="width:100%;justify-content:center">ログアウト</button>
+    <div class="card-header"><h2>データの保存先</h2></div>
+    <div class="card-body" id="account-box">
+      <span id="settings-user-email" style="display:none"></span>
     </div>
   </div>
 
@@ -1083,7 +1109,7 @@ const loadTesseract = () => loadLib('ocr');
   <!-- ▸ データバックアップ（折りたたみ） -->
   <div class="card">
     <button class="collapse-head" onclick="toggleCollapse(this)">
-      <span>データバックアップ</span><span class="chev">▶</span>
+      <span>データバックアップ</span><span style="display:flex;align-items:center;gap:8px"><span id="backup-age" style="font-size:11px;font-weight:600;color:var(--ink-sub)"></span><span class="chev">▶</span></span>
     </button>
     <div class="collapse-body">
     <div class="card-body" style="border-top:1px solid var(--rule)">
@@ -1123,6 +1149,38 @@ const loadTesseract = () => loadLib('ocr');
   </div>
 </div>
 
+<!-- AI見積もり補助 -->
+<div class="modal-backdrop" id="ai-modal">
+  <div class="modal-sheet" style="max-height:92vh;display:flex;flex-direction:column;padding:0">
+    <div class="modal-header" style="padding:14px 16px;margin:0;border-bottom:1px solid var(--rule)">
+      <h3 style="font-size:15px;font-weight:700">✨ AIで明細を提案</h3>
+      <button class="btn-sm" onclick="closeAiEst()">✕ 閉じる</button>
+    </div>
+    <div style="overflow-y:auto;flex:1">
+      <div style="padding:12px 16px">
+        <div id="ai-key-wrap" class="form-field" style="display:none">
+          <label>Claude APIキー（初回のみ）</label>
+          <input type="password" id="ai-key-inline" placeholder="sk-ant-..." autocomplete="off">
+          <div style="font-size:11px;color:var(--ink-sub);margin-top:4px;line-height:1.6">console.anthropic.com で発行したキー。この端末のブラウザにだけ保存されます（設定 →「見積の設定」で変更・削除）。</div>
+        </div>
+        <div class="form-field">
+          <label>工事の内容（広さ・数量がわかれば書く）</label>
+          <textarea id="ai-q" rows="4" placeholder="例）マンション浴室 1216ユニットバス交換、在来浴室の解体あり。洗面所のクロス・CF張替え 約3畳"></textarea>
+        </div>
+        <button class="btn btn-primary" id="ai-go" style="width:100%;justify-content:center" onclick="runAiEst()">明細を提案してもらう</button>
+        <div id="ai-status" style="display:none;font-size:12px;text-align:center;padding:8px;margin-top:10px;border-radius:8px;line-height:1.6"></div>
+        <div style="font-size:10.5px;color:var(--ink-sub);margin-top:8px;line-height:1.6">自社の単価マスタ・過去の見積から近いものを渡して提案させます。<span style="color:var(--green);font-weight:700">実績</span>＝単価マスタの値、<span style="color:var(--accent);font-weight:700">過去</span>＝似た見積の値、<span style="color:var(--orange);font-weight:700">AI推定</span>＝実績なし（要確認）。</div>
+      </div>
+      <div id="ai-result"></div>
+    </div>
+    <div id="ai-foot" style="display:none;padding:12px 16px;border-top:1px solid var(--rule);gap:8px;align-items:center;background:var(--surface)">
+      <span id="ai-total" style="flex:1;font-size:13px;font-weight:800"></span>
+      <button class="btn-sm" onclick="applyAiEst(true)">置き換え</button>
+      <button class="btn-sm accent" onclick="applyAiEst(false)">明細に追加</button>
+    </div>
+  </div>
+</div>
+
 <!-- HELP MODAL -->
 <div class="modal-backdrop" id="help-modal">
   <div class="modal-sheet" style="max-height:85vh;overflow-y:auto">
@@ -1139,6 +1197,12 @@ const loadTesseract = () => loadLib('ocr');
           現場管理（案件・配置表・写真・図面・経費・メンバー）を使いたいときは、<br>
           placeholder="️設定 →「見積の設定」→ <strong>表示する機能</strong> を「全機能」に切り替えてください。<br>
           <span style="color:var(--ink-sub)">※ 隠れているだけで、登録済みのデータは消えていません</span>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:var(--accent);margin:12px 0 6px">データの保存先</div>
+        <div style="font-size:12px;color:var(--ink);line-height:1.9">
+          ログインは不要です。データは<strong>この端末の中</strong>に保存されます。<br>
+          別の端末でも同じデータを見たいときだけ、設定 →「データの保存先」からクラウド保存を有効にしてください。<br>
+          <span style="color:var(--ink-sub)">※ 端末内だけに保存している間は、ときどきバックアップを書き出してください。見積が3件を超えて1ヶ月バックアップがないと、ホームでお知らせします</span>
         </div>
         <div style="font-size:13px;font-weight:700;color:var(--accent);margin:12px 0 6px">まず最初に</div>
         <div style="font-size:12px;color:var(--ink);line-height:1.9">設定 →「その他の設定」→ <strong>自社情報</strong>を1回だけ入力してください。<br>
@@ -1269,7 +1333,7 @@ const loadTesseract = () => loadLib('ocr');
           よく使うものが上、たまにしか使わないものは<strong>「その他の設定」</strong>に畳んであります。<br>
           <br>
           <strong>いつも見えている</strong><br>
-          　見積作成の記録／見積の設定／経費管理／メンバー管理／アカウント<br>
+          　見積作成の記録／見積の設定／データの保存先／経費管理／メンバー管理<br>
           <br>
           <strong>見積作成の記録</strong>について<br>
           　見積を保存するたびに、かかった時間と「どこから入力したか」を自動で記録します。<br>
@@ -1336,30 +1400,60 @@ let currentUserOrgs = []; // all orgs the user belongs to
 let caseFilter = 'all';  // 'all' | 'personal' | org_id
 
 // Auth state listener — fires immediately on load
+// ログインは任意。未ログインでも端末内のデータでそのまま使える
+function refreshAll() {
+  applyMode();
+  updateDashboard();
+  setBadge('m-est-badge', estimates.length);
+  setBadge('m-inv-badge', invoices.length);
+  updateOrgUI();
+  renderWorkersList();
+  loadProfile();
+  updateAccountUI();
+}
 sb.auth.onAuthStateChange(async (event, session) => {
+  closeAuth();
   if (session && session.user) {
     currentUser = session.user;
-    document.getElementById('auth-overlay').style.display = 'none';
     const emailEl = document.getElementById('settings-user-email');
     if (emailEl) emailEl.textContent = session.user.email;
     await loadFromSupabase();
-    applyMode();
-    updateDashboard();
-    setBadge('m-est-badge', estimates.length);
-    setBadge('m-inv-badge', invoices.length);
-    updateOrgUI();
-    renderWorkersList();
-    loadProfile();
   } else {
+    // ログアウト／未ログイン：端末内のデータはそのまま使う（消さない）
     currentUser = null;
     currentOrgId = null;
     currentOrg = null;
     currentUserOrgs = [];
-    estimates=[]; invoices=[]; customers=[]; cases=[];
-    estCounter=1; invCounter=1;
-    document.getElementById('auth-overlay').style.display = 'flex';
+    load();
   }
+  refreshAll();
 });
+// ログイン画面は必要なときだけ開く
+function openAuth() { document.getElementById('auth-overlay').style.display = 'flex'; }
+function closeAuth() { document.getElementById('auth-overlay').style.display = 'none'; }
+// 設定画面のアカウント欄を状態に合わせて書き換える
+function updateAccountUI() {
+  const box = document.getElementById('account-box');
+  if (!box) return;
+  if (currentUser) {
+    box.innerHTML = `
+      <p style="font-size:12px;color:var(--ink-sub);margin-bottom:12px">クラウド保存：<strong style="color:var(--ink)">有効</strong>　${esc(currentUser.email||'')}</p>
+      <div class="form-field">
+        <label>氏名（表示名）</label>
+        <input type="text" id="profile-display-name" placeholder="山田 太郎" style="width:100%;padding:10px 12px;border:1.5px solid var(--rule);border-radius:var(--radius);font-size:14px;font-family:inherit;outline:none;box-sizing:border-box">
+      </div>
+      <button onclick="saveProfile()" class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:14px">保存</button>
+      <button onclick="logout()" class="btn btn-danger" style="width:100%;justify-content:center">ログアウト</button>`;
+    loadProfile();
+  } else {
+    box.innerHTML = `
+      <p style="font-size:12px;color:var(--ink-sub);line-height:1.8;margin-bottom:12px">
+        いまは<strong style="color:var(--ink)">この端末だけ</strong>にデータを保存しています。<br>
+        別の端末でも同じデータを見たい場合や、複数人で共有したい場合はクラウド保存を有効にしてください。
+      </p>
+      <button onclick="openAuth()" class="btn btn-primary" style="width:100%;justify-content:center">クラウド保存を有効にする</button>`;
+  }
+}
 
 async function loadFromSupabase() {
   if (!currentUser) return;
@@ -1598,7 +1692,7 @@ function authErrMsg(msg) {
 }
 
 async function logout() {
-  if (!confirm('ログアウトしますか？')) return;
+  if (!confirm('クラウド保存をやめますか？\n\nこの端末のデータはそのまま残ります。')) return;
   await sb.auth.signOut();
 }
 
@@ -1736,7 +1830,9 @@ function navigate(page, el) {
   if(page==='settings') {
     loadCompany(); renderWorkersList(); updateOrgUI(); loadProfile(); renderExpenseTracker();
     const pk=document.getElementById('price-kind-select'); if(pk) pk.value=defaultPriceKind();
+    aiRenderKeyState();
     renderMetrics();
+    updateBackupAge();
     applyMode();
   }
 }
@@ -1936,12 +2032,12 @@ function metricCount(kind, n) {
 function loadMetrics() { try { return JSON.parse(localStorage.getItem('ck_metrics') || '[]'); } catch(e) { return []; } }
 function metricSave(est, rows) {
   if (!estMetric || !rows) return;
-  const auto = estMetric.sug + estMetric.past + estMetric.pkg;
+  const auto = estMetric.sug + estMetric.past + estMetric.pkg + (estMetric.ai || 0);
   const rec = {
     id: String(est.id), num: est.num, date: fmtDate(new Date()),
     min: Math.max(1, Math.round((estMetric.active - estMetric.t0) / 60000)),  // 最後に触った時刻まで
     rows,
-    sug: estMetric.sug, past: estMetric.past, pkg: estMetric.pkg,
+    sug: estMetric.sug, past: estMetric.past, pkg: estMetric.pkg, ai: estMetric.ai || 0,
     manual: Math.max(0, rows - auto),
     grand: est.grand || 0
   };
@@ -1954,10 +2050,10 @@ function metricSummary() {
   const all = loadMetrics();
   if (!all.length) return null;
   const sum = k => all.reduce((s, m) => s + (m[k] || 0), 0);
-  const rows = sum('rows'), auto = sum('sug') + sum('past') + sum('pkg');
+  const rows = sum('rows'), auto = sum('sug') + sum('past') + sum('pkg') + sum('ai');
   const recent = all.slice(-10);
   const rRows = recent.reduce((s,m)=>s+(m.rows||0),0);
-  const rAuto = recent.reduce((s,m)=>s+(m.sug||0)+(m.past||0)+(m.pkg||0),0);
+  const rAuto = recent.reduce((s,m)=>s+(m.sug||0)+(m.past||0)+(m.pkg||0)+(m.ai||0),0);
   return {
     n: all.length,
     avgMin: Math.round(all.reduce((s, m) => s + (m.min || 0), 0) / all.length),
@@ -2056,13 +2152,13 @@ function pastMatchRate(e, cur) {
   return hit/cur.size;
 }
 function openPastPicker() {
-  document.getElementById('past-modal').classList.add('show');
+  document.getElementById('past-modal').classList.add('open');
   document.getElementById('past-q').value='';
   pastFilter='';
   renderPastChips();
   renderPastList();
 }
-function closePastPicker(){ document.getElementById('past-modal').classList.remove('show'); }
+function closePastPicker(){ document.getElementById('past-modal').classList.remove('open'); }
 function quickFromPast() {
   navigate('estimate', document.querySelector('[data-page="estimate"]'));
   estNewForm();
@@ -2144,6 +2240,286 @@ function maybeSuggestPast() {
     bar.querySelector('span').textContent=`似た過去の見積が ${hits.length}件あります`;
   }
 }
+
+// ===== AI見積もり補助 =====
+// 自社の単価マスタ・過去の見積から近いものを渡して、Claudeに明細を提案させる。
+// 単価はマスタ/過去実績で上書きし、実績がないものだけ「AI推定」として要確認で出す。
+const AI_MODEL = 'claude-sonnet-4-5';
+const AI_KEY = () => localStorage.getItem('ck_ai_key') || '';
+function aiSaveKey(v) {
+  v = (v || '').trim();
+  if (v) localStorage.setItem('ck_ai_key', v); else localStorage.removeItem('ck_ai_key');
+  aiRenderKeyState();
+  showPastToast(v ? 'APIキーを保存しました' : 'APIキーを削除しました');
+}
+function aiRenderKeyState() {
+  const k = AI_KEY();
+  document.querySelectorAll('.ai-key-st').forEach(el => {
+    el.textContent = k ? `登録済み（…${k.slice(-4)}）` : '未登録';
+  });
+}
+function openAiEst() {
+  document.getElementById('ai-modal').classList.add('open');
+  document.getElementById('ai-key-wrap').style.display = AI_KEY() ? 'none' : '';
+  document.getElementById('ai-result').innerHTML = '';
+  document.getElementById('ai-foot').style.display = 'none';
+  aiSetStatus('');
+  aiProposal = null;
+  setTimeout(() => document.getElementById('ai-q').focus(), 80);
+}
+function closeAiEst() { document.getElementById('ai-modal').classList.remove('open'); }
+function aiSetStatus(msg, kind) {
+  const el = document.getElementById('ai-status');
+  if (!msg) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.textContent = msg;
+  el.style.background = kind === 'err' ? 'var(--orange-soft)' : 'var(--accent-soft)';
+  el.style.color = kind === 'err' ? 'var(--ink)' : 'var(--accent)';
+}
+
+// 日本語は単語の区切りがないので、依頼文からn-gramを作って品目名と照合する
+function aiGrams(t, lo = 2, hi = 5) {
+  const s = String(t).replace(/[\s　、。,.・\/()（）「」【】\[\]]/g, '');
+  const out = new Set();
+  for (let n = lo; n <= hi; n++) for (let i = 0; i + n <= s.length; i++) out.add(s.slice(i, i + n));
+  return out;
+}
+function aiGramScore(name, qg) {
+  let s = 0;
+  for (const g of aiGrams(name)) if (qg.has(g)) s += g.length;
+  return s;
+}
+// 入力文から単価マスタの候補を絞る（AIに渡す量を抑える）
+// 語が当たった品目を優先し、残りを実績回数の多い品目（養生・産廃など付帯項目）で埋める
+function aiPickMaster(text, hitLimit = 100, fillLimit = 40) {
+  const ms = PDB().master;
+  const qg = aiGrams(text);
+  const scored = ms.map((m, i) => {
+    let best = 0;
+    for (const nm of [m.n].concat(m.alt || [])) {
+      const s = aiGramScore(nm, qg);
+      if (s > best) best = s;
+    }
+    return { s: best, i, m };
+  });
+  const hits = scored.filter(x => x.s > 0)
+    .sort((a, b) => (b.s - a.s) || (b.m.c - a.m.c))
+    .slice(0, hitLimit);
+  const taken = new Set(hits.map(x => x.i));
+  const fill = scored.filter(x => !taken.has(x.i))
+    .sort((a, b) => b.m.c - a.m.c)
+    .slice(0, fillLimit);
+  return hits.concat(fill).map(({ i, m }) => ({ i, m }));
+}
+// 入力文に近い過去の見積（タイトルの語一致）
+// r = タイトル全体のうち何割が当たったか。参考として渡すのは緩めに、
+// 単価の上書きに使うのは r が高いものだけ（「マンション」だけ一致、のような弱い一致で単価を動かさない）
+const AI_PAST_PRICE_MIN = 0.3;
+function aiPickPast(text, limit = 3) {
+  const qg = aiGrams(text);
+  const scored = PASTDB().map(e => {
+    const self = aiGramScore(e.t, aiGrams(e.t));
+    const s = aiGramScore(e.t, qg);
+    return { s, r: self ? s / self : 0, e };
+  }).filter(x => x.s > 0);
+  scored.sort((a, b) => b.r - a.r || b.s - a.s);
+  return scored.slice(0, limit);
+}
+
+let aiProposal = null;
+
+async function runAiEst() {
+  const q = (document.getElementById('ai-q').value || '').trim();
+  if (!q) { aiSetStatus('工事の内容を入力してください', 'err'); return; }
+  const inlineKey = (document.getElementById('ai-key-inline').value || '').trim();
+  if (inlineKey) { aiSaveKey(inlineKey); document.getElementById('ai-key-inline').value = ''; document.getElementById('ai-key-wrap').style.display = 'none'; }
+  const key = AI_KEY();
+  if (!key) { aiSetStatus('APIキーを入力してください', 'err'); return; }
+
+  const btn = document.getElementById('ai-go');
+  btn.disabled = true;
+  aiSetStatus('自社の実績から候補を探して、AIに相談しています…');
+  document.getElementById('ai-result').innerHTML = '';
+  document.getElementById('ai-foot').style.display = 'none';
+
+  const cands = aiPickMaster(q);
+  const pastRefs = aiPickPast(q);
+  const ms = PDB().master;
+  // AIに渡す候補表（番号・品目・単位・実績単価・回数）
+  const table = cands.map(({ i, m }) =>
+    `${i}\t${m.n}\t${m.u}\t${m.p}\t${m.c}`).join('\n');
+  const pastText = pastRefs.map(({ e }) => {
+    const lines = e.g.flatMap(g => g.i.map(([mi, qty, price]) => {
+      const m = ms[mi]; return m ? `  ${m.n} ${qty}${m.u} @${price}` : null;
+    }).filter(Boolean)).slice(0, 25).join('\n');
+    return `【${e.t}（${e.d}／計¥${e.s}）】\n${lines}`;
+  }).join('\n\n');
+
+  const prompt = `あなたは内装・リフォーム工事の見積作成を補助します。下の「自社の品目候補」から選んで見積明細を組んでください。
+
+# 自社の品目候補（番号／品目名／単位／直近単価／実績回数）
+${table}
+
+${pastText ? `# 参考：内容が近い自社の過去見積\n${pastText}\n` : ''}
+# 依頼内容
+${q}
+
+# ルール
+- 原則として候補表の番号を使う。候補になければ idx を null にして品目名・単位・推定単価を自分で書く（最小限に）。
+- 数量は依頼内容から算出する。広さや数量が書かれていない場合は一般的な規模を仮定し、assumptions にその仮定を書く。
+- 養生費・産廃処分・運搬費・諸経費など、実際の工事で必要になる付帯項目も忘れずに入れる。
+- セクション（工事区分）ごとにまとめる。
+- 単価は書かなくてよい（番号がある品目は自社実績を使う）。候補にない品目だけ price を入れる。
+
+# 出力（JSONのみ。前後に説明文を書かない）
+{"sections":[{"name":"解体工事","items":[{"idx":123,"qty":1,"note":""},{"idx":null,"name":"〇〇","unit":"式","qty":1,"price":30000,"note":"候補になし"}]}],"assumptions":"仮定した条件"}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: AI_MODEL,
+        max_tokens: 4000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    if (!res.ok) {
+      let detail = '';
+      try { const j = await res.json(); detail = j.error?.message || ''; } catch (e) {}
+      if (res.status === 401) throw new Error('APIキーが正しくないようです。設定から入れ直してください');
+      if (res.status === 429) throw new Error('リクエストが混み合っています。少し待ってからもう一度お試しください');
+      if (res.status === 400 && /credit|balance/i.test(detail)) throw new Error('Anthropicの残高が不足しています。console.anthropic.com で確認してください');
+      throw new Error(`AIの応答エラー（${res.status}）${detail ? '：' + detail : ''}`);
+    }
+    const data = await res.json();
+    const text = (data.content || []).map(c => c.text || '').join('');
+    const m = text.match(/\{[\s\S]*\}/);
+    if (!m) throw new Error('AIの回答を読み取れませんでした。もう一度お試しください');
+    aiProposal = aiNormalize(JSON.parse(m[0]), pastRefs);
+    aiSetStatus('');
+    aiRenderResult();
+  } catch (e) {
+    aiSetStatus(e.message || '通信に失敗しました', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// AIの回答に自社の単価を当てる。過去見積に同じ品目があればその単価を優先。
+function aiNormalize(raw, pastRefs) {
+  const ms = PDB().master;
+  const pastPrice = {};
+  (pastRefs || []).filter(x => x.r >= AI_PAST_PRICE_MIN)
+    .forEach(({ e }) => e.g.forEach(g => g.i.forEach(([mi, qty, price]) => {
+      if (pastPrice[mi] == null) pastPrice[mi] = price;
+    })));
+  const kind = defaultPriceKind();
+  const sections = (raw.sections || []).map(sec => ({
+    name: String(sec.name || '').slice(0, 40),
+    items: (sec.items || []).map(it => {
+      const idx = Number.isInteger(it.idx) ? it.idx : null;
+      const m = idx != null ? ms[idx] : null;
+      const qty = Math.max(0, Number(it.qty) || 1);
+      if (m) {
+        const fromPast = pastPrice[idx];
+        return {
+          on: true, name: m.n, unit: m.u, qty,
+          price: fromPast != null ? fromPast : priceOf(m, kind),
+          src: fromPast != null ? 'past' : 'master',
+          c: m.c, note: String(it.note || '')
+        };
+      }
+      if (!it.name) return null;                       // 番号が無効で品目名もない → 捨てる
+      return {
+        on: true, name: String(it.name).slice(0, 60),
+        unit: String(it.unit || '式'), qty,
+        price: Math.max(0, Number(it.price) || 0),
+        src: 'estimate', c: 0, note: String(it.note || '')
+      };
+    }).filter(it => it && it.name)
+  })).filter(sec => sec.items.length);
+  return { sections, assumptions: String(raw.assumptions || '') };
+}
+
+function aiRenderResult() {
+  const el = document.getElementById('ai-result');
+  if (!aiProposal || !aiProposal.sections.length) {
+    el.innerHTML = '<div class="empty-state">提案を作れませんでした。内容を具体的に書いてもう一度お試しください</div>';
+    return;
+  }
+  const lbl = { master: '実績', past: '過去', estimate: 'AI推定' };
+  let html = '';
+  aiProposal.sections.forEach((sec, si) => {
+    html += `<div class="ai-sec">${esc(sec.name || '未分類')}</div>`;
+    sec.items.forEach((it, ii) => {
+      const sub = it.src === 'master' ? `実績${it.c}回` : it.src === 'past' ? '似た見積の単価' : '実績なし・要確認';
+      html += `<label class="ai-item${it.on ? '' : ' off'}" data-ai="${si}-${ii}">
+        <input type="checkbox" ${it.on ? 'checked' : ''} onchange="aiToggle(${si},${ii},this.checked)">
+        <span style="flex:1;min-width:0">
+          <span class="ai-n">${esc(it.name)}</span>
+          <span class="ai-m">
+            <span>${esc(String(it.qty))}${esc(it.unit)} × ¥${commas(it.price)}</span>
+            <span class="ai-b ${it.src}">${lbl[it.src]}</span>
+            <span>${sub}</span>
+          </span>
+          ${it.note ? `<span class="ai-note">${esc(it.note)}</span>` : ''}
+        </span>
+        <span class="ai-amt">¥${commas(Math.round(it.qty * it.price))}</span>
+      </label>`;
+    });
+  });
+  if (aiProposal.assumptions) {
+    html += `<div class="ai-assume"><b>AIが置いた仮定</b><br>${esc(aiProposal.assumptions)}</div>`;
+  }
+  el.innerHTML = html;
+  document.getElementById('ai-foot').style.display = 'flex';
+  aiUpdateTotal();
+}
+function aiToggle(si, ii, on) {
+  aiProposal.sections[si].items[ii].on = on;
+  document.querySelector(`[data-ai="${si}-${ii}"]`)?.classList.toggle('off', !on);
+  aiUpdateTotal();
+}
+function aiUpdateTotal() {
+  let sum = 0, n = 0, est = 0;
+  aiProposal.sections.forEach(s => s.items.forEach(it => {
+    if (!it.on) return;
+    sum += Math.round(it.qty * it.price); n++;
+    if (it.src === 'estimate') est++;
+  }));
+  document.getElementById('ai-total').innerHTML =
+    `${n}項目 ¥${commas(sum)}` + (est ? `<span style="font-weight:600;color:var(--orange);font-size:11px"> ／ AI推定 ${est}件</span>` : '');
+}
+function applyAiEst(replace) {
+  if (!aiProposal) return;
+  const picked = aiProposal.sections
+    .map(s => ({ name: s.name, items: s.items.filter(it => it.on) }))
+    .filter(s => s.items.length);
+  if (!picked.length) { showPastToast('項目が選ばれていません'); return; }
+  const wrap = document.getElementById('est-items');
+  if (replace) {
+    if (wrap.querySelectorAll('[data-item]').length && !confirm('現在の明細をAIの提案に置き換えますか？')) return;
+    wrap.innerHTML = '';
+    if (estMetric) { estMetric.sug = 0; estMetric.past = 0; estMetric.pkg = 0; estMetric.ai = 0; }
+  }
+  let n = 0;
+  picked.forEach(sec => {
+    if (sec.name && sec.name !== '未分類') estAddSection(sec.name);
+    sec.items.forEach(it => { estAddRow(it.name, it.unit, it.qty, it.price, 0); n++; });
+  });
+  metricCount('ai', n);
+  closeAiEst();
+  estRecalc();
+  const r = estCompute();
+  showPastToast(`AIの提案から ${n}項目を入れました（工事小計 ¥${commas(r.workSub)}）。単価を確認してください`);
+}
+
 
 // ===== 工事パッケージ =====
 function renderPkgBar() {
@@ -3172,6 +3548,9 @@ function deleteTemplate(id) {
   openTemplatePicker();
 }
 function exportBackup() {
+  localStorage.setItem('ck_last_backup', String(Date.now()));
+  document.getElementById('backup-reminder')?.setAttribute('style','display:none');
+  setTimeout(updateBackupAge,0);
   const data={
     estimates, invoices, customers, cases,
     estCounter, invCounter,
@@ -3654,6 +4033,7 @@ function updateDashboard() {
   document.getElementById('dash-inv-list').innerHTML=!invoices.length?'<div class="empty-state">まだ請求がありません</div>'
     :[...invoices].reverse().slice(0,4).map(i=>`<div class="activity-item" onclick="goToInv('${i.id}')"><div class="activity-dot" style="background:${S_COLOR[i.status]}"></div><div class="activity-text"><strong>${i.client||'—'}</strong><br><span style="color:var(--ink-sub);font-size:11px">${i.num} · 期限 ${i.due||'—'}</span></div><div class="activity-right"><div style="font-size:13.5px;font-weight:700">¥${commas(i.grand||0)}</div><div style="font-size:11px;color:${S_COLOR[i.status]}">${S_LABEL[i.status]}</div></div></div>`).join('');
   if(ckMode()==='full') renderWhiteboard();
+  checkBackupReminder();
   const pc=document.getElementById('past-count');
   if(pc) pc.textContent = PASTDB().length ? `${PASTDB().length}件` : '';
   // 通知バナー制御
@@ -3974,6 +4354,39 @@ async function exportInvoices() {
 function parseNum(id){return parseInt(document.getElementById(id).textContent.replace(/[¥,]/g,''))||0;}
 function setBadge(id,count){const el=document.getElementById(id);el.textContent=count;el.style.display=count>0?'block':'none';}
 
+// ===== バックアップの催促 =====
+// クラウド保存を使っていないと、端末が壊れた時に取り戻せない。
+// 見積が増えたら／前回から1ヶ月たったら、ホームで一度だけ知らせる。
+function checkBackupReminder() {
+  const bar = document.getElementById('backup-reminder');
+  if (!bar) return;
+  if (currentUser) { bar.style.display = 'none'; return; }      // クラウド保存中なら不要
+  const n = estimates.length + invoices.length;
+  if (n < 3) { bar.style.display = 'none'; return; }
+  const last = parseInt(localStorage.getItem('ck_last_backup') || '0');
+  const days = last ? Math.floor((Date.now() - last) / 86400000) : null;
+  if (last && days < 30) { bar.style.display = 'none'; return; }
+  if (localStorage.getItem('ck_backup_dismissed') === String(new Date().toISOString().slice(0,10))) {
+    bar.style.display = 'none'; return;
+  }
+  bar.querySelector('.br-msg').textContent = last
+    ? `前回のバックアップから${days}日たっています`
+    : 'バックアップをまだ取っていません';
+  bar.style.display = 'flex';
+}
+function updateBackupAge() {
+  const el = document.getElementById('backup-age'); if (!el) return;
+  const last = parseInt(localStorage.getItem('ck_last_backup') || '0');
+  if (!last) { el.textContent = '未実施'; el.style.color = 'var(--orange)'; return; }
+  const days = Math.floor((Date.now() - last) / 86400000);
+  el.textContent = days === 0 ? '今日' : `${days}日前`;
+  el.style.color = days >= 30 ? 'var(--orange)' : 'var(--ink-sub)';
+}
+function dismissBackupReminder() {
+  localStorage.setItem('ck_backup_dismissed', new Date().toISOString().slice(0,10));
+  document.getElementById('backup-reminder').style.display = 'none';
+}
+
 // ===== 表示モード =====
 // 'estimate' … 見積・請求に特化（既定）  /  'full' … 現場管理も含む全機能
 function ckMode(){ return localStorage.getItem('ck_mode')||'estimate'; }
@@ -4125,8 +4538,9 @@ function enableNotifications() {
 
 window.onload=()=>{
   initBrand();
-  applyMode();
-  // Data loading is handled by sb.auth.onAuthStateChange above
+  load();            // 端末内のデータで先に表示する（ログインの返事は待たない）
+  refreshAll();
+  checkBackupReminder();
 };
 // ページを閉じる直前に未sync分を強制送信
 window.addEventListener('beforeunload', () => {
