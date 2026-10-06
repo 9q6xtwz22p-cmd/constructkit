@@ -278,6 +278,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic Pro
 .ai-b.master { background:var(--green); }
 .ai-b.past { background:var(--accent); }
 .ai-b.estimate { background:var(--orange); }
+.ai-b.edited { background:var(--ink-sub); }
 .ai-note { font-size:11px; color:var(--ink-sub); margin-top:3px; line-height:1.5; }
 .ai-assume { margin:10px 16px 14px; padding:10px 12px; background:var(--orange-soft); border-radius:9px; font-size:11.5px; line-height:1.7; }
 .past-secs { font-size:10.5px; color:var(--ink-sub); margin-top:4px; }
@@ -1141,25 +1142,31 @@ const loadTesseract = () => loadLib('ocr');
   </div>
 </div>
 
-<!-- AI見積もり補助 -->
+<!-- AI見積もり補助（相談しながら明細を作る） -->
 <div class="modal-backdrop" id="ai-modal">
   <div class="modal-sheet" style="max-height:92vh;display:flex;flex-direction:column;padding:0">
     <div class="modal-header" style="padding:14px 16px;margin:0;border-bottom:1px solid var(--rule)">
-      <h3 style="font-size:15px;font-weight:700">✨ AIで明細を提案</h3>
-      <button class="btn-sm" onclick="closeAiEst()">✕ 閉じる</button>
+      <h3 style="font-size:15px;font-weight:700">AIと相談して明細を作る</h3>
+      <button class="btn-sm" onclick="closeAiEst()">閉じる</button>
     </div>
-    <div style="overflow-y:auto;flex:1">
-      <div style="padding:12px 16px">
-        <div class="form-field">
-          <label>工事の内容（広さ・数量がわかれば書く）</label>
-          <textarea id="ai-q" rows="4" placeholder="例）マンション浴室 1216ユニットバス交換、在来浴室の解体あり。洗面所のクロス・CF張替え 約3畳"></textarea>
-        </div>
-        <button class="btn btn-primary" id="ai-go" style="width:100%;justify-content:center" onclick="runAiEst()">明細を提案してもらう</button>
-        <div id="ai-status" style="display:none;font-size:12px;text-align:center;padding:8px;margin-top:10px;border-radius:8px;line-height:1.6"></div>
-        <div style="font-size:10.5px;color:var(--ink-sub);margin-top:8px;line-height:1.6">自社の単価マスタ・過去の見積から近いものを渡して提案させます。<span style="color:var(--green);font-weight:700">実績</span>＝単価マスタの値、<span style="color:var(--accent);font-weight:700">過去</span>＝似た見積の値、<span style="color:var(--orange);font-weight:700">AI推定</span>＝実績なし（要確認）。</div>
+
+    <!-- いまの明細（常に最新。ここが正） -->
+    <div id="ai-result" style="overflow-y:auto;flex:1;min-height:120px"></div>
+
+    <!-- やりとり -->
+    <div id="ai-log" style="border-top:1px solid var(--rule);background:var(--head);padding:8px 16px;max-height:132px;overflow-y:auto;font-size:12px;line-height:1.7"></div>
+
+    <!-- 入力 -->
+    <div style="padding:10px 16px;border-top:1px solid var(--rule);background:var(--surface)">
+      <div id="ai-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px;align-items:flex-end">
+        <textarea id="ai-q" rows="2" style="flex:1;resize:vertical" placeholder="例）マンション50平米の原状回復。全室クロス張替え、床はCF。既存撤去・処分込み"></textarea>
+        <button class="btn btn-primary" id="ai-go" style="white-space:nowrap" onclick="runAiEst()">送信</button>
       </div>
-      <div id="ai-result"></div>
+      <div id="ai-status" style="display:none;font-size:12px;text-align:center;padding:7px;margin-top:8px;border-radius:4px;line-height:1.6"></div>
+      <div style="font-size:10.5px;color:var(--ink-sub);margin-top:7px;line-height:1.6"><span style="color:var(--green);font-weight:700">実績</span>＝単価マスタの値、<span style="color:var(--accent);font-weight:700">過去</span>＝似た見積の値、<span style="color:var(--orange);font-weight:700">AI推定</span>＝実績なし（要確認）。直したいことをそのまま書けば明細が変わります。</div>
     </div>
+
     <div id="ai-foot" style="display:none;padding:12px 16px;border-top:1px solid var(--rule);gap:8px;align-items:center;background:var(--surface)">
       <span id="ai-total" style="flex:1;font-size:13px;font-weight:800"></span>
       <button class="btn-sm" onclick="applyAiEst(true)">置き換え</button>
@@ -2237,11 +2244,28 @@ const AI_ENDPOINT = 'https://matomeru-genba-ai.9q6xtwz22p.workers.dev';
 try { localStorage.removeItem('ck_ai_key'); } catch (e) {}   // 旧版で端末に残ったキーを消す
 function openAiEst() {
   document.getElementById('ai-modal').classList.add('open');
-  document.getElementById('ai-result').innerHTML = '';
+  document.getElementById('ai-result').innerHTML =
+    '<div class="empty-state">工事の内容を書いて送信してください。<br>出てきた明細は、そのあと会話で直せます</div>';
+  document.getElementById('ai-log').innerHTML = '';
   document.getElementById('ai-foot').style.display = 'none';
   aiSetStatus('');
   aiProposal = null;
+  aiTurns = [];
+  aiPastRefs = [];
+  aiRenderChips();
   setTimeout(() => document.getElementById('ai-q').focus(), 80);
+}
+// よく使う直しは打たずに押せるようにする
+const AI_CHIPS = ['養生を追加', '産廃処分を追加', '数量を見直して', '処分費は別途にして', '安いグレードで', '諸経費の項目を足して'];
+function aiRenderChips() {
+  const el = document.getElementById('ai-chips'); if (!el) return;
+  el.innerHTML = AI_CHIPS.map(t =>
+    `<button class="btn-sm" onclick="aiChip('${esc(t)}')">${esc(t)}</button>`).join('');
+}
+function aiChip(t) {
+  const q = document.getElementById('ai-q');
+  q.value = q.value ? q.value + '。' + t : t;
+  q.focus();
 }
 function closeAiEst() { document.getElementById('ai-modal').classList.remove('open'); }
 function aiSetStatus(msg, kind) {
@@ -2303,18 +2327,33 @@ function aiPickPast(text, limit = 3) {
 }
 
 let aiProposal = null;
+let aiTurns = [];        // {role:'user'|'ai', text}
+let aiPastRefs = [];     // 単価の上書きに使う過去見積（初回に決めて以降も使う）
+
+function aiPushTurn(role, text) {
+  aiTurns.push({ role, text });
+  const el = document.getElementById('ai-log'); if (!el) return;
+  const who = role === 'user' ? 'あなた' : 'AI';
+  const col = role === 'user' ? 'var(--ink)' : 'var(--accent)';
+  el.insertAdjacentHTML('beforeend',
+    `<div style="margin-bottom:5px"><b style="color:${col}">${who}</b>　${esc(text)}</div>`);
+  el.scrollTop = el.scrollHeight;
+}
 
 async function runAiEst() {
   const q = (document.getElementById('ai-q').value || '').trim();
-  if (!q) { aiSetStatus('工事の内容を入力してください', 'err'); return; }
+  if (!q) { aiSetStatus('直したいこと・工事の内容を入力してください', 'err'); return; }
   const btn = document.getElementById('ai-go');
   btn.disabled = true;
-  aiSetStatus('自社の実績から候補を探して、AIに相談しています…');
-  document.getElementById('ai-result').innerHTML = '';
-  document.getElementById('ai-foot').style.display = 'none';
+  document.getElementById('ai-q').value = '';
+  aiPushTurn('user', q);
+  aiSetStatus(aiProposal ? 'AIに相談しています…' : '自社の実績から候補を探して、AIに相談しています…');
 
-  const cands = aiPickMaster(q);
-  const pastRefs = aiPickPast(q);
+  // 候補はここまでの会話全体から拾う（「養生追加」のような後出しにも効かせる）
+  const allText = aiTurns.filter(t => t.role === 'user').map(t => t.text).join(' ');
+  const cands = aiPickMaster(allText);
+  if (!aiPastRefs.length) aiPastRefs = aiPickPast(q);
+  const pastRefs = aiPastRefs;
   const ms = PDB().master;
   // AIに渡す候補表（番号・品目・単位・実績単価・回数）
   const table = cands.map(({ i, m }) =>
@@ -2326,24 +2365,49 @@ async function runAiEst() {
     return `【${e.t}（${e.d}／計¥${e.s}）】\n${lines}`;
   }).join('\n\n');
 
-  const prompt = `あなたは内装・リフォーム工事の見積作成を補助します。下の「自社の品目候補」から選んで見積明細を組んでください。
+  // いまの明細をそのままAIに見せる。AIは全文ではなく「差分」で返す
+  const stateText = aiProposal ? aiProposal.sections.map(sec =>
+    `【${sec.name || '未分類'}】\n` + sec.items.map(it =>
+      `  ${it.name} ${it.qty}${it.unit} @${it.price}${it.note ? ' ※' + it.note : ''}`).join('\n')
+  ).join('\n') : '（まだ空）';
+
+  const history = aiTurns.slice(-8).map(t =>
+    `${t.role === 'user' ? 'ユーザー' : 'あなた'}：${t.text}`).join('\n');
+
+  const prompt = `あなたは内装・リフォーム工事の見積作成を補助します。ユーザーと会話しながら見積明細を組み立て、直していきます。
 
 # 自社の品目候補（番号／品目名／単位／直近単価／実績回数）
 ${table}
 
 ${pastText ? `# 参考：内容が近い自社の過去見積\n${pastText}\n` : ''}
-# 依頼内容
-${q}
+# いまの明細
+${stateText}
+
+# これまでのやりとり
+${history}
 
 # ルール
-- 原則として候補表の番号を使う。候補になければ idx を null にして品目名・単位・推定単価を自分で書く（最小限に）。
-- 数量は依頼内容から算出する。広さや数量が書かれていない場合は一般的な規模を仮定し、assumptions にその仮定を書く。
-- 養生費・産廃処分・運搬費・諸経費など、実際の工事で必要になる付帯項目も忘れずに入れる。
-- セクション（工事区分）ごとにまとめる。
-- 単価は書かなくてよい（番号がある品目は自社実績を使う）。候補にない品目だけ price を入れる。
+- 原則として候補表の番号（idx）を使う。候補になければ idx を null にして品目名・単位・推定単価を書く（最小限に）。
+- 数量は依頼内容から算出する。書かれていなければ一般的な規模を仮定し、note か reply にその仮定を書く。
+- 初回は養生費・産廃処分・運搬費など、実際に必要になる付帯項目も入れる。
+- 2回目以降は「いまの明細」をベースに、言われた箇所だけを直す。関係ない項目は触らない。
+- 単価は書かなくてよい（idxがある品目は自社実績を使う）。候補にない品目だけ price を入れる。
+- reply は1〜2文の日本語で、何をしたかを簡潔に。
 
 # 出力（JSONのみ。前後に説明文を書かない）
-{"sections":[{"name":"解体工事","items":[{"idx":123,"qty":1,"note":""},{"idx":null,"name":"〇〇","unit":"式","qty":1,"price":30000,"note":"候補になし"}]}],"assumptions":"仮定した条件"}`;
+{"reply":"何をしたかを1〜2文で","ops":[
+ {"op":"set","sections":[{"name":"解体工事","items":[{"idx":123,"qty":1,"note":""}]}]},
+ {"op":"add","section":"内装工事","items":[{"idx":45,"qty":80,"note":""},{"idx":null,"name":"〇〇","unit":"式","qty":1,"price":30000,"note":"候補になし"}]},
+ {"op":"remove","match":"産廃"},
+ {"op":"qty","match":"クロス","qty":120},
+ {"op":"price","match":"クロス","price":980},
+ {"op":"note","match":"クロス","note":"量産品"}
+]}
+
+opの使い分け：
+- 明細が空、または作り直すときだけ "set"
+- 項目を足す＝"add"、消す＝"remove"、数量・単価・備考を変える＝"qty"/"price"/"note"
+- match は品目名の一部（部分一致）。該当する全項目に適用される`;
 
   try {
     const res = await fetch(AI_ENDPOINT, {
@@ -2361,7 +2425,9 @@ ${q}
     const text = (data.content || []).map(c => c.text || '').join('');
     const m = text.match(/\{[\s\S]*\}/);
     if (!m) throw new Error('AIの回答を読み取れませんでした。もう一度お試しください');
-    aiProposal = aiNormalize(JSON.parse(m[0]), pastRefs);
+    const raw = JSON.parse(m[0]);
+    const changed = aiApplyOps(raw, pastRefs);
+    aiPushTurn('ai', raw.reply || (changed ? '明細を更新しました' : '変更はありません'));
     aiSetStatus('');
     aiRenderResult();
   } catch (e) {
@@ -2371,40 +2437,95 @@ ${q}
   }
 }
 
-// AIの回答に自社の単価を当てる。過去見積に同じ品目があればその単価を優先。
-function aiNormalize(raw, pastRefs) {
-  const ms = PDB().master;
+// 過去見積の単価表（タイトルがよく一致したものだけを単価の上書きに使う）
+function aiPastPriceMap(pastRefs) {
   const pastPrice = {};
   (pastRefs || []).filter(x => x.r >= AI_PAST_PRICE_MIN)
     .forEach(({ e }) => e.g.forEach(g => g.i.forEach(([mi, qty, price]) => {
       if (pastPrice[mi] == null) pastPrice[mi] = price;
     })));
+  return pastPrice;
+}
+// AIが返した1項目を、自社の単価を当てた明細行にする
+function aiMakeItem(it, pastPrice, kind) {
+  const ms = PDB().master;
+  const idx = Number.isInteger(it.idx) ? it.idx : null;
+  const m = idx != null ? ms[idx] : null;
+  const qty = Math.max(0, Number(it.qty) || 1);
+  if (m) {
+    const fromPast = pastPrice[idx];
+    return {
+      on: true, name: m.n, unit: m.u, qty,
+      price: fromPast != null ? fromPast : priceOf(m, kind),
+      src: fromPast != null ? 'past' : 'master',
+      c: m.c, note: String(it.note || '')
+    };
+  }
+  if (!it.name) return null;                         // 番号が無効で品目名もない → 捨てる
+  return {
+    on: true, name: String(it.name).slice(0, 60),
+    unit: String(it.unit || '式'), qty,
+    price: Math.max(0, Number(it.price) || 0),
+    src: 'estimate', c: 0, note: String(it.note || '')
+  };
+}
+// AIの回答に自社の単価を当てる。過去見積に同じ品目があればその単価を優先。
+function aiNormalize(raw, pastRefs) {
+  const pastPrice = aiPastPriceMap(pastRefs);
   const kind = defaultPriceKind();
   const sections = (raw.sections || []).map(sec => ({
     name: String(sec.name || '').slice(0, 40),
-    items: (sec.items || []).map(it => {
-      const idx = Number.isInteger(it.idx) ? it.idx : null;
-      const m = idx != null ? ms[idx] : null;
-      const qty = Math.max(0, Number(it.qty) || 1);
-      if (m) {
-        const fromPast = pastPrice[idx];
-        return {
-          on: true, name: m.n, unit: m.u, qty,
-          price: fromPast != null ? fromPast : priceOf(m, kind),
-          src: fromPast != null ? 'past' : 'master',
-          c: m.c, note: String(it.note || '')
-        };
-      }
-      if (!it.name) return null;                       // 番号が無効で品目名もない → 捨てる
-      return {
-        on: true, name: String(it.name).slice(0, 60),
-        unit: String(it.unit || '式'), qty,
-        price: Math.max(0, Number(it.price) || 0),
-        src: 'estimate', c: 0, note: String(it.note || '')
-      };
-    }).filter(it => it && it.name)
+    items: (sec.items || []).map(it => aiMakeItem(it, pastPrice, kind)).filter(it => it && it.name)
   })).filter(sec => sec.items.length);
   return { sections, assumptions: String(raw.assumptions || '') };
+}
+
+// AIが返した差分を、いまの明細に当てる。
+// 全文を書き直させないので、言われていない行が勝手に変わる事故が起きない。
+function aiApplyOps(raw, pastRefs) {
+  const ops = Array.isArray(raw.ops) ? raw.ops
+            : (raw.sections ? [{ op: 'set', sections: raw.sections }] : []);
+  if (!ops.length) return false;
+  const pastPrice = aiPastPriceMap(pastRefs);
+  const kind = defaultPriceKind();
+  if (!aiProposal) aiProposal = { sections: [], assumptions: '' };
+  const hit = (it, match) => !match || it.name.includes(String(match));
+  const each = (fn) => aiProposal.sections.forEach(s => s.items.forEach(fn));
+  let changed = false;
+
+  ops.forEach(o => {
+    const op = String(o && o.op || '');
+    if (op === 'set') {
+      aiProposal = aiNormalize({ sections: o.sections, assumptions: raw.assumptions }, pastRefs);
+      changed = true;
+    } else if (op === 'add') {
+      const name = String(o.section || '未分類').slice(0, 40);
+      let sec = aiProposal.sections.find(s => s.name === name);
+      if (!sec) { sec = { name, items: [] }; aiProposal.sections.push(sec); }
+      (o.items || []).forEach(x => {
+        const it = aiMakeItem(x, pastPrice, kind);
+        if (it && it.name) { sec.items.push(it); changed = true; }
+      });
+    } else if (op === 'remove') {
+      aiProposal.sections.forEach(s => {
+        const before = s.items.length;
+        s.items = s.items.filter(it => !hit(it, o.match));
+        if (s.items.length !== before) changed = true;
+      });
+      aiProposal.sections = aiProposal.sections.filter(s => s.items.length);
+    } else if (op === 'qty') {
+      const v = Math.max(0, Number(o.qty) || 0);
+      each(it => { if (hit(it, o.match)) { it.qty = v; changed = true; } });
+    } else if (op === 'price') {
+      const v = Math.max(0, Number(o.price) || 0);
+      // 実績のある品目でも、AIが単価を動かしたら「変更」として区別する
+      each(it => { if (hit(it, o.match)) { it.price = v; it.src = 'edited'; changed = true; } });
+    } else if (op === 'note') {
+      each(it => { if (hit(it, o.match)) { it.note = String(o.note || '').slice(0, 60); changed = true; } });
+    }
+  });
+  if (raw.assumptions) aiProposal.assumptions = String(raw.assumptions);
+  return changed;
 }
 
 function aiRenderResult() {
@@ -2413,12 +2534,15 @@ function aiRenderResult() {
     el.innerHTML = '<div class="empty-state">提案を作れませんでした。内容を具体的に書いてもう一度お試しください</div>';
     return;
   }
-  const lbl = { master: '実績', past: '過去', estimate: 'AI推定' };
+  const lbl = { master: '実績', past: '過去', estimate: 'AI推定', edited: '変更' };
   let html = '';
   aiProposal.sections.forEach((sec, si) => {
     html += `<div class="ai-sec">${esc(sec.name || '未分類')}</div>`;
     sec.items.forEach((it, ii) => {
-      const sub = it.src === 'master' ? `実績${it.c}回` : it.src === 'past' ? '似た見積の単価' : '実績なし・要確認';
+      const sub = it.src === 'master' ? `実績${it.c}回`
+                : it.src === 'past'   ? '似た見積の単価'
+                : it.src === 'edited' ? 'AIが単価を変更'
+                : '実績なし・要確認';
       html += `<label class="ai-item${it.on ? '' : ' off'}" data-ai="${si}-${ii}">
         <input type="checkbox" ${it.on ? 'checked' : ''} onchange="aiToggle(${si},${ii},this.checked)">
         <span style="flex:1;min-width:0">
