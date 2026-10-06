@@ -1151,6 +1151,7 @@ const loadTesseract = () => loadLib('ocr');
 
     <!-- 入力 -->
     <div style="padding:10px 16px;border-top:1px solid var(--rule);background:var(--surface)">
+      <div id="ai-fixhd" style="display:none;font-size:12px;font-weight:700;margin-bottom:6px">気になるところを直す<span style="font-weight:400;color:var(--ink-sub)">　／　言った箇所だけが変わります</span></div>
       <div id="ai-chips" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
       <div style="display:flex;gap:8px;align-items:flex-end">
         <textarea id="ai-q" rows="3" style="flex:1;resize:vertical" placeholder="例）マンション50平米の原状回復。全室クロス張替え、床はCF。既存撤去・処分込み"></textarea>
@@ -2249,6 +2250,8 @@ function aiSetPhase(hasResult) {
     ? '直したいところだけ書く（例：養生が抜けてる／クロスは120㎡）'
     : '例）マンション50平米の原状回復。全室クロス張替え、床はCF。既存撤去・処分込み';
   chips.style.display = hasResult ? 'flex' : 'none';
+  const fixhd = document.getElementById('ai-fixhd');
+  if (fixhd) fixhd.style.display = hasResult ? 'block' : 'none';
   log.style.display = hasResult && aiTurns.length > 2 ? 'block' : 'none';
   if (legend) legend.style.display = hasResult ? 'none' : 'block';
   if (hasResult && !chips.dataset.done) {
