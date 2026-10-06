@@ -16,8 +16,10 @@ const ALLOWED_ORIGINS = [
 ];
 const DAILY_LIMIT = 50;        // 1IPあたり／日
 const MAX_PROMPT  = 30000;     // 文字数。通常の見積依頼は6,000字程度
-const MODEL       = 'claude-sonnet-5-5';
+// 上から順に試す。先頭が使えない（提供終了・権限なし）ときは次に落ちる
+const MODELS      = ['claude-sonnet-5-5', 'claude-haiku-4-5-20251001'];
 const MAX_TOKENS  = 4000;
+const MAX_RETRY   = 3;         // 混雑（429/529）時の再試行回数
 
 const json = (obj, status, headers) =>
   new Response(JSON.stringify(obj), {
@@ -62,35 +64,85 @@ export default {
     }
 
     // --- Anthropicへ。モデルと上限はサーバー側で固定する
-    let res;
     try {
-      res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-api-key': env.ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          max_tokens: MAX_TOKENS,
-          messages: [{ role: 'user', content: prompt }],
-        }),
-      });
+      const { model, data } = await callWithFallback(prompt, env.ANTHROPIC_API_KEY);
+      return json(data, 200, { ...cors, 'X-Used-Today': String(used + 1), 'X-Model': model });
     } catch (e) {
-      return json({ error: 'AIに接続できませんでした。時間をおいてお試しください' }, 502, cors);
+      return json({ error: e.userMessage || 'AIに接続できませんでした。時間をおいてお試しください' },
+                  e.status || 502, cors);
     }
-
-    const data = await res.json().catch(() => null);
-    if (!res.ok) {
-      const detail = data?.error?.message || '';
-      // キーや残高の話はそのまま出さず、運用者向けの短い文言にする
-      const msg = res.status === 401 ? 'サーバー側のAPIキーが無効です（管理者に連絡してください）'
-                : res.status === 429 ? 'AIが混み合っています。少し待ってからお試しください'
-                : /credit|balance/i.test(detail) ? 'AIの残高が不足しています（管理者に連絡してください）'
-                : `AIの応答エラー（${res.status}）`;
-      return json({ error: msg }, res.status, cors);
-    }
-    return json(data, 200, { ...cors, 'X-Used-Today': String(used + 1) });
   },
 };
+
+// 1回だけ呼ぶ。拒否はHTTP 200で返ってくるので stop_reason を見る必要がある。
+async function callOnce(model, prompt, apiKey) {
+  let res;
+  try {
+    res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: MAX_TOKENS,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+  } catch (e) {
+    throw Object.assign(new Error('network'), { status: 502, retryable: true });
+  }
+
+  const data = await res.json().catch(() => null);
+
+  if (!res.ok) {
+    const detail = data?.error?.message || '';
+    const err = new Error(`status ${res.status}`);
+    err.status = res.status;
+    // 混雑・一時障害は待てば直る。キー不正やモデル未提供は待っても直らない
+    err.retryable = [429, 500, 502, 503, 529].includes(res.status);
+    err.modelUnavailable = [400, 403, 404].includes(res.status);
+    err.userMessage =
+        res.status === 401 ? 'サーバー側のAPIキーが無効です（管理者に連絡してください）'
+      : res.status === 429 ? 'AIが混み合っています。少し待ってからお試しください'
+      : /credit|balance/i.test(detail) ? 'AIの残高が不足しています（管理者に連絡してください）'
+      : `AIの応答エラー（${res.status}）`;
+    throw err;
+  }
+
+  // 安全分類器による拒否。エラーではなく200で返るので明示的に見る
+  if (data?.stop_reason === 'refusal') {
+    throw Object.assign(new Error('refusal'), { refused: true });
+  }
+  return data;
+}
+
+// 混雑なら待って再試行、モデルが使えないなら次のモデルへ
+async function callWithFallback(prompt, apiKey) {
+  let last;
+  for (const model of MODELS) {
+    for (let attempt = 1; attempt <= MAX_RETRY; attempt++) {
+      try {
+        return { model, data: await callOnce(model, prompt, apiKey) };
+      } catch (e) {
+        last = e;
+        if (e.retryable && attempt < MAX_RETRY) {
+          await sleep(Math.min(800 * 2 ** attempt, 8000) + Math.random() * 400);
+          continue;
+        }
+        break;   // 再試行しても無駄 → 次のモデルを試すか、諦める
+      }
+    }
+    // 拒否またはモデル未提供なら次のモデル。それ以外は即座に返す
+    if (!last?.refused && !last?.modelUnavailable) break;
+  }
+  if (last?.refused) {
+    throw Object.assign(new Error('refused'),
+      { status: 422, userMessage: 'この内容はお答えできませんでした。工事内容の書き方を変えてお試しください' });
+  }
+  throw last ?? new Error('unknown');
+}
+
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));

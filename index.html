@@ -2007,7 +2007,7 @@ function sugKey(e, inp) {
 // 目的：サジェスト・過去見積の複製が実際に入力を減らしているかを数字で確かめる
 let estMetric = null;
 function metricStart() {
-  estMetric = { t0: Date.now(), sug: 0, past: 0, pkg: 0, active: Date.now() };
+  estMetric = { t0: Date.now(), sug: 0, past: 0, pkg: 0, ai: 0, active: Date.now() };
 }
 function metricTouch() { if (estMetric) estMetric.active = Date.now(); }
 function metricCount(kind, n) {
@@ -2023,7 +2023,7 @@ function metricSave(est, rows) {
     id: String(est.id), num: est.num, date: fmtDate(new Date()),
     min: Math.max(1, Math.round((estMetric.active - estMetric.t0) / 60000)),  // 最後に触った時刻まで
     rows,
-    sug: estMetric.sug, past: estMetric.past, pkg: estMetric.pkg, ai: estMetric.ai || 0,
+    sug: estMetric.sug, past: estMetric.past, pkg: estMetric.pkg, ai: estMetric.ai || 0, ai: estMetric.ai || 0,
     manual: Math.max(0, rows - auto),
     grand: est.grand || 0
   };
@@ -2046,7 +2046,7 @@ function metricSummary() {
     rows, auto,
     autoRate: rows ? Math.round(auto / rows * 100) : 0,
     recentRate: rRows ? Math.round(rAuto / rRows * 100) : 0,
-    bySug: sum('sug'), byPast: sum('past'), byPkg: sum('pkg'), manual: sum('manual')
+    bySug: sum('sug'), byPast: sum('past'), byPkg: sum('pkg'), byAi: sum('ai'), manual: sum('manual')
   };
 }
 function renderMetrics() {
@@ -2086,7 +2086,8 @@ function renderMetrics() {
     </div>
     <div style="font-size:11px;font-weight:700;color:var(--ink-sub);margin-bottom:8px">明細 ${s.rows}項目の内訳</div>
     ${bar('過去の見積から複製', s.byPast, 'var(--accent)')}
-    ${bar('パッケージ', s.byPkg, '#8b5cf6')}
+    ${bar('AIの下書き', s.byAi, '#5a4a78')}
+    ${bar('パッケージ', s.byPkg, '#1f6b6b')}
     ${bar('候補から選択', s.bySug, 'var(--green)')}
     ${bar('手入力', s.manual, 'var(--ink-sub)')}
     <button class="btn-sm" style="width:100%;justify-content:center;margin-top:12px" onclick="exportMetrics()"><svg class="ic" viewBox="0 0 20 20"><use href="#i-chart"/></svg> 記録をCSVで書き出す</button>
@@ -2187,7 +2188,7 @@ function applyPast(i) {
   if(has && !confirm(`現在の明細を「${e.t}」の内容に置き換えますか？`)) return;
   const ms=PDB().master;
   document.getElementById('est-items').innerHTML='';
-  if(estMetric){ estMetric.sug=0; estMetric.pkg=0; }   // 置き換えなので入力元をリセット
+  if(estMetric){ estMetric.sug=0; estMetric.pkg=0; estMetric.ai=0; }   // 置き換えなので入力元をリセット
   let n=0;
   e.g.forEach(g=>{
     if(g.n && g.n!=='未分類') estAddSection(g.n);
@@ -2232,7 +2233,7 @@ function maybeSuggestPast() {
 // 単価はマスタ/過去実績で上書きし、実績がないものだけ「AI推定」として要確認で出す。
 // APIキーはこのファイルには持たない。中継のWorkerだけが持っていて、ブラウザには降りてこない。
 // Worker側の中身とモデル指定は worker/worker.js
-const AI_ENDPOINT = 'https://matomeru-genba-ai.shutterarchivejapan.workers.dev';
+const AI_ENDPOINT = 'https://matomeru-genba-ai.9q6xtwz22p.workers.dev';
 try { localStorage.removeItem('ck_ai_key'); } catch (e) {}   // 旧版で端末に残ったキーを消す
 function openAiEst() {
   document.getElementById('ai-modal').classList.add('open');
