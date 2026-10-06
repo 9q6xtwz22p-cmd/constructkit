@@ -1146,25 +1146,25 @@ const loadTesseract = () => loadLib('ocr');
 <div class="modal-backdrop" id="ai-modal">
   <div class="modal-sheet" style="max-height:92vh;display:flex;flex-direction:column;padding:0">
     <div class="modal-header" style="padding:14px 16px;margin:0;border-bottom:1px solid var(--rule)">
-      <h3 style="font-size:15px;font-weight:700">AIと相談して明細を作る</h3>
+      <h3 style="font-size:15px;font-weight:700">AIで明細を提案</h3>
       <button class="btn-sm" onclick="closeAiEst()">閉じる</button>
     </div>
 
     <!-- いまの明細（常に最新。ここが正） -->
     <div id="ai-result" style="overflow-y:auto;flex:1;min-height:120px"></div>
 
-    <!-- やりとり -->
-    <div id="ai-log" style="border-top:1px solid var(--rule);background:var(--head);padding:8px 16px;max-height:132px;overflow-y:auto;font-size:12px;line-height:1.7"></div>
+    <!-- 直したときだけ出る履歴 -->
+    <div id="ai-log" style="display:none;border-top:1px solid var(--rule);background:var(--head);padding:8px 16px;max-height:92px;overflow-y:auto;font-size:12px;line-height:1.7"></div>
 
     <!-- 入力 -->
     <div style="padding:10px 16px;border-top:1px solid var(--rule);background:var(--surface)">
-      <div id="ai-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
+      <div id="ai-chips" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
       <div style="display:flex;gap:8px;align-items:flex-end">
-        <textarea id="ai-q" rows="2" style="flex:1;resize:vertical" placeholder="例）マンション50平米の原状回復。全室クロス張替え、床はCF。既存撤去・処分込み"></textarea>
-        <button class="btn btn-primary" id="ai-go" style="white-space:nowrap" onclick="runAiEst()">送信</button>
+        <textarea id="ai-q" rows="3" style="flex:1;resize:vertical" placeholder="例）マンション50平米の原状回復。全室クロス張替え、床はCF。既存撤去・処分込み"></textarea>
+        <button class="btn btn-primary" id="ai-go" style="white-space:nowrap" onclick="runAiEst()">提案してもらう</button>
       </div>
       <div id="ai-status" style="display:none;font-size:12px;text-align:center;padding:7px;margin-top:8px;border-radius:4px;line-height:1.6"></div>
-      <div style="font-size:10.5px;color:var(--ink-sub);margin-top:7px;line-height:1.6"><span style="color:var(--green);font-weight:700">実績</span>＝単価マスタの値、<span style="color:var(--accent);font-weight:700">過去</span>＝似た見積の値、<span style="color:var(--orange);font-weight:700">AI推定</span>＝実績なし（要確認）。直したいことをそのまま書けば明細が変わります。</div>
+      <div id="ai-legend" style="font-size:10.5px;color:var(--ink-sub);margin-top:7px;line-height:1.6">自社の単価マスタ・過去の見積から近いものを渡して提案させます。<span style="color:var(--green);font-weight:700">実績</span>＝単価マスタの値、<span style="color:var(--accent);font-weight:700">過去</span>＝似た見積の値、<span style="color:var(--orange);font-weight:700">AI推定</span>＝実績なし（要確認）。</div>
     </div>
 
     <div id="ai-foot" style="display:none;padding:12px 16px;border-top:1px solid var(--rule);gap:8px;align-items:center;background:var(--surface)">
@@ -2244,24 +2244,38 @@ const AI_ENDPOINT = 'https://matomeru-genba-ai.9q6xtwz22p.workers.dev';
 try { localStorage.removeItem('ck_ai_key'); } catch (e) {}   // 旧版で端末に残ったキーを消す
 function openAiEst() {
   document.getElementById('ai-modal').classList.add('open');
-  document.getElementById('ai-result').innerHTML =
-    '<div class="empty-state">工事の内容を書いて送信してください。<br>出てきた明細は、そのあと会話で直せます</div>';
+  document.getElementById('ai-result').innerHTML = '';
   document.getElementById('ai-log').innerHTML = '';
   document.getElementById('ai-foot').style.display = 'none';
   aiSetStatus('');
   aiProposal = null;
   aiTurns = [];
   aiPastRefs = [];
-  aiRenderChips();
+  aiSetPhase(false);
   setTimeout(() => document.getElementById('ai-q').focus(), 80);
 }
-// よく使う直しは打たずに押せるようにする
-const AI_CHIPS = ['養生を追加', '産廃処分を追加', '数量を見直して', '処分費は別途にして', '安いグレードで', '諸経費の項目を足して'];
-function aiRenderChips() {
-  const el = document.getElementById('ai-chips'); if (!el) return;
-  el.innerHTML = AI_CHIPS.map(t =>
-    `<button class="btn-sm" onclick="aiChip('${esc(t)}')">${esc(t)}</button>`).join('');
+// 提案前は「書いて出す」だけ。提案が出てはじめて、直すための道具を見せる。
+function aiSetPhase(hasResult) {
+  const q = document.getElementById('ai-q');
+  const chips = document.getElementById('ai-chips');
+  const log = document.getElementById('ai-log');
+  const legend = document.getElementById('ai-legend');
+  document.getElementById('ai-go').textContent = hasResult ? '直す' : '提案してもらう';
+  q.rows = hasResult ? 1 : 3;
+  q.placeholder = hasResult
+    ? '直したいところだけ書く（例：養生が抜けてる／クロスは120㎡）'
+    : '例）マンション50平米の原状回復。全室クロス張替え、床はCF。既存撤去・処分込み';
+  chips.style.display = hasResult ? 'flex' : 'none';
+  log.style.display = hasResult && aiTurns.length > 2 ? 'block' : 'none';
+  if (legend) legend.style.display = hasResult ? 'none' : 'block';
+  if (hasResult && !chips.dataset.done) {
+    chips.innerHTML = AI_CHIPS.map(t =>
+      `<button class="btn-sm" onclick="aiChip('${esc(t)}')">${esc(t)}</button>`).join('');
+    chips.dataset.done = '1';
+  }
 }
+// よく使う直しは打たずに押せるようにする
+const AI_CHIPS = ['養生を追加', '産廃処分を追加', '処分費は別途にして', '安いグレードで', '数量を見直して'];
 function aiChip(t) {
   const q = document.getElementById('ai-q');
   q.value = q.value ? q.value + '。' + t : t;
@@ -2333,6 +2347,7 @@ let aiPastRefs = [];     // 単価の上書きに使う過去見積（初回に�
 function aiPushTurn(role, text) {
   aiTurns.push({ role, text });
   const el = document.getElementById('ai-log'); if (!el) return;
+  if (aiTurns.length > 2) el.style.display = 'block';   // 直しに入ってから出す
   const who = role === 'user' ? 'あなた' : 'AI';
   const col = role === 'user' ? 'var(--ink)' : 'var(--accent)';
   el.insertAdjacentHTML('beforeend',
@@ -2563,6 +2578,7 @@ function aiRenderResult() {
   }
   el.innerHTML = html;
   document.getElementById('ai-foot').style.display = 'flex';
+  aiSetPhase(true);
   aiUpdateTotal();
 }
 function aiToggle(si, ii, on) {
