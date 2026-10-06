@@ -934,11 +934,15 @@ const loadTesseract = () => loadLib('ocr');
         <input type="text" id="exp-name-input" placeholder="項目名（例: 交通費）"
           style="flex:1;padding:10px 12px;border:1.5px solid var(--rule);border-radius:9px;font-size:14px;font-family:inherit;outline:none">
       </div>
-      <div style="margin-bottom:8px">
+      <div style="display:flex;gap:8px;margin-bottom:8px">
         <select id="exp-case-select"
-          style="width:100%;padding:10px 12px;border:1.5px solid var(--rule);border-radius:9px;font-size:14px;font-family:inherit;outline:none;background:var(--surface);color:var(--ink)">
-          <option value="">経費立て替え分</option>
+          style="flex:1;min-width:0;padding:10px 12px;border:1.5px solid var(--rule);border-radius:9px;font-size:14px;font-family:inherit;outline:none;background:var(--surface);color:var(--ink)">
+          <option value="">現場なし（共通経費）</option>
         </select>
+        <input type="text" id="exp-payer-input" list="exp-payer-list" placeholder="立替者（空欄＝会社払い）"
+          title="自腹で払った人の名前。書くと立替として精算待ちになります"
+          style="flex:1;min-width:0;padding:10px 12px;border:1.5px solid var(--rule);border-radius:9px;font-size:14px;font-family:inherit;outline:none">
+        <datalist id="exp-payer-list"></datalist>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
         <div style="position:relative;flex:1">
@@ -983,6 +987,7 @@ const loadTesseract = () => loadLib('ocr');
         </div>
       </div>
       <!-- 経費一覧 -->
+      <div id="exp-unsettled" style="display:none;background:var(--orange-soft);border:1px solid var(--rule);border-radius:4px;padding:11px 13px;margin-bottom:12px"></div>
       <div id="exp-list"></div>
     </div>
   </div>
@@ -1322,7 +1327,15 @@ const loadTesseract = () => loadLib('ocr');
         <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">経費管理（設定の一番上）</div>
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
           • ホームの<strong>「経費を記録」</strong>から直接ジャンプできます<br>
-          • 項目名・現場・金額を入れて「＋追加」<br>
+          • 項目名・現場・<strong>立替者</strong>・金額を入れて「＋追加」<br>
+          <br>
+          <strong style="color:var(--orange)">立替について</strong><br>
+          　<strong>立替者を空欄</strong>にすると、通常の経費（会社払い）として記録されます。<br>
+          　自腹で払ったときだけ<strong>名前を書いてください</strong>。立替として精算待ちになります。<br>
+          　（一度書いた名前は次から候補に出るので、打ち直す必要はありません）<br>
+          　・一覧の上に<strong>「未精算の立替」が人ごとに合計</strong>で出ます。誰にいくら返すかが一目で分かります<br>
+          　・返したら「<strong>精算</strong>」を押すと未精算から消えます。押し間違えても「戻す」で復帰します<br>
+          <br>
           • ボタンでレシートを撮影すると金額を自動読み取り（OCR）<br>
           • 月予算を設定すると、使用状況がバーで確認できます<br>
           • 月別・現場別に絞り込んで一覧できます
@@ -3936,13 +3949,25 @@ function addExpItem() {
   const now = new Date();
   const paidBy = userProfile.displayName || currentUser?.email || '';
   const caseId = document.getElementById('exp-case-select')?.value || '';
-  expItems.push({ id: Date.now(), name, amount, month: `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`, date: fmtDate(now), paidBy, caseId: caseId || null });
+  // 立替＝本人が自腹で払った分。会社払いと混ぜると精算漏れが起きるので分けて持つ
+  const payer  = (document.getElementById('exp-payer-input')?.value || '').trim();
+  expItems.push({ id: Date.now(), name, amount, month: `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`,
+                  date: fmtDate(now), paidBy, caseId: caseId || null,
+                  payer: payer || null, settled: false });
   nameEl.value = ''; amtEl.value = '';
   persist();
   renderExpenseTracker();
 }
 function deleteExpItem(id) {
   expItems = expItems.filter(e => e.id !== id);
+  persist();
+  renderExpenseTracker();
+}
+// 立替を精算済みにする（戻せるようにトグル）
+function toggleExpSettled(id) {
+  const e = expItems.find(x => x.id === id);
+  if (!e) return;
+  e.settled = !e.settled;
   persist();
   renderExpenseTracker();
 }
@@ -4006,21 +4031,56 @@ function renderExpenseTracker() {
   if (remainEl) remainEl.textContent = (isThisMonth && monthBudget > 0) ? (remain >= 0 ? `残り: ¥${commas(remain)}` : `超過: ¥${commas(Math.abs(remain))}`) : '';
   if (barEl) { barEl.style.width = pct + '%'; barEl.style.background = barColor; }
 
+  // 立替者は自由入力。2回目からは一度打った名前が候補に出る（打ち直さなくて済む）
+  const payList = document.getElementById('exp-payer-list');
+  if (payList) {
+    const names = [...new Set([
+      ...expItems.filter(e => e.payer).map(e => e.payer),
+      ...(workers || []).map(w => w.name)
+    ].filter(Boolean))];
+    payList.innerHTML = names.map(n => `<option value="${esc(n)}">`).join('');
+  }
+
+  // 未精算の立替（誰にいくら返すか）。フィルターに関係なく全期間で集計する
+  const unsettled = expItems.filter(e => e.payer && !e.settled);
+  const byPerson = {};
+  unsettled.forEach(e => { byPerson[e.payer] = (byPerson[e.payer] || 0) + e.amount; });
+  const sumEl = document.getElementById('exp-unsettled');
+  if (sumEl) {
+    if (!unsettled.length) { sumEl.style.display = 'none'; }
+    else {
+      sumEl.style.display = 'block';
+      const total = unsettled.reduce((s, e) => s + e.amount, 0);
+      sumEl.innerHTML =
+        `<div style="font-size:12px;font-weight:700;color:var(--orange);margin-bottom:6px">未精算の立替　合計 ¥${commas(total)}</div>` +
+        Object.entries(byPerson).sort((a,b)=>b[1]-a[1]).map(([n, v]) =>
+          `<div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0"><span>${esc(n)}</span><span style="font-weight:700">¥${commas(v)}</span></div>`
+        ).join('');
+    }
+  }
+
   const listEl = document.getElementById('exp-list');
   if (!listEl) return;
   if (!filtered.length) { listEl.innerHTML = '<div class="empty-state" style="padding:12px 0;font-size:13px">経費がありません</div>'; return; }
   listEl.innerHTML = [...filtered].reverse().map(e => {
     const linkedCase = e.caseId ? cases.find(c => c.id == e.caseId) : null;
+    const badge = !e.payer ? ''
+      : e.settled
+        ? '<span class="ai-b" style="background:var(--ink-sub)">精算済</span>'
+        : '<span class="ai-b" style="background:var(--orange)">立替</span>';
+    const btn = !e.payer ? ''
+      : `<button onclick="toggleExpSettled(${e.id})" class="btn-sm" style="flex-shrink:0;font-size:11px">${e.settled ? '戻す' : '精算'}</button>`;
     return `
-    <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--rule)">
+    <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--rule)">
       <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:600">${e.name}</div>
+        <div style="font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px">${esc(e.name)}${badge}</div>
         <div style="font-size:11px;color:var(--ink-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-          ${e.date||''}${e.paidBy ? ' · ' + e.paidBy : ''}${linkedCase ? ' · ' + linkedCase.name : ' · 立替'}
+          ${e.date||''}${e.payer ? ' · ' + esc(e.payer) + 'が立替' : ' · 会社払い'}${linkedCase ? ' · ' + esc(linkedCase.name) : ''}
         </div>
       </div>
-      <div style="font-size:14px;font-weight:700;color:var(--ink)">¥${commas(e.amount)}</div>
-      <button onclick="deleteExpItem(${e.id})" style="background:none;border:none;color:var(--ink-sub);font-size:16px;cursor:pointer;padding:2px 4px;line-height:1">×</button>
+      <div style="font-size:14px;font-weight:700;color:var(--ink);flex-shrink:0">¥${commas(e.amount)}</div>
+      ${btn}
+      <button onclick="deleteExpItem(${e.id})" style="background:none;border:none;color:var(--ink-sub);font-size:16px;cursor:pointer;padding:2px 4px;line-height:1;flex-shrink:0">×</button>
     </div>`;
   }).join('');
 }
@@ -4503,7 +4563,7 @@ function dismissBackupReminder() {
 
 // ===== 表示モード =====
 // 'estimate' … 見積・請求に特化（既定）  /  'full' … 現場管理も含む全機能
-function ckMode(){ return localStorage.getItem('ck_mode')||'estimate'; }
+function ckMode(){ return localStorage.getItem('ck_mode')||'full'; }
 function applyMode() {
   const full = ckMode()==='full';
   document.querySelectorAll('[data-full]').forEach(el=>{ el.style.display = full ? '' : 'none'; });
