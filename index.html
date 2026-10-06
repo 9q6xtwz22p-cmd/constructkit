@@ -279,6 +279,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic Pro
 .ai-b.past { background:var(--accent); }
 .ai-b.estimate { background:var(--orange); }
 .ai-b.edited { background:var(--ink-sub); }
+.ai-b.assumed { background:var(--red); }
 .ai-note { font-size:11px; color:var(--ink-sub); margin-top:3px; line-height:1.5; }
 .ai-assume { margin:10px 16px 14px; padding:10px 12px; background:var(--orange-soft); border-radius:9px; font-size:11.5px; line-height:1.7; }
 .past-secs { font-size:10.5px; color:var(--ink-sub); margin-top:4px; }
@@ -425,8 +426,7 @@ const loadTesseract = () => loadLib('ocr');
     <svg class="ic" viewBox="0 0 20 20"><use href="#i-plus"/></svg>
     <span>見積を作る</span>
   </button>
-  <button onclick="quickFromPast()" class="quick-secondary">
-    <svg class="ic" viewBox="0 0 20 20"><use href="#i-site"/></svg>
+  <button onclick="quickFromPast()" class="quick-secondary" style="display:none">
     <span>過去の見積から作る</span>
     <span class="quick-count" id="past-count"></span>
   </button>
@@ -543,20 +543,13 @@ const loadTesseract = () => loadLib('ocr');
       <div class="card-header">
         <h2>明細</h2>
         <div style="display:flex;gap:6px">
-          <button class="btn-sm accent" onclick="openAiEst()" title="工事内容を書くとAIが明細を提案">✨ AI</button>
-          <button class="btn-sm accent" onclick="openPastPicker()" title="過去の見積から明細を丸ごと読み込む"><svg class="ic" viewBox="0 0 20 20"><use href="#i-site"/></svg> 過去の見積</button>
-          <button class="btn-sm" onclick="openTemplatePicker()" title="テンプレートから読み込む"><svg class="ic" viewBox="0 0 20 20"><use href="#i-folder"/></svg> テンプレ</button>
+          <button class="btn-sm accent" onclick="openAiEst()" title="工事内容を書くとAIが明細を提案">AIで作る</button>
           <button class="btn-sm" onclick="saveEstTemplate()" title="現在の明細をテンプレートとして保存"><svg class="ic" viewBox="0 0 20 20"><use href="#i-save"/></svg> 保存</button>
         </div>
       </div>
-      <div class="quick-add" id="est-pkg-bar"></div>
-      <div id="past-hint" style="display:none;align-items:center;justify-content:space-between;gap:8px;padding:9px 16px;background:var(--accent-soft);border-bottom:1px solid var(--rule)">
-        <span style="font-size:12px;font-weight:700;color:var(--accent)"></span>
-        <div style="display:flex;gap:6px;flex-shrink:0">
-          <button class="btn-sm accent" onclick="openPastPicker()">見る</button>
-          <button class="btn-sm" onclick="this.closest('#past-hint').style.display='none'">✕</button>
-        </div>
-      </div>
+      <!-- 過去の見積・パッケージは選ばせず、AIへの材料として裏で使う -->
+      <div class="quick-add" id="est-pkg-bar" style="display:none"></div>
+      <div id="past-hint" style="display:none"></div>
       <div style="padding:0 16px" id="est-items"></div>
       <div class="totals-box">
         <div class="total-line"><span class="lbl">工事小計</span><span class="val" id="est-worksub">¥0</span></div>
@@ -1164,7 +1157,7 @@ const loadTesseract = () => loadLib('ocr');
         <button class="btn btn-primary" id="ai-go" style="white-space:nowrap" onclick="runAiEst()">提案してもらう</button>
       </div>
       <div id="ai-status" style="display:none;font-size:12px;text-align:center;padding:7px;margin-top:8px;border-radius:4px;line-height:1.6"></div>
-      <div id="ai-legend" style="font-size:10.5px;color:var(--ink-sub);margin-top:7px;line-height:1.6">自社の単価マスタ・過去の見積から近いものを渡して提案させます。<span style="color:var(--green);font-weight:700">実績</span>＝単価マスタの値、<span style="color:var(--accent);font-weight:700">過去</span>＝似た見積の値、<span style="color:var(--orange);font-weight:700">AI推定</span>＝実績なし（要確認）。</div>
+      <div id="ai-legend" style="font-size:10.5px;color:var(--ink-sub);margin-top:7px;line-height:1.6">自社の単価マスタ・過去の見積から近いものを渡して提案させます。バッジは<b>単価の出どころ</b>です（<span style="color:var(--green);font-weight:700">実績</span>＝単価マスタ、<span style="color:var(--accent);font-weight:700">過去</span>＝似た見積、<span style="color:var(--orange);font-weight:700">AI推定</span>＝実績なし）。<span style="color:var(--red);font-weight:700">数量はAIが置いた仮定</span>なので、必ず確認してください。</div>
     </div>
 
     <div id="ai-foot" style="display:none;padding:12px 16px;border-top:1px solid var(--rule);gap:8px;align-items:center;background:var(--surface)">
@@ -2221,19 +2214,9 @@ function showPastToast(msg) {
 }
 // 明細を数件入れた時点で「似た見積があります」と知らせる
 let pastHintShown=false;
-function maybeSuggestPast() {
-  if(pastHintShown) return;
-  const cur=currentItemIdx();
-  if(cur.size<3) return;
-  const hits=PASTDB().map(e=>({e,m:pastMatchRate(e,cur)})).filter(x=>x.m>=0.6);
-  if(!hits.length) return;
-  pastHintShown=true;
-  const bar=document.getElementById('past-hint');
-  if(bar){
-    bar.style.display='flex';
-    bar.querySelector('span').textContent=`似た過去の見積が ${hits.length}件あります`;
-  }
-}
+// 過去の見積は「選ばせるもの」ではなく「AIに渡す材料」。
+// 入力の途中で候補を出すと、見比べる手間のぶん遅くなるので声をかけない。
+function maybeSuggestPast() {}
 
 // ===== AI見積もり補助 =====
 // 自社の単価マスタ・過去の見積から近いものを渡して、Claudeに明細を提案させる。
@@ -2403,7 +2386,9 @@ ${history}
 
 # ルール
 - 原則として候補表の番号（idx）を使う。候補になければ idx を null にして品目名・単位・推定単価を書く（最小限に）。
-- 数量は依頼内容から算出する。書かれていなければ一般的な規模を仮定し、note か reply にその仮定を書く。
+- 数量は依頼内容から算出する。書かれていなければ一般的な規模を仮定する。
+- 各項目に qs を必ず付ける。依頼文に数量・広さが明記されていて計算で出せるなら "指定"、自分で仮定したなら "仮定"。
+- 単位が「式」の品目に1より大きい数量を入れない（式は一式で1）。
 - 初回は養生費・産廃処分・運搬費など、実際に必要になる付帯項目も入れる。
 - 2回目以降は「いまの明細」をベースに、言われた箇所だけを直す。関係ない項目は触らない。
 - 単価は書かなくてよい（idxがある品目は自社実績を使う）。候補にない品目だけ price を入れる。
@@ -2411,8 +2396,8 @@ ${history}
 
 # 出力（JSONのみ。前後に説明文を書かない）
 {"reply":"何をしたかを1〜2文で","ops":[
- {"op":"set","sections":[{"name":"解体工事","items":[{"idx":123,"qty":1,"note":""}]}]},
- {"op":"add","section":"内装工事","items":[{"idx":45,"qty":80,"note":""},{"idx":null,"name":"〇〇","unit":"式","qty":1,"price":30000,"note":"候補になし"}]},
+ {"op":"set","sections":[{"name":"解体工事","items":[{"idx":123,"qty":1,"qs":"仮定","note":""}]}]},
+ {"op":"add","section":"内装工事","items":[{"idx":45,"qty":80,"qs":"指定","note":""},{"idx":null,"name":"〇〇","unit":"式","qty":1,"qs":"仮定","price":30000,"note":"候補になし"}]},
  {"op":"remove","match":"産廃"},
  {"op":"qty","match":"クロス","qty":120},
  {"op":"price","match":"クロス","price":980},
@@ -2466,11 +2451,16 @@ function aiMakeItem(it, pastPrice, kind) {
   const ms = PDB().master;
   const idx = Number.isInteger(it.idx) ? it.idx : null;
   const m = idx != null ? ms[idx] : null;
-  const qty = Math.max(0, Number(it.qty) || 1);
+  let qty = Math.max(0, Number(it.qty) || 1);
+  // 単価が「一式いくら」の品目に数量を掛けると桁が飛ぶので、式は1に寄せる
+  const unit = m ? m.u : String(it.unit || '式');
+  if (/^(式|一式)$/.test(unit) && qty > 1) qty = 1;
+  // 数量が依頼文から出たのか、AIが置いた仮定なのかを持ち回る
+  const qs = it.qs === '指定' ? 'given' : 'assumed';
   if (m) {
     const fromPast = pastPrice[idx];
     return {
-      on: true, name: m.n, unit: m.u, qty,
+      on: true, name: m.n, unit: m.u, qty, qs,
       price: fromPast != null ? fromPast : priceOf(m, kind),
       src: fromPast != null ? 'past' : 'master',
       c: m.c, note: String(it.note || '')
@@ -2479,7 +2469,7 @@ function aiMakeItem(it, pastPrice, kind) {
   if (!it.name) return null;                         // 番号が無効で品目名もない → 捨てる
   return {
     on: true, name: String(it.name).slice(0, 60),
-    unit: String(it.unit || '式'), qty,
+    unit, qty, qs,
     price: Math.max(0, Number(it.price) || 0),
     src: 'estimate', c: 0, note: String(it.note || '')
   };
@@ -2554,16 +2544,19 @@ function aiRenderResult() {
   aiProposal.sections.forEach((sec, si) => {
     html += `<div class="ai-sec">${esc(sec.name || '未分類')}</div>`;
     sec.items.forEach((it, ii) => {
-      const sub = it.src === 'master' ? `実績${it.c}回`
-                : it.src === 'past'   ? '似た見積の単価'
+      const sub = it.src === 'master' ? `単価は実績${it.c}回`
+                : it.src === 'past'   ? '単価は似た見積から'
                 : it.src === 'edited' ? 'AIが単価を変更'
-                : '実績なし・要確認';
+                : '単価の実績なし';
+      // 数量はほぼ全部AIの当て推量。単価の出どころと混同させない
+      const qb = it.qs === 'given' ? '' : '<span class="ai-b assumed">数量は仮定</span>';
       html += `<label class="ai-item${it.on ? '' : ' off'}" data-ai="${si}-${ii}">
         <input type="checkbox" ${it.on ? 'checked' : ''} onchange="aiToggle(${si},${ii},this.checked)">
         <span style="flex:1;min-width:0">
           <span class="ai-n">${esc(it.name)}</span>
           <span class="ai-m">
             <span>${esc(String(it.qty))}${esc(it.unit)} × ¥${commas(it.price)}</span>
+            ${qb}
             <span class="ai-b ${it.src}">${lbl[it.src]}</span>
             <span>${sub}</span>
           </span>
@@ -2587,14 +2580,19 @@ function aiToggle(si, ii, on) {
   aiUpdateTotal();
 }
 function aiUpdateTotal() {
-  let sum = 0, n = 0, est = 0;
+  let sum = 0, n = 0, est = 0, asm = 0;
   aiProposal.sections.forEach(s => s.items.forEach(it => {
     if (!it.on) return;
     sum += Math.round(it.qty * it.price); n++;
     if (it.src === 'estimate') est++;
+    if (it.qs !== 'given') asm++;
   }));
+  const warn = [];
+  if (asm) warn.push(`数量が仮定 ${asm}件`);
+  if (est) warn.push(`単価の実績なし ${est}件`);
   document.getElementById('ai-total').innerHTML =
-    `${n}項目 ¥${commas(sum)}` + (est ? `<span style="font-weight:600;color:var(--orange);font-size:11px"> ／ AI推定 ${est}件</span>` : '');
+    `${n}項目 ¥${commas(sum)}` +
+    (warn.length ? `<span style="font-weight:600;color:var(--red);font-size:11px"> ／ 要確認 ${warn.join('・')}</span>` : '');
 }
 function applyAiEst(replace) {
   if (!aiProposal) return;
