@@ -1183,7 +1183,7 @@ const loadTesseract = () => loadLib('ocr');
         <div style="font-size:12px;color:var(--ink);line-height:1.9">
           このツールは既定で<strong>「見積・請求のみ」</strong>を表示しています。<br>
           現場管理（案件・配置表・写真・図面・経費・メンバー）を使いたいときは、<br>
-          placeholder="️設定 →「見積の設定」→ <strong>表示する機能</strong> を「全機能」に切り替えてください。<br>
+          「設定 →見積の設定」→ <strong>表示する機能</strong> を「全機能」に切り替えてください。<br>
           <span style="color:var(--ink-sub)">※ 隠れているだけで、登録済みのデータは消えていません</span>
         </div>
         <div style="font-size:13px;font-weight:700;color:var(--accent);margin:12px 0 6px">データの保存先</div>
@@ -1249,22 +1249,36 @@ const loadTesseract = () => loadLib('ocr');
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
           <strong>自動見積もり（2019〜2026年の見積書236件から）</strong><br>
           <br>
-          <strong style="color:var(--accent)">① 過去の見積から作る　← 一番速い</strong><br>
-          　ホームの「過去の見積から作る」、または明細の「過去の見積」を押すと、<br>
-          　<strong>207件の過去見積</strong>から選べます。選ぶと<strong>明細が丸ごと入ります</strong>。<br>
-          　あとは数量を現場に合わせて直すだけ。<br>
-          　・顧客名や工事名で検索できます<br>
-          　・工事の種類（造作・設備・電気…）で絞り込めます<br>
-          　<strong>・明細を3つ以上入れると「似た見積があります」と自動でお知らせします</strong><br>
-          　　（過去の見積と6割以上一致したとき。「見る」を押すと一致率順で出ます）<br>
+          <strong style="color:var(--accent)">① AIで作る　← 一番速い</strong><br>
+          　明細の「AIで作る」を押して、工事内容を文章で書くだけ。<br>
+          　<strong>単価マスタ2,666品目</strong>と<strong>過去見積207件</strong>を材料にして、明細を組み立てます。<br>
+          　過去の見積は裏で使われます。選ぶ手間はありません。<br>
           <br>
-          ② <strong>パッケージボタン</strong>：「ユニットバス改修」「塗装工事」などを押すと、定番の明細がまるごと入ります<br>
-          ③ <strong>品目サジェスト</strong>：項目名を打つと<strong>2,666品目</strong>の実績から候補が出ます。選ぶと<strong>単位・数量・単価が自動入力</strong><br>
+          　<strong>書き方</strong>　数量や広さを書くほど精度が上がります<br>
+          　　例）マンション原状回復。壁天井クロス張替え 150㎡、床CF 45㎡。既存撤去・処分込み<br>
+          <br>
+          　<strong>バッジの見方</strong>　バッジは<u>単価の出どころ</u>です<br>
+          　　<span style="color:var(--green);font-weight:700">実績</span>＝単価マスタの値　／　<span style="color:var(--accent);font-weight:700">過去</span>＝似た見積の値　／<br>
+          　　<span style="color:var(--orange);font-weight:700">AI推定</span>＝実績がない品目　／　<span style="color:var(--ink-sub);font-weight:700">変更</span>＝AIが単価を動かした<br>
+          　　<span style="color:var(--red);font-weight:700">数量は仮定</span>＝<strong>AIが勝手に置いた数字です。必ず確認してください</strong><br>
+          　　（依頼文に数量を書けばこの赤いバッジは消えます）<br>
+          <br>
+          　<strong>直す</strong>　提案が出たら、下の欄に直したいことだけ書いて「直す」<br>
+          　　例）養生が抜けてる ／ クロスは120㎡ ／ 仮設電気はいらない ／ 処分費は別途にして<br>
+          　　言った箇所だけが変わります。他の行は動きません。<br>
+          　　よく使う直しはボタンでも押せます<br>
+          <br>
+          　<strong>明細に入れる</strong>　チェックを外した行は入りません。<br>
+          　　「明細に追加」＝今の明細に足す　／　「置き換え」＝今の明細を消して入れ直す<br>
+          <br>
+          　※ 1回あたり5〜15円かかります。1日50回までで止まります<br>
+          <br>
+          ② <strong>品目サジェスト</strong>：項目名を打つと<strong>2,666品目</strong>の実績から候補が出ます。選ぶと<strong>単位・数量・単価が自動入力</strong><br>
           　候補の下に<strong>「直近 ／ 平均 ／ 中央」の3つのボタン</strong>が出るので、押した値が入ります。<br>
-          　どれを既定にするかは placeholder="️設定 →「見積の設定」で変えられます。<br>
+          　どれを既定にするかは「設定 →見積の設定」で変えられます。<br>
           　<span style="color:var(--orange);font-weight:700">「幅大」</span>と付いた品目は、現場によって金額の差が3倍以上ある項目です。平均を鵜呑みにせず確認してください<br>
           　※ 表記ゆれは統合済み。「産廃処分費」でも「産廃処分・運搬費」でも同じ候補が出ます<br>
-          ④ 合計欄の<strong>「▶ 経費・値引き」</strong>を開くと調整できます<br>
+          ③ 合計欄の<strong>「▶ 経費・値引き」</strong>を開くと調整できます<br>
           　・現場管理費／諸経費：% を入れると工事小計から自動計算（初期値 5% / 8%）<br>
           　・出精値引き：税込合計の端数を自動カットしてキリのいい金額に（千円／万円単位）<br>
           　※ 普段は畳んだままでOK。閉じていても自動で計算されています<br>
@@ -1277,11 +1291,11 @@ const loadTesseract = () => loadLib('ocr');
           • 「＋ 区分」で工事区分を作ると、区分ごとの小計が右に出ます<br>
           • 明細テンプレートの保存・読み込みでよく使う内容をすぐ呼び出し<br>
           • 仕入単価を入力すると粗利が自動計算されます<br>
-          • 「placeholder="」の印刷は<strong>表紙（大項目サマリ）＋ 工事区分ごとの内訳明細書</strong>の2階層。<br>
+          • 印刷は<strong>表紙（大項目サマリ）＋ 工事区分ごとの内訳明細書</strong>の2階層。<br>
           　従来の見積書フォーマット（ベージュの帯・罫線グリッド・振込先枠・ロゴ）をそのまま再現しています<br>
-          • 「placeholder="」ボタンでA4サイズの見積書を印刷・PDF保存<br>
-          • 「placeholder="」ボタンで<strong>メール送信・共有</strong>（スマホは共有シート、PCはメールソフトが開きます）<br>
-          • 「placeholder="」ボタンでExcelにエクスポートできます
+          • 「印刷」ボタンでA4サイズの見積書を印刷・PDF保存<br>
+          • 「共有」ボタンで<strong>メール送信・共有</strong>（スマホは共有シート、PCはメールソフトが開きます）<br>
+          • 「Excel」ボタンでエクスポートできます
         </div>
       </div>
 
@@ -1290,9 +1304,9 @@ const loadTesseract = () => loadLib('ocr');
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
           • 見積から明細を転記して請求書をすぐ作成<br>
           • ステータス管理：下書き → 送付済み → 入金済み<br>
-          • 「placeholder="」ボタンで請求書を印刷・PDF保存<br>
-          • 「placeholder="」ボタンで<strong>メール送信・共有</strong><br>
-          • 「placeholder="」ボタンでExcelにエクスポートできます
+          • 「印刷」ボタンで請求書を印刷・PDF保存<br>
+          • 「共有」ボタンで<strong>メール送信・共有</strong><br>
+          • 「Excel」ボタンでエクスポートできます
         </div>
       </div>
 
@@ -1305,7 +1319,7 @@ const loadTesseract = () => loadLib('ocr');
       </div>
 
       <div style="margin-bottom:18px">
-        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">経費管理（placeholder="️設定の一番上）</div>
+        <div style="font-size:13px;font-weight:700;border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px">経費管理（設定の一番上）</div>
         <div style="font-size:12px;color:var(--ink);line-height:1.9;padding-left:4px">
           • ホームの<strong>「経費を記録」</strong>から直接ジャンプできます<br>
           • 項目名・現場・金額を入れて「＋追加」<br>
@@ -1331,7 +1345,7 @@ const loadTesseract = () => loadLib('ocr');
           　記録はこの端末の中だけに残ります。CSVで書き出せます。<br>
           <br>
           <strong>その他の設定（▶ をタップで開く）</strong><br>
-          　placeholder="️ 自社情報　… 会社名・住所・TEL・許可番号・<strong>お振込み先・支払条件</strong>、<br>
+          　自社情報　… 会社名・住所・TEL・許可番号・<strong>お振込み先・支払条件</strong>、<br>
           　　それに<strong>会社ロゴと社印の画像</strong>も登録できます。<br>
           　　<strong>すべて見積書・請求書に印刷される情報</strong>なので、最初に1回だけ設定してください。未入力のときは設定画面の上に警告が出ます。<br>
           　チーム共有　… 招待コードで複数人とデータ共有<br>
@@ -1695,7 +1709,7 @@ function updateOrgUI() {
       const org = m.organizations;
       const isOwner = org.owner_id === currentUser?.id;
       return `<div style="background:var(--accent-soft);border-radius:12px;padding:16px;margin-bottom:12px">
-        <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:4px">TEAM MODE placeholder="</div>
+        <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:4px">TEAM MODE</div>
         <div style="font-size:16px;font-weight:700;margin-bottom:6px">${org.name}</div>
         <div style="font-size:12px;color:var(--ink-sub)">招待コード</div>
         <div style="font-size:22px;font-weight:800;letter-spacing:4px;color:var(--ink);margin-top:2px">${org.invite_code}</div>
@@ -2213,7 +2227,6 @@ function showPastToast(msg) {
   t.textContent=msg; t.style.display='block';
   clearTimeout(t._h); t._h=setTimeout(()=>{t.style.display='none'},4000);
 }
-// 明細を数件入れた時点で「似た見積があります」と知らせる
 let pastHintShown=false;
 // 過去の見積は「選ばせるもの」ではなく「AIに渡す材料」。
 // 入力の途中で候補を出すと、見比べる手間のぶん遅くなるので声をかけない。
