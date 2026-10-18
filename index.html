@@ -313,7 +313,8 @@ window.__libs = {};
 // integrity は sha384-... を入れるとCDN改ざん時に実行されなくなる（空なら検証なし）
 const LIBS = {
   xlsx: { src:'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', global:'XLSX',      integrity:'' },
-  ocr:  { src:'https://cdn.jsdelivr.net/npm/tesseract.js@4.1.4/dist/tesseract.min.js', global:'Tesseract', integrity:'' }
+  ocr:  { src:'https://cdn.jsdelivr.net/npm/tesseract.js@4.1.4/dist/tesseract.min.js', global:'Tesseract', integrity:'' },
+  pdf:  { src:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', global:'pdfjsLib', integrity:'' }
 };
 function loadLib(key) {
   const L = LIBS[key];
@@ -543,6 +544,7 @@ const loadTesseract = () => loadLib('ocr');
       <div class="card-header">
         <h2>明細</h2>
         <div style="display:flex;gap:6px">
+          <button class="btn-sm accent" onclick="openPlan()" title="平面図から室ごとの面積を拾う">図面から拾う</button>
           <button class="btn-sm accent" onclick="openAiEst()" title="工事内容を書くとAIが明細を提案">AIで作る</button>
           <button class="btn-sm" onclick="saveEstTemplate()" title="現在の明細をテンプレートとして保存"><svg class="ic" viewBox="0 0 20 20"><use href="#i-save"/></svg> 保存</button>
         </div>
@@ -992,6 +994,18 @@ const loadTesseract = () => loadLib('ocr');
     </div>
   </div>
 
+  <!-- 過去の見積を取り込む -->
+  <div class="card">
+    <div class="card-header"><h2>過去の見積を取り込む</h2></div>
+    <div class="card-body">
+      <div style="font-size:12.5px;color:var(--ink-sub);line-height:1.8;margin-bottom:12px">
+        見積書のPDFを読み込んで、<b style="color:var(--ink)">自社の単価マスタを育てます</b>。<br>
+        取り込むほど、AI見積が自社の実績に近づきます。
+      </div>
+      <button class="btn btn-primary" onclick="openImport()" style="width:100%;justify-content:center">見積書を取り込む</button>
+    </div>
+  </div>
+
   <!-- メンバー管理 -->
   <div class="card" data-full>
     <div class="card-header"><h2>メンバー管理</h2></div>
@@ -1140,6 +1154,78 @@ const loadTesseract = () => loadLib('ocr');
   </div>
 </div>
 
+<!-- 過去の見積を取り込む -->
+<div class="modal-backdrop" id="imp-modal">
+  <div class="modal-sheet" style="max-height:92vh;display:flex;flex-direction:column;padding:0">
+    <div class="modal-header" style="padding:14px 16px;margin:0;border-bottom:1px solid var(--rule)">
+      <h3 style="font-size:15px;font-weight:700">過去の見積を取り込む</h3>
+      <button class="btn-sm" onclick="closeImport()">閉じる</button>
+    </div>
+    <div style="overflow-y:auto;flex:1;padding:0 16px">
+      <div id="imp-stats" style="background:var(--head);border:1px solid var(--rule);border-radius:4px;padding:12px 14px;margin-top:12px"></div>
+      <div id="imp-result"></div>
+      <details style="margin:14px 0">
+        <summary style="font-size:12.5px;font-weight:700;cursor:pointer;padding:6px 0">データの管理</summary>
+        <div style="font-size:12.5px;line-height:1.9;padding:8px 0 0">
+          <label style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px">
+            <input type="checkbox" id="imp-seed" onchange="toggleSeed(this.checked)" style="margin-top:3px">
+            <span>同梱の単価データ（エークラフト実績 2,666品目・207件）を使う<br>
+            <span style="color:var(--ink-sub);font-size:11.5px">外すと、取り込んだ自社データだけで動きます</span></span>
+          </label>
+          <button class="btn-sm" onclick="clearOwnData()">取り込んだデータを削除</button>
+        </div>
+      </details>
+    </div>
+    <div style="padding:12px 16px;border-top:1px solid var(--rule);background:var(--surface)">
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="file" id="imp-file" accept="application/pdf" multiple style="flex:1;font-size:12px">
+        <button class="btn btn-primary" id="imp-go" onclick="runImport()" style="white-space:nowrap">取り込む</button>
+      </div>
+      <div id="imp-status" style="display:none;font-size:12px;text-align:center;padding:7px;margin-top:8px;border-radius:4px;line-height:1.6"></div>
+      <div style="font-size:10.5px;color:var(--ink-sub);margin-top:7px;line-height:1.6">
+        見積書のPDFから品目・単位・数量・単価を読み取り、<b>単価マスタに積み上げます</b>。同じ品目が複数回出てくると、直近単価・平均・中央値・実績回数が更新されます。<br>
+        表記ゆれは自動で統合します（「産廃処分費」と「産廃処分・運搬費」は同じ品目として扱われます）。<br>
+        1件あたり5〜15円。文字が入っていないスキャンPDFは読めません。
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 図面から数量を拾う -->
+<div class="modal-backdrop" id="plan-modal">
+  <div class="modal-sheet" style="max-height:92vh;display:flex;flex-direction:column;padding:0">
+    <div class="modal-header" style="padding:14px 16px;margin:0;border-bottom:1px solid var(--rule)">
+      <h3 style="font-size:15px;font-weight:700">図面から数量を拾う</h3>
+      <button class="btn-sm" onclick="closePlan()">閉じる</button>
+    </div>
+
+    <div id="plan-result" style="overflow-y:auto;flex:1;min-height:120px;padding:0 16px"></div>
+
+    <div style="padding:12px 16px;border-top:1px solid var(--rule);background:var(--surface)">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <input type="file" id="plan-file" accept="application/pdf,image/*" style="flex:1;font-size:12px">
+        <button class="btn btn-primary" id="plan-go" onclick="runPlan()" style="white-space:nowrap">読み取る</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--ink-sub)">
+        <label style="white-space:nowrap">天井高</label>
+        <input type="number" id="plan-ch" value="2400" min="1000" max="6000" step="50"
+          style="width:88px;padding:6px 8px;border:1.5px solid var(--rule);border-radius:4px;font-size:13px">
+        <span>mm　図面に記載があればそちらを優先します</span>
+      </div>
+      <div id="plan-status" style="display:none;font-size:12px;text-align:center;padding:7px;margin-top:8px;border-radius:4px;line-height:1.6"></div>
+      <div style="font-size:10.5px;color:var(--ink-sub);margin-top:7px;line-height:1.6">
+        平面図の<b>室名と寸法</b>を読み取って、床面積・周長・壁面積を室ごとに出します。計算はツール側で行うので、AIが数字を取り違えても金額には影響しません。<br>
+        <b>CADから出したPDF</b>が一番正確です。写真やスキャンでも読めますが要確認が増えます。
+      </div>
+    </div>
+
+    <div id="plan-foot" style="display:none;padding:12px 16px;border-top:1px solid var(--rule);gap:8px;align-items:center;background:var(--surface)">
+      <span id="plan-total" style="flex:1;font-size:13px;font-weight:800"></span>
+      <button class="btn-sm accent" onclick="planToAi()">この数量で見積を作る</button>
+    </div>
+  </div>
+</div>
+
 <!-- AI見積もり補助（相談しながら明細を作る） -->
 <div class="modal-backdrop" id="ai-modal">
   <div class="modal-sheet" style="max-height:92vh;display:flex;flex-direction:column;padding:0">
@@ -1278,7 +1364,17 @@ const loadTesseract = () => loadLib('ocr');
           <br>
           　※ 1回あたり5〜15円かかります。1日50回までで止まります<br>
           <br>
-          ② <strong>品目サジェスト</strong>：項目名を打つと<strong>2,666品目</strong>の実績から候補が出ます。選ぶと<strong>単位・数量・単価が自動入力</strong><br>
+          <strong style="color:var(--accent)">② 図面から拾う</strong><br>
+          　平面図があるときは、明細の「<strong>図面から拾う</strong>」から先に数量を出せます。<br>
+          　室名と寸法を読み取って、室ごとの<strong>床面積・周長・壁面積</strong>を算出します。<br>
+          　・<strong>CADから出したPDF</strong>が一番正確です（文字データを直接読むため）。写真やスキャンでも読めますが要確認が増えます<br>
+          　・<strong>計算はツール側で行います。</strong>AIには寸法を読ませるだけなので、桁を間違えることがありません<br>
+          　・使った寸法値が各室に表示されます。図面と見比べる手間が減ります<br>
+          　・図面に延床面積の記載があれば<strong>自動で検算</strong>します。5%以上ズレたら警告が出ます<br>
+          　・「この数量で見積を作る」でAI見積に渡ると、<strong>数量が「仮定」ではなくなります</strong>（赤いバッジが消えます）<br>
+          　※ LGSの本数やボードの枚数までは出ません。そこは実績単価で一式として拾ってください<br>
+          <br>
+          ③ <strong>品目サジェスト</strong>：項目名を打つと<strong>2,666品目</strong>の実績から候補が出ます。選ぶと<strong>単位・数量・単価が自動入力</strong><br>
           　候補の下に<strong>「直近 ／ 平均 ／ 中央」の3つのボタン</strong>が出るので、押した値が入ります。<br>
           　どれを既定にするかは「設定 →見積の設定」で変えられます。<br>
           　<span style="color:var(--orange);font-weight:700">「幅大」</span>と付いた品目は、現場によって金額の差が3倍以上ある項目です。平均を鵜呑みにせず確認してください<br>
@@ -1949,7 +2045,44 @@ function estAddRow(name='',unit='式',qty=1,price=0,cost=0) {
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 // ===== 単価マスタ・サジェスト =====
-const PDB = () => (window.CK_PRICE_DB || {master:[],packages:[]});
+// 単価マスタ＝同梱データ ＋ 自社で取り込んだ分。
+// 商品として他社に渡すときは同梱データを外せるよう、ここで切り替えられるようにしてある。
+let _pdbCache = null;
+function useSeedData() { return localStorage.getItem('ck_use_seed') !== 'off'; }
+function invalidatePdb() { _pdbCache = null; }
+const PDB = () => {
+  if (_pdbCache) return _pdbCache;
+  const seed = useSeedData() ? (window.CK_PRICE_DB || {master:[],packages:[]}) : {master:[],packages:[]};
+  const own  = ownPriceDB();
+  if (!own.master.length) { _pdbCache = seed; return seed; }
+  // 自社取り込み分を後ろに足す。indexは変えない（過去見積が参照しているため）
+  _pdbCache = { master: seed.master.concat(own.master), packages: seed.packages || [] };
+  return _pdbCache;
+};
+function ownPriceDB() {
+  try { return JSON.parse(localStorage.getItem('ck_own_price') || '{"master":[]}'); }
+  catch (e) { return { master: [] }; }
+}
+function saveOwnPriceDB(db) {
+  localStorage.setItem('ck_own_price', JSON.stringify(db));
+  invalidatePdb();
+}
+function ownPastDB() {
+  try { return JSON.parse(localStorage.getItem('ck_own_past') || '[]'); }
+  catch (e) { return []; }
+}
+function saveOwnPastDB(list) { localStorage.setItem('ck_own_past', JSON.stringify(list)); }
+
+// 表記ゆれを吸収するキー。「産廃処分費」と「産廃処分・運搬費」を同じものとして扱う。
+// 記号・括弧・空白・サイズ表記を落とし、全角英数を半角に寄せる。
+function normKey(name) {
+  return String(name || '')
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+    .replace(/[（(][^）)]*[）)]/g, '')
+    .replace(/[\s　・,，、。.／/\-－―ー~〜＋+]/g, '')
+    .replace(/[【】\[\]「」『』]/g, '')
+    .toLowerCase();
+}
 function sugSearch(q, limit=8) {
   q = (q||'').trim();
   const ms = PDB().master;
@@ -2143,7 +2276,7 @@ function clearMetrics() {
 }
 
 // ===== 過去の見積ライブラリ =====
-const PASTDB = () => (window.CK_PAST_DB?.estimates || []);
+const PASTDB = () => (useSeedData() ? (window.CK_PAST_DB?.estimates || []) : []).concat(ownPastDB());
 let pastFilter = '';
 
 // 現在の明細に入っている品目（マスタindex）の集合
@@ -2244,6 +2377,581 @@ let pastHintShown=false;
 // 過去の見積は「選ばせるもの」ではなく「AIに渡す材料」。
 // 入力の途中で候補を出すと、見比べる手間のぶん遅くなるので声をかけない。
 function maybeSuggestPast() {}
+
+// ===== 過去の見積を取り込んで単価マスタを育てる =====
+// 見積書のPDFを読んで、品目・単位・数量・単価を取り出し、自社の単価マスタに足す。
+// 同じ品目が複数回出てきたら、直近単価・平均・中央値・実績回数を更新する。
+// 使うほど自社の実績に近づく。他社に渡したときも、その会社の実績で育つ。
+let impQueue = [];     // 取り込み待ちのファイル
+let impResult = null;  // {files, newItems, updItems, estimates, skipped[]}
+
+function openImport() {
+  document.getElementById('imp-modal').classList.add('open');
+  document.getElementById('imp-result').innerHTML =
+    '<div class="empty-state">過去の見積書（PDF）を選んでください。<br>複数まとめて選べます</div>';
+  impSetStatus('');
+  impResult = null;
+  renderImportStats();
+}
+function closeImport() { document.getElementById('imp-modal').classList.remove('open'); }
+function impSetStatus(msg, kind) {
+  const el = document.getElementById('imp-status');
+  if (!msg) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.textContent = msg;
+  el.style.background = kind === 'err' ? 'var(--orange-soft)' : 'var(--accent-soft)';
+  el.style.color = kind === 'err' ? 'var(--ink)' : 'var(--accent)';
+}
+function renderImportStats() {
+  const el = document.getElementById('imp-stats'); if (!el) return;
+  const own = ownPriceDB(), past = ownPastDB();
+  const seedOn = useSeedData();
+  const seedM = (window.CK_PRICE_DB?.master || []).length;
+  const seedP = (window.CK_PAST_DB?.estimates || []).length;
+  el.innerHTML = `
+    <div style="display:flex;gap:18px;font-size:12.5px;line-height:1.8;flex-wrap:wrap">
+      <div><b>取り込み済み</b><br>品目 ${commas(own.master.length)}件　見積 ${commas(past.length)}件</div>
+      <div><b>同梱データ</b><br>${seedOn ? `品目 ${commas(seedM)}件　見積 ${commas(seedP)}件` : '使わない設定'}</div>
+      <div><b>合計で使える</b><br>品目 ${commas(PDB().master.length)}件　見積 ${commas(PASTDB().length)}件</div>
+    </div>`;
+}
+
+// PDFから文字を取り出す（全ページ）
+async function impReadPdf(file) {
+  const pdfjs = await loadLib('pdf');
+  pdfjs.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
+  let out = [];
+  for (let p = 1; p <= Math.min(doc.numPages, 8); p++) {
+    const tc = await (await doc.getPage(p)).getTextContent();
+    out.push(tc.items.map(i => i.str).join(' '));
+  }
+  return out.join('\n').replace(/[ \t]+/g, ' ').trim();
+}
+
+async function runImport() {
+  const files = [...document.getElementById('imp-file').files];
+  if (!files.length) { impSetStatus('PDFを選んでください', 'err'); return; }
+  const btn = document.getElementById('imp-go');
+  btn.disabled = true;
+  const res = { files: 0, newItems: 0, updItems: 0, estimates: 0, skipped: [] };
+
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    impSetStatus(`${i + 1}/${files.length} 件目を読み取っています… ${f.name}`);
+    try {
+      const text = await impReadPdf(f);
+      if (text.length < 50) throw new Error('文字を取り出せません（スキャンPDFの可能性）');
+      const parsed = await impParseOne(text.slice(0, 20000));
+      const n = impMerge(parsed);
+      res.files++; res.newItems += n.added; res.updItems += n.updated; res.estimates += n.est;
+    } catch (e) {
+      res.skipped.push({ name: f.name, why: e.message || '読み取り失敗' });
+    }
+  }
+  impResult = res;
+  impSetStatus('');
+  renderImportResult();
+  renderImportStats();
+  refreshAll();
+  btn.disabled = false;
+}
+
+// 1件ぶんの見積書テキストを、構造に起こす
+async function impParseOne(text) {
+  const prompt = `添付は内装・リフォーム工事の見積書から取り出した文字です。構造に起こしてください。
+
+# 見積書の文字
+${text}
+
+# ルール
+- 明細の1行ごとに 品目名・単位・数量・単価 を取り出す。
+- 金額しか書かれていない行は、数量と単価が分かる場合だけ入れる。分からなければ飛ばす。
+- 小計・合計・消費税・値引き・現場管理費・諸経費の行は明細に入れない（これらは別に集計される）。
+- 工事区分（「解体工事」「内装工事」など）でまとめる。区分が無ければ "未分類"。
+- 数量と単価は数字だけにする（カンマや円は外す）。
+- 読み取れない行は捨てる。推測で数字を作らないこと。
+
+# 出力（JSONのみ。前後に説明文を書かない）
+{"client":"顧客名","project":"工事名","date":"2026-09","total":1673500,
+ "groups":[{"name":"内装工事","items":[{"n":"クロス貼り施工","u":"㎡","q":120,"p":1250}]}]}`;
+
+  const res = await fetch(AI_ENDPOINT, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ prompt })
+  });
+  if (!res.ok) {
+    let d = ''; try { d = (await res.json()).error || ''; } catch (e) {}
+    throw new Error(d || `AIに接続できませんでした（${res.status}）`);
+  }
+  const data = await res.json();
+  const t = (data.content || []).map(c => c.text || '').join('');
+  const m = t.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error('見積書として読み取れませんでした');
+  return JSON.parse(m[0]);
+}
+
+// 取り込んだ1件を、単価マスタと過去見積に反映する
+function impMerge(p) {
+  const seedLen = useSeedData() ? (window.CK_PRICE_DB?.master || []).length : 0;
+  // PDB()が返す配列を直接いじる。別で読み直すと、更新した内容が保存されない。
+  const all = PDB().master.slice();
+  const byKey = new Map();
+  all.forEach((m, i) => { const k = normKey(m.n); if (!byKey.has(k)) byKey.set(k, { m, i }); });
+
+  let added = 0, updated = 0;
+  const groups = [];
+  (p.groups || []).forEach(g => {
+    const items = [];
+    (g.items || []).forEach(it => {
+      const name = String(it.n || '').trim().slice(0, 60);
+      const qty  = Number(it.q) || 0;
+      const price = Math.round(Number(it.p) || 0);
+      if (!name || price <= 0) return;
+      const unit = String(it.u || '式').slice(0, 6);
+      const key = normKey(name);
+      const hit = byKey.get(key);
+      if (hit) {
+        // 既存品目：直近単価を更新し、実績として積む
+        const m = hit.m;
+        const hist = (m.hist || []).concat(price).slice(-40);
+        m.hist = hist; m.p = price; m.c = (m.c || 0) + 1;
+        m.av = Math.round(hist.reduce((s, v) => s + v, 0) / hist.length);
+        const sorted = [...hist].sort((a, b) => a - b);
+        m.md = sorted[Math.floor(sorted.length / 2)];
+        m.lo = Math.min(m.lo != null ? m.lo : price, price);
+        m.hi = Math.max(m.hi != null ? m.hi : price, price);
+        updated++;
+        items.push([hit.i, qty, price]);
+      } else {
+        // 新しい品目として自社マスタに足す
+        const m = { n: name, u: unit, c: 1, p: price, av: price, md: price, lo: price, hi: price, hist: [price] };
+        const idx = all.length;
+        all.push(m);
+        byKey.set(key, { m, i: idx });
+        added++;
+        items.push([idx, qty, price]);
+      }
+    });
+    if (items.length) groups.push({ n: String(g.name || '未分類').slice(0, 30), i: items });
+  });
+
+  // 同梱分は書き換えられないので、変更点だけ別に持つ。自社分はそのまま保存。
+  saveOwnPriceDB({ master: all.slice(seedLen), over: impCollectOverrides(all, seedLen) });
+
+  let est = 0;
+  const total = Math.round(Number(p.total) || 0);
+  const nItems = groups.reduce((s, g) => s + g.i.length, 0);
+  if (nItems) {
+    const list = ownPastDB();
+    const title = [p.client, p.project].filter(Boolean).join('　').slice(0, 60) || '取り込んだ見積';
+    // 同じ内容を二重に取り込まない
+    if (!list.some(e => e.t === title && e.s === total)) {
+      list.push({ t: title, d: String(p.date || '').slice(0, 7), n: nItems, s: total, g: groups });
+      saveOwnPastDB(list);
+      est = 1;
+    }
+  }
+  invalidatePdb();
+  return { added, updated, est };
+}
+// 同梱マスタに加えた変更を、別で保存しておく（同梱ファイルは書き換えられないため）
+function impCollectOverrides(all, seedLen) {
+  const o = {};
+  for (let i = 0; i < seedLen && i < all.length; i++) {
+    const m = all[i];
+    if (m.hist) o[i] = { p: m.p, av: m.av, md: m.md, lo: m.lo, hi: m.hi, c: m.c, hist: m.hist };
+  }
+  return o;
+}
+// 起動時、保存しておいた上書きを同梱マスタに当て直す
+function applyPriceOverrides() {
+  const own = ownPriceDB();
+  const ms = window.CK_PRICE_DB?.master;
+  if (!own.over || !ms) return;
+  Object.entries(own.over).forEach(([i, v]) => { if (ms[i]) Object.assign(ms[i], v); });
+  invalidatePdb();
+}
+
+function renderImportResult() {
+  const r = impResult; if (!r) return;
+  const el = document.getElementById('imp-result');
+  el.innerHTML = `
+    <div style="background:var(--green-soft);border:1px solid var(--rule);border-radius:4px;padding:13px 15px;margin:12px 0;line-height:1.9;font-size:13px">
+      <b style="font-size:14px">${r.files}件を取り込みました</b><br>
+      新しい品目　<b>${commas(r.newItems)}件</b><br>
+      単価を更新した品目　<b>${commas(r.updItems)}件</b><br>
+      過去見積に追加　<b>${commas(r.estimates)}件</b>
+    </div>
+    ${r.skipped.length ? `<div style="background:var(--orange-soft);border:1px solid var(--rule);border-radius:4px;padding:11px 14px;font-size:12.5px;line-height:1.8">
+      <b>読み取れなかったファイル ${r.skipped.length}件</b><br>
+      ${r.skipped.map(s => `${esc(s.name)}　<span style="color:var(--ink-sub)">${esc(s.why)}</span>`).join('<br>')}
+    </div>` : ''}`;
+}
+
+// 取り込んだデータを消す（売り物にする前の初期化にも使う）
+function clearOwnData() {
+  if (!confirm('取り込んだ単価と見積をすべて削除します。よろしいですか')) return;
+  localStorage.removeItem('ck_own_price');
+  localStorage.removeItem('ck_own_past');
+  invalidatePdb();
+  renderImportStats();
+  refreshAll();
+  showPastToast('取り込んだデータを削除しました');
+}
+function toggleSeed(on) {
+  localStorage.setItem('ck_use_seed', on ? 'on' : 'off');
+  invalidatePdb();
+  renderImportStats();
+  refreshAll();
+}
+
+// ===== 図面から数量を拾う =====
+// 設計の肝は3つ。
+//  1. AIには「読む」ことだけさせ、面積・周長・壁の計算はこちらでやる（桁間違いを起こさない）
+//  2. 室は矩形の集まりで持つ。L字の部屋は矩形2つに分けて同じ名前にすれば面積が合算される
+//  3. 読み取った形を元の図面に重ねて見せる。数字を見比べるより、ズレに気づくのが速い
+let planRooms = null;   // [{name,rects,ch,openings,area,peri,wall,openArea,ev,sure,on}]
+let planMeta  = null;   // {title,scale,statedArea,pxPerM,origin,img,scaleChecks,hasText,pages}
+
+function openPlan() {
+  document.getElementById('plan-modal').classList.add('open');
+  document.getElementById('plan-result').innerHTML =
+    '<div class="empty-state">平面図を選んで「読み取る」を押してください</div>';
+  document.getElementById('plan-foot').style.display = 'none';
+  planSetStatus('');
+  planRooms = null; planMeta = null;
+}
+function closePlan() { document.getElementById('plan-modal').classList.remove('open'); }
+function planSetStatus(msg, kind) {
+  const el = document.getElementById('plan-status');
+  if (!msg) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.textContent = msg;
+  el.style.background = kind === 'err' ? 'var(--orange-soft)' : 'var(--accent-soft)';
+  el.style.color = kind === 'err' ? 'var(--ink)' : 'var(--accent)';
+}
+
+// ---- 幾何：矩形の集まりから面積と外周を出す ----
+// 面積はそのまま足す（矩形同士は重ならない前提。重なりはAI側で分けさせる）
+function rectsArea(rects) {
+  return rects.reduce((s, r) => s + Math.abs((r[2] - r[0]) * (r[3] - r[1])), 0);
+}
+// 外周＝各矩形の辺のうち、同じ部屋の別の矩形と接していない部分の合計。
+// これでL字でも正しい巾木の長さが出る（内側の継ぎ目は数えない）。
+function rectsPerimeter(rects) {
+  const ov = (a0, a1, b0, b1) => Math.max(0, Math.min(a1, b1) - Math.max(a0, b0));
+  let total = 0;
+  rects.forEach((r, i) => {
+    const [x0, y0, x1, y1] = r;
+    let top = x1 - x0, bottom = x1 - x0, left = y1 - y0, right = y1 - y0;
+    rects.forEach((o, j) => {
+      if (i === j) return;
+      if (o[3] === y0) top    -= ov(x0, x1, o[0], o[2]);   // 上辺に別の矩形が接している
+      if (o[1] === y1) bottom -= ov(x0, x1, o[0], o[2]);
+      if (o[2] === x0) left   -= ov(y0, y1, o[1], o[3]);
+      if (o[0] === x1) right  -= ov(y0, y1, o[1], o[3]);
+    });
+    total += Math.max(0, top) + Math.max(0, bottom) + Math.max(0, left) + Math.max(0, right);
+  });
+  return total;
+}
+
+// ---- 図面を開く ----
+async function planReadPdf(file) {
+  const pdfjs = await loadLib('pdf');
+  pdfjs.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
+  const page = await doc.getPage(1);
+  let items = [];
+  try {
+    const tc = await page.getTextContent();
+    items = tc.items.filter(it => String(it.str || '').trim())
+      .map(it => ({ s: String(it.str).trim(), x: Math.round(it.transform[4]), y: Math.round(it.transform[5]) }));
+  } catch (e) { items = []; }
+  const vp0 = page.getViewport({ scale: 1 });
+  const scale = Math.min(2200 / vp0.width, 2200 / vp0.height, 3);
+  const vp = page.getViewport({ scale });
+  const cv = document.createElement('canvas');
+  cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+  await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+  return { items, b64: cv.toDataURL('image/png').split(',')[1], media: 'image/png',
+           pages: doc.numPages, w: cv.width, h: cv.height, url: cv.toDataURL('image/png') };
+}
+function planReadImage(file) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(2200 / img.width, 2200 / img.height, 1);
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      const url = cv.toDataURL('image/png');
+      res({ items: [], b64: url.split(',')[1], media: 'image/png', pages: 1, w: cv.width, h: cv.height, url });
+    };
+    img.onerror = () => rej(new Error('画像を開けませんでした'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+async function runPlan() {
+  const f = document.getElementById('plan-file').files[0];
+  if (!f) { planSetStatus('平面図のファイルを選んでください', 'err'); return; }
+  const btn = document.getElementById('plan-go');
+  btn.disabled = true;
+  document.getElementById('plan-foot').style.display = 'none';
+  planSetStatus('図面を読み込んでいます…');
+  try {
+    const isPdf = /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name);
+    const src = isPdf ? await planReadPdf(f) : await planReadImage(f);
+    planSetStatus('AIに室の形と寸法を読み取らせています…');
+    const defCh = parseInt(document.getElementById('plan-ch').value) || 2400;
+
+    const textBlock = src.items.length
+      ? '# 図面から抽出した文字（座標つき。x右・y上、単位pt）\n' +
+        src.items.slice(0, 1200).map(it => `${it.x},${it.y}\t${it.s}`).join('\n')
+      : '（文字データを取り出せませんでした。画像だけを見て読み取ってください）';
+
+    const prompt = `添付は内装工事の平面図です。室の形と寸法を読み取ってください。画像サイズは ${src.w} × ${src.h} px です。
+
+${textBlock}
+
+# 座標のきめごと
+- 単位は mm。原点は建物の北西角（図面の左上の角）。x は右へ＋、y は下へ＋。
+- 室は**矩形の集まり**で表す。L字や凹みのある室は、矩形を2つ3つに分けて書く（面積は合算される）。
+- 1つの室の矩形どうしは重ねない。辺で接するように分ける。
+
+# やること
+- 内装工事の対象になる室をすべて拾う。階段・EV・PS・EPSなど対象外は入れない。
+- 室ごとに rects（矩形の配列）、ch（天井高mm。図面になければ null）、
+  openings（その室に付く建具・窓。[{n:"会議室1扉", w:800, h:2030, q:1}]）を書く。
+- ev に、どの寸法値を使ったかを短く書く。
+- 自信がなければ sure を false。**推測で数字を作らないこと。**
+- 読み取れない室は rects を空にして sure を false、ev に理由を書く。
+
+# 縮尺（重なり表示に使う）
+- px_per_m … 画像1px が実寸何mか。図面の寸法値と画像上の長さから求める。
+- origin_px … 原点（建物の北西角）が画像のどこにあるか [x, y]（px）。
+- scale_checks … 縮尺の根拠を**2つ以上**。例 [{"how":"上の寸法 4730","px_per_m":78.2},{"how":"右の寸法 3530","px_per_m":77.9}]
+  2つの値が食い違うなら、読み違いの可能性が高い。正直に両方書くこと。
+
+# 大事なこと
+- **面積の計算はしないでください。** 座標を書くだけでいい。計算はこちらでやります。
+- 図面に延床面積・施工面積の記載があれば total に㎡で入れる。無ければ 0。
+
+# 出力（JSONのみ。前後に説明文を書かない）
+{"title":"図面名","scale":"1/50","total":0,"px_per_m":78.2,"origin_px":[132,160],
+ "scale_checks":[{"how":"上の寸法 4730","px_per_m":78.2},{"how":"右の寸法 3530","px_per_m":77.9}],
+ "rooms":[{"name":"会議室1","rects":[[0,0,2363,2268]],"ch":2300,
+   "openings":[{"n":"会議室1扉","w":800,"h":2030,"q":1}],
+   "ev":"上の寸法2363、右の寸法2268","sure":true}]}`;
+
+    const res = await fetch(AI_ENDPOINT, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ prompt, images: [{ media_type: src.media, data: src.b64 }] })
+    });
+    if (!res.ok) {
+      let detail = ''; try { detail = (await res.json()).error || ''; } catch (e) {}
+      throw new Error(detail || `AIに接続できませんでした（${res.status}）`);
+    }
+    const data = await res.json();
+    const text = (data.content || []).map(c => c.text || '').join('');
+    const m = text.match(/\{[\s\S]*\}/);
+    if (!m) throw new Error('図面を読み取れませんでした。別のページや解像度でお試しください');
+    planBuild(JSON.parse(m[0]), defCh, src);
+    planSetStatus('');
+    planRender();
+  } catch (e) {
+    planSetStatus(e.message || '読み取りに失敗しました', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// AIが読んだ座標から、面積・外周・壁面積を計算する。計算はすべてここ。
+function planBuild(raw, defCh, src) {
+  planMeta = {
+    title: String(raw.title || '').slice(0, 60),
+    scale: String(raw.scale || '').slice(0, 20),
+    statedArea: Number(raw.total) || 0,
+    pxPerM: Number(raw.px_per_m) || 0,
+    origin: Array.isArray(raw.origin_px) ? raw.origin_px.map(Number) : null,
+    scaleChecks: (raw.scale_checks || []).slice(0, 4).map(c =>
+      ({ how: String(c.how || '').slice(0, 40), v: Number(c.px_per_m) || 0 })).filter(c => c.v > 0),
+    img: src.url, imgW: src.w, imgH: src.h,
+    hasText: src.items.length > 0, pages: src.pages || 1
+  };
+  planRooms = (raw.rooms || []).map(r => {
+    const rects = (r.rects || [])
+      .map(a => (a || []).map(Number))
+      .filter(a => a.length === 4 && a.every(v => Number.isFinite(v)))
+      .map(([a, b, c, d]) => [Math.min(a, c), Math.min(b, d), Math.max(a, c), Math.max(b, d)])
+      .filter(a => a[2] > a[0] && a[3] > a[1]);
+    const ch = Number(r.ch) || defCh;
+    const area = +(rectsArea(rects) / 1e6).toFixed(2);          // mm² → ㎡
+    const peri = +(rectsPerimeter(rects) / 1000).toFixed(1);     // mm → m
+    const openings = (r.openings || []).map(o => ({
+      n: String(o.n || '開口').slice(0, 24),
+      w: Number(o.w) || 0, h: Number(o.h) || 0, q: Math.max(1, Number(o.q) || 1)
+    })).filter(o => o.w > 0 && o.h > 0);
+    const openArea = +(openings.reduce((s, o) => s + o.w * o.h * o.q, 0) / 1e6).toFixed(1);
+    const wallRaw = peri * ch / 1000;
+    return {
+      name: String(r.name || '').slice(0, 30) || '室',
+      rects, ch, area, peri, openings, openArea,
+      wall: +Math.max(0, wallRaw - openArea).toFixed(1),   // 開口を引いた壁面積
+      wallRaw: +wallRaw.toFixed(1),
+      ev: String(r.ev || '').slice(0, 80),
+      sure: r.sure !== false && area > 0,
+      on: area > 0
+    };
+  }).filter(r => r.name);
+}
+
+// 読み取った形を元の図面に重ねて描く。数字を見比べるより、ズレに気づくのが速い。
+function planOverlay() {
+  const m = planMeta;
+  if (!m || !m.img || !m.pxPerM || !m.origin) return '';
+  const toPx = (mm) => mm / 1000 * m.pxPerM;
+  const shapes = planRooms.filter(r => r.on).map((r, i) => {
+    const col = r.sure ? 'rgba(28,79,124,.22)' : 'rgba(155,50,38,.26)';
+    const line = r.sure ? '#1c4f7c' : '#9b3226';
+    const rects = r.rects.map(([x0, y0, x1, y1]) =>
+      `<rect x="${(m.origin[0] + toPx(x0)).toFixed(1)}" y="${(m.origin[1] + toPx(y0)).toFixed(1)}"
+             width="${toPx(x1 - x0).toFixed(1)}" height="${toPx(y1 - y0).toFixed(1)}"
+             fill="${col}" stroke="${line}" stroke-width="2"/>`).join('');
+    const c = r.rects[0];
+    const cx = m.origin[0] + toPx((c[0] + c[2]) / 2);
+    const cy = m.origin[1] + toPx((c[1] + c[3]) / 2);
+    return rects + `<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" font-size="${Math.max(13, m.imgW/60).toFixed(0)}"
+        fill="${line}" text-anchor="middle" font-weight="700"
+        paint-order="stroke" stroke="#fff" stroke-width="4">${esc(r.name)}</text>`;
+  }).join('');
+  return `<div style="margin:12px 0">
+    <div style="font-size:12px;font-weight:700;margin-bottom:6px">読み取った形を元の図面に重ねたもの</div>
+    <div style="border:1px solid var(--rule);background:#fff;overflow:auto;max-height:420px">
+      <svg viewBox="0 0 ${m.imgW} ${m.imgH}" style="width:100%;display:block">
+        <image href="${m.img}" x="0" y="0" width="${m.imgW}" height="${m.imgH}"/>
+        ${shapes}
+      </svg>
+    </div>
+    <div style="font-size:11.5px;color:var(--ink-sub);margin-top:5px;line-height:1.6">
+      枠が実際の室とズレていたら、その室の数量は信用できません。<span style="color:var(--red)">赤</span>は要確認の室です。
+    </div></div>`;
+}
+
+function planRender() {
+  const el = document.getElementById('plan-result');
+  if (!planRooms || !planRooms.length) {
+    el.innerHTML = '<div class="empty-state">室を読み取れませんでした。<br>平面図のページを指定するか、解像度を上げてお試しください</div>';
+    return;
+  }
+  const sum = planRooms.filter(r => r.on).reduce((s, r) => s + r.area, 0);
+  const ng = planRooms.filter(r => !r.sure);
+
+  // 検算1：縮尺の根拠が2つ以上あるか、食い違っていないか
+  let scaleBox = '';
+  const cks = planMeta.scaleChecks || [];
+  if (cks.length >= 2) {
+    const vs = cks.map(c => c.v);
+    const spread = (Math.max(...vs) - Math.min(...vs)) / (vs.reduce((a, b) => a + b, 0) / vs.length) * 100;
+    const okay = spread <= 2;
+    scaleBox = `<div style="background:${okay ? 'var(--green-soft)' : 'var(--red-soft)'};border:1px solid var(--rule);border-radius:4px;padding:10px 12px;margin:10px 0;font-size:12.5px;line-height:1.7">
+      <b>縮尺の照合</b>　${cks.map(c => `${esc(c.how)} → ${c.v.toFixed(1)}px/m`).join('　／　')}<br>
+      ばらつき ${spread.toFixed(1)}%　${okay ? '一致しています' : '<b style="color:var(--red)">食い違っています。寸法の読み違いが疑われます</b>'}
+    </div>`;
+  } else {
+    scaleBox = `<div style="background:var(--head);border:1px solid var(--rule);border-radius:4px;padding:10px 12px;margin:10px 0;font-size:12.5px">
+      縮尺の根拠が1つしか取れませんでした。読み違いがあっても気づけません</div>`;
+  }
+
+  // 検算2：床面積の合計と、図面に書かれている面積
+  let areaBox = '';
+  if (planMeta.statedArea > 0) {
+    const diff = sum - planMeta.statedArea;
+    const pct = Math.abs(diff) / planMeta.statedArea * 100;
+    const okay = pct <= 5;
+    areaBox = `<div style="background:${okay ? 'var(--green-soft)' : 'var(--red-soft)'};border:1px solid var(--rule);border-radius:4px;padding:10px 12px;margin:10px 0;font-size:12.5px;line-height:1.7">
+      <b>面積の照合</b>　読み取り ${sum.toFixed(2)}㎡ ／ 図面の記載 ${planMeta.statedArea.toFixed(2)}㎡　
+      差 ${diff >= 0 ? '+' : ''}${diff.toFixed(2)}㎡（${pct.toFixed(1)}%）<br>
+      ${okay ? '一致しています' : '<b style="color:var(--red)">ズレています。拾い漏れか読み違いの可能性があります</b>'}
+    </div>`;
+  } else {
+    areaBox = `<div style="background:var(--head);border:1px solid var(--rule);border-radius:4px;padding:10px 12px;margin:10px 0;font-size:12.5px">
+      図面に延床面積の記載が無いため、面積の照合はできていません</div>`;
+  }
+
+  const head = `<div style="padding:12px 0 0">
+    <div style="font-size:14px;font-weight:700">${esc(planMeta.title || '平面図')}</div>
+    <div style="font-size:11.5px;color:var(--ink-sub);margin-top:3px">
+      ${planMeta.scale ? '縮尺 ' + esc(planMeta.scale) + '　' : ''}${planRooms.length}室を認識
+      ${planMeta.hasText ? '　／　PDFの文字データから読み取り' : '　／　画像から読み取り（精度が落ちます）'}
+      ${planMeta.pages > 1 ? `　／　1ページ目のみ（全${planMeta.pages}ページ）` : ''}
+    </div></div>`;
+
+  const rows = planRooms.map((r, i) => {
+    const shape = r.rects.length > 1 ? `<span class="ai-b" style="background:var(--accent);margin-left:6px">矩形${r.rects.length}個</span>` : '';
+    const op = r.openings.length
+      ? `<span class="ai-note">開口 ${r.openings.map(o => `${esc(o.n)} ${o.w}×${o.h}${o.q > 1 ? '×' + o.q : ''}`).join('、')}　計 ${r.openArea.toFixed(1)}㎡を控除</span>` : '';
+    return `
+    <label class="ai-item${r.on ? '' : ' off'}" style="display:flex;gap:9px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--rule)">
+      <input type="checkbox" ${r.on ? 'checked' : ''} ${r.area ? '' : 'disabled'} onchange="planToggle(${i},this.checked)">
+      <span style="flex:1;min-width:0">
+        <span class="ai-n">${esc(r.name)}${r.sure ? '' : '<span class="ai-b assumed" style="margin-left:6px">要確認</span>'}${shape}</span>
+        <span class="ai-m">
+          <span>${r.area ? `天井高 ${commas(r.ch)}` : '寸法を読めず'}</span>
+        </span>
+        ${r.ev ? `<span class="ai-note">${esc(r.ev)}</span>` : ''}
+        ${op}
+      </span>
+      <span style="text-align:right;flex-shrink:0;font-size:12px;line-height:1.7">
+        ${r.area ? `<b style="font-size:14px">${r.area.toFixed(2)}㎡</b><br>
+          <span style="color:var(--ink-sub)">巾木 ${r.peri.toFixed(1)}m<br>壁 ${r.wall.toFixed(1)}㎡</span>` : '—'}
+      </span>
+    </label>`;
+  }).join('');
+
+  el.innerHTML = head + planOverlay() + scaleBox + areaBox +
+    (ng.length ? `<div style="font-size:12px;color:var(--red);font-weight:700;margin-bottom:8px">要確認 ${ng.length}室　重なり表示で形を確かめてください</div>` : '') +
+    rows;
+  document.getElementById('plan-foot').style.display = 'flex';
+  planUpdateTotal();
+}
+function planToggle(i, on) { planRooms[i].on = on; planRender(); }
+function planUpdateTotal() {
+  const sel = planRooms.filter(r => r.on);
+  const area = sel.reduce((s, r) => s + r.area, 0);
+  const wall = sel.reduce((s, r) => s + r.wall, 0);
+  const peri = sel.reduce((s, r) => s + r.peri, 0);
+  document.getElementById('plan-total').innerHTML =
+    `${sel.length}室　床 ${area.toFixed(2)}㎡　壁 ${wall.toFixed(1)}㎡　巾木 ${peri.toFixed(1)}m`;
+}
+
+// 拾った数量を文章にしてAI見積へ渡す。数量が文中にあるので「仮定」ではなく「指定」になる。
+function planToAi() {
+  const sel = (planRooms || []).filter(r => r.on);
+  if (!sel.length) { showPastToast('室が選ばれていません'); return; }
+  const area = sel.reduce((s, r) => s + r.area, 0);
+  const wall = sel.reduce((s, r) => s + r.wall, 0);
+  const peri = sel.reduce((s, r) => s + r.peri, 0);
+  const nOp  = sel.reduce((s, r) => s + r.openings.reduce((t, o) => t + o.q, 0), 0);
+  const lines = sel.map(r => `  ${r.name}　床${r.area.toFixed(2)}㎡　壁${r.wall.toFixed(1)}㎡　巾木${r.peri.toFixed(1)}m　天井高${r.ch}`).join('\n');
+  const txt =
+`平面図から拾った数量です。この数量をそのまま使ってください。
+
+合計　床 ${area.toFixed(2)}㎡　壁 ${wall.toFixed(1)}㎡（開口控除済み）　巾木 ${peri.toFixed(1)}m${nOp ? `　建具 ${nOp}箇所` : ''}
+
+室別
+${lines}
+
+この数量にもとづいて内装工事の見積明細を作ってください。`;
+  closePlan();
+  openAiEst();
+  document.getElementById('ai-q').value = txt;
+  showPastToast(`${sel.length}室ぶんの数量をAI見積に渡しました。工事内容を書き足して送信してください`);
+}
 
 // ===== AI見積もり補助 =====
 // 自社の単価マスタ・過去の見積から近いものを渡して、Claudeに明細を提案させる。
@@ -4712,6 +5420,7 @@ function enableNotifications() {
 
 window.onload=()=>{
   initBrand();
+  applyPriceOverrides();   // 取り込みで更新した単価を同梱マスタに当て直す
   load();            // 端末内のデータで先に表示する（ログインの返事は待たない）
   refreshAll();
   checkBackupReminder();

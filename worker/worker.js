@@ -15,7 +15,9 @@ const ALLOWED_ORIGINS = [
   'http://localhost:8000',
 ];
 const DAILY_LIMIT = 50;        // 1IPあたり／日
-const MAX_PROMPT  = 30000;     // 文字数。通常の見積依頼は6,000字程度
+const MAX_PROMPT  = 60000;     // 文字数。図面の文字データを載せると長くなる
+const MAX_IMAGES  = 3;         // 1回に送れる図面の枚数
+const MAX_IMG_B64 = 5_000_000; // 画像1枚のbase64長（約3.7MB）
 // 上から順に試す。先頭が使えない（提供終了・権限なし）ときは次に落ちる
 const MODELS      = ['claude-sonnet-5-5', 'claude-haiku-4-5-20251001'];
 const MAX_TOKENS  = 4000;
@@ -50,6 +52,20 @@ export default {
     if (!prompt)                   return json({ error: '依頼内容が空です' }, 400, cors);
     if (prompt.length > MAX_PROMPT) return json({ error: '依頼内容が長すぎます' }, 413, cors);
 
+    // 図面（画像）。無ければ今までどおり文章だけ
+    const images = Array.isArray(body?.images) ? body.images : [];
+    if (images.length > MAX_IMAGES) {
+      return json({ error: `図面は${MAX_IMAGES}枚までです` }, 400, cors);
+    }
+    for (const im of images) {
+      if (typeof im?.data !== 'string' || !/^image\/(png|jpeg|webp|gif)$/.test(im?.media_type || '')) {
+        return json({ error: '図面の形式が不正です（PNG・JPEGのみ）' }, 400, cors);
+      }
+      if (im.data.length > MAX_IMG_B64) {
+        return json({ error: '図面の画像が大きすぎます。解像度を下げてお試しください' }, 413, cors);
+      }
+    }
+
     // --- 1日の回数制限
     const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
     const day = new Date().toISOString().slice(0, 10);
@@ -65,7 +81,7 @@ export default {
 
     // --- Anthropicへ。モデルと上限はサーバー側で固定する
     try {
-      const { model, data } = await callWithFallback(prompt, env.ANTHROPIC_API_KEY);
+      const { model, data } = await callWithFallback(prompt, env.ANTHROPIC_API_KEY, images);
       return json(data, 200, { ...cors, 'X-Used-Today': String(used + 1), 'X-Model': model });
     } catch (e) {
       return json({ error: e.userMessage || 'AIに接続できませんでした。時間をおいてお試しください' },
@@ -75,7 +91,12 @@ export default {
 };
 
 // 1回だけ呼ぶ。拒否はHTTP 200で返ってくるので stop_reason を見る必要がある。
-async function callOnce(model, prompt, apiKey) {
+async function callOnce(model, prompt, apiKey, images = []) {
+  // 図面は本文より前に置く。先に見てから指示を読ませたほうが読み取りが安定する
+  const content = images.length
+    ? [...images.map(im => ({ type: 'image', source: { type: 'base64', media_type: im.media_type, data: im.data } })),
+       { type: 'text', text: prompt }]
+    : prompt;
   let res;
   try {
     res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -88,7 +109,7 @@ async function callOnce(model, prompt, apiKey) {
       body: JSON.stringify({
         model,
         max_tokens: MAX_TOKENS,
-        messages: [{ role: 'user', content: prompt }],
+        messages: [{ role: 'user', content }],
       }),
     });
   } catch (e) {
@@ -120,12 +141,12 @@ async function callOnce(model, prompt, apiKey) {
 }
 
 // 混雑なら待って再試行、モデルが使えないなら次のモデルへ
-async function callWithFallback(prompt, apiKey) {
+async function callWithFallback(prompt, apiKey, images = []) {
   let last;
   for (const model of MODELS) {
     for (let attempt = 1; attempt <= MAX_RETRY; attempt++) {
       try {
-        return { model, data: await callOnce(model, prompt, apiKey) };
+        return { model, data: await callOnce(model, prompt, apiKey, images) };
       } catch (e) {
         last = e;
         if (e.retryable && attempt < MAX_RETRY) {
