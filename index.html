@@ -2737,7 +2737,7 @@ async function runPlan() {
       ? '# 図面から抽出した文字（座標つき。x右・y上、単位pt）\n' +
         '縦＝縦向きに書かれた文字。' +
         (nVert ? 'CAD出力のPDFでは縦書きの数字が逆順で出ることがあるため、そういう値は「5188 または 8815」と両方を並べてあります。図面を見て正しいほうを選んでください。\n' : '\n') +
-        src.items.slice(0, 1200).map(it =>
+        src.items.slice(0, 600).map(it =>
           `${it.x},${it.y}\t${it.rev ? `${it.s} または ${it.rev}` : it.s}${it.v ? '\t縦' : ''}`).join('\n')
       : '（文字データを取り出せませんでした。画像だけを見て読み取ってください）';
 
@@ -2792,13 +2792,14 @@ rects に外形の矩形を入れ、name を "店舗全体" などにしてよ�
 
     const res = await fetch(AI_ENDPOINT, {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ prompt, images: [{ media_type: src.media, data: src.b64 }] })
+      // prefill で回答を「{」から始めさせる。前置きや思考文を挟む余地をなくす。
+      body: JSON.stringify({ prompt, prefill: '{', images: [{ media_type: src.media, data: src.b64 }] })
     });
     if (!res.ok) {
       let detail = ''; try { detail = (await res.json()).error || ''; } catch (e) {}
       throw new Error(detail || `AIに接続できませんでした（${res.status}）`);
     }
-    planBuild(planParse(await res.json()), defCh, src);
+    planBuild(planParse(await res.json(), '{'), defCh, src);
     planSetStatus('');
     planRender();
   } catch (e) {
@@ -2810,9 +2811,16 @@ rects に外形の矩形を入れ、name を "店舗全体" などにしてよ�
 
 // AIの返事をJSONにする。失敗したときは「何が返ってきたか」を必ず見せる。
 // 原因が分からないまま「読み取れませんでした」とだけ出すと、直しようがない。
-function planParse(data) {
-  const text = (data.content || []).map(c => c.text || '').join('');
+function planParse(data, prefill) {
+  const blocks = data.content || [];
+  // thinking ブロックしか返ってこないことがある。text 以外も拾っておく。
+  // prefill を使ったときは、その続きが返るので先頭に足し戻す。
+  const text = (prefill || '') + blocks.map(c => c.text || c.thinking || '').join('');
   const cut  = data.stop_reason === 'max_tokens';   // 途中で切れた
+  // 原因を特定できるよう、返事の形を控えておく
+  const shape = `[${blocks.map(c => c.type || '?').join(',') || '中身なし'}]`
+    + ` stop=${data.stop_reason || '?'}`
+    + (data.usage ? ` 入力${data.usage.input_tokens}/出力${data.usage.output_tokens}` : '');
   const m = text.match(/\{[\s\S]*\}/);
   if (m) {
     try { return JSON.parse(m[0]); } catch (e) { /* 下で詳しく出す */ }
@@ -2845,11 +2853,11 @@ function planParse(data) {
       } catch (e) {}
     }
   }
-  const peek = text.trim().slice(0, 200) || '（空の返事）';
+  const peek = text.trim().slice(0, 200) || '（本文なし）';
   throw new Error(
     (cut ? '回答が長すぎて途中で切れました。図面のページを絞るか、解像度を下げてお試しください。'
          : '図面を読み取れませんでした。') +
-    `\n\nAIからの返事（先頭200字）:\n${peek}`);
+    `\n\n返事の形: ${shape}\nAIからの返事（先頭200字）:\n${peek}`);
 }
 
 // 途中で切れた回答を救ったときは、最後の1件が中途半端になっている。

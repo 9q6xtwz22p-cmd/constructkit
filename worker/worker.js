@@ -49,6 +49,8 @@ export default {
     let body;
     try { body = await req.json(); } catch (e) { return json({ error: 'リクエストが不正です' }, 400, cors); }
     const prompt = typeof body?.prompt === 'string' ? body.prompt : '';
+    // 回答の書き出しを指定する（例: "{"）。前置きを挟ませず、いきなりJSONから書かせたいとき用。
+    const prefill = typeof body?.prefill === 'string' ? body.prefill.slice(0, 200) : '';
     if (!prompt)                   return json({ error: '依頼内容が空です' }, 400, cors);
     if (prompt.length > MAX_PROMPT) return json({ error: '依頼内容が長すぎます' }, 413, cors);
 
@@ -81,7 +83,7 @@ export default {
 
     // --- Anthropicへ。モデルと上限はサーバー側で固定する
     try {
-      const { model, data } = await callWithFallback(prompt, env.ANTHROPIC_API_KEY, images);
+      const { model, data } = await callWithFallback(prompt, env.ANTHROPIC_API_KEY, images, prefill);
       return json(data, 200, { ...cors, 'X-Used-Today': String(used + 1), 'X-Model': model });
     } catch (e) {
       return json({ error: e.userMessage || 'AIに接続できませんでした。時間をおいてお試しください' },
@@ -91,7 +93,7 @@ export default {
 };
 
 // 1回だけ呼ぶ。拒否はHTTP 200で返ってくるので stop_reason を見る必要がある。
-async function callOnce(model, prompt, apiKey, images = []) {
+async function callOnce(model, prompt, apiKey, images = [], prefill = '') {
   // 図面は本文より前に置く。先に見てから指示を読ませたほうが読み取りが安定する
   const content = images.length
     ? [...images.map(im => ({ type: 'image', source: { type: 'base64', media_type: im.media_type, data: im.data } })),
@@ -109,7 +111,9 @@ async function callOnce(model, prompt, apiKey, images = []) {
       body: JSON.stringify({
         model,
         max_tokens: MAX_TOKENS,
-        messages: [{ role: 'user', content }],
+        messages: prefill
+          ? [{ role: 'user', content }, { role: 'assistant', content: prefill }]
+          : [{ role: 'user', content }],
       }),
     });
   } catch (e) {
@@ -141,12 +145,12 @@ async function callOnce(model, prompt, apiKey, images = []) {
 }
 
 // 混雑なら待って再試行、モデルが使えないなら次のモデルへ
-async function callWithFallback(prompt, apiKey, images = []) {
+async function callWithFallback(prompt, apiKey, images = [], prefill = '') {
   let last;
   for (const model of MODELS) {
     for (let attempt = 1; attempt <= MAX_RETRY; attempt++) {
       try {
-        return { model, data: await callOnce(model, prompt, apiKey, images) };
+        return { model, data: await callOnce(model, prompt, apiKey, images, prefill) };
       } catch (e) {
         last = e;
         if (e.retryable && attempt < MAX_RETRY) {
