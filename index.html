@@ -2658,6 +2658,25 @@ function rectsPerimeter(rects) {
   return total;
 }
 
+// ---- PDFの文字を1つ読む ----
+// CAD出力のPDFは、縦向きに書いた寸法の文字が逆順で出てくることがある。
+// （実例: 8815 が 5188、600*500 が 005*006 として取れる）
+// そのまま渡すとAIが桁違いの寸法として読むので、向きを見て補正する。
+function planTextItem(it) {
+  const s = String(it.str).trim();
+  const [a, b] = it.transform;                     // 変換行列から文字の向きを出す
+  const deg = Math.round(Math.atan2(b, a) * 180 / Math.PI);
+  const vertical = Math.abs(Math.abs(deg) - 90) < 20;
+  const o = { s, x: Math.round(it.transform[4]), y: Math.round(it.transform[5]) };
+  // 数字だけ（寸法値）で縦向きなら、逆順の可能性を併記する。
+  // 文字を勝手に書き換えず「どちらかである」と伝えて、AIに前後関係で選ばせる。
+  if (vertical && /^[0-9０-９*×.,\-]+$/.test(s) && s.length > 1) {
+    const rev = [...s].reverse().join('');
+    if (rev !== s) { o.rev = rev; o.v = true; }
+  } else if (vertical) { o.v = true; }
+  return o;
+}
+
 // ---- 図面を開く ----
 async function planReadPdf(file) {
   const pdfjs = await loadLib('pdf');
@@ -2668,8 +2687,7 @@ async function planReadPdf(file) {
   let items = [];
   try {
     const tc = await page.getTextContent();
-    items = tc.items.filter(it => String(it.str || '').trim())
-      .map(it => ({ s: String(it.str).trim(), x: Math.round(it.transform[4]), y: Math.round(it.transform[5]) }));
+    items = tc.items.filter(it => String(it.str || '').trim()).map(it => planTextItem(it));
   } catch (e) { items = []; }
   const vp0 = page.getViewport({ scale: 1 });
   const scale = Math.min(2200 / vp0.width, 2200 / vp0.height, 3);
@@ -2709,9 +2727,13 @@ async function runPlan() {
     planSetStatus('AIに室の形と寸法を読み取らせています…');
     const defCh = parseInt(document.getElementById('plan-ch').value) || 2400;
 
+    const nVert = src.items.filter(it => it.rev).length;
     const textBlock = src.items.length
       ? '# 図面から抽出した文字（座標つき。x右・y上、単位pt）\n' +
-        src.items.slice(0, 1200).map(it => `${it.x},${it.y}\t${it.s}`).join('\n')
+        '縦＝縦向きに書かれた文字。' +
+        (nVert ? 'CAD出力のPDFでは縦書きの数字が逆順で出ることがあるため、そういう値は「5188 または 8815」と両方を並べてあります。図面を見て正しいほうを選んでください。\n' : '\n') +
+        src.items.slice(0, 1200).map(it =>
+          `${it.x},${it.y}\t${it.rev ? `${it.s} または ${it.rev}` : it.s}${it.v ? '\t縦' : ''}`).join('\n')
       : '（文字データを取り出せませんでした。画像だけを見て読み取ってください）';
 
     const prompt = `添付は内装工事の平面図です。室の形と寸法を読み取ってください。画像サイズは ${src.w} × ${src.h} px です。
@@ -2737,6 +2759,20 @@ ${textBlock}
 - scale_checks … 縮尺の根拠を**2つ以上**。例 [{"how":"上の寸法 4730","px_per_m":78.2},{"how":"右の寸法 3530","px_per_m":77.9}]
   2つの値が食い違うなら、読み違いの可能性が高い。正直に両方書くこと。
 
+# 工事の中身（これも必ず拾う）
+図面の注記・引き出し線・凡例に書かれた**やることの指示**を scope に列挙する。店舗や小規模の内装では、
+室が1つしかないことも多い。その場合でも注記には工事内容がすべて書かれている。見落とすと見積が抜ける。
+例）窓塞ぎ×2 ／ 既存柱コンクリ調 ／ 棚造作 ／ 取り外し可能スノコ造作 ／ 看板移設 ／
+　　耐熱ガラス ／ ケイカル+ステンレス板 ／ 埋め込みコンセント ／ テープライト（調光付）／
+　　既存ライティングレール ／ 新規ライティングレール ／ オーニング ／ スピーカー設置
+- 仕上材・下地材・造作・設備・電気・解体・移設、すべて拾う。
+- 「既存」と書かれていれば残すのか撤去するのか分かるように、書かれたまま写す。
+- 数量が添えてあれば一緒に（「窓塞ぎ×2」なら q:2）。
+
+# 室が取れないとき
+店舗など一体空間で室に分けられない図面では、建物全体を1つの室として
+rects に外形の矩形を入れ、name を "店舗全体" などにしてよい。無理に分割しないこと。
+
 # 大事なこと
 - **面積の計算はしないでください。** 座標を書くだけでいい。計算はこちらでやります。
 - 図面に延床面積・施工面積の記載があれば total に㎡で入れる。無ければ 0。
@@ -2746,7 +2782,8 @@ ${textBlock}
  "scale_checks":[{"how":"上の寸法 4730","px_per_m":78.2},{"how":"右の寸法 3530","px_per_m":77.9}],
  "rooms":[{"name":"会議室1","rects":[[0,0,2363,2268]],"ch":2300,
    "openings":[{"n":"会議室1扉","w":800,"h":2030,"q":1}],
-   "ev":"上の寸法2363、右の寸法2268","sure":true}]}`;
+   "ev":"上の寸法2363、右の寸法2268","sure":true}],
+ "scope":[{"n":"窓塞ぎ","q":2,"note":"既存窓を塞ぐ"},{"n":"既存柱コンクリ調","q":1,"note":""}]}`;
 
     const res = await fetch(AI_ENDPOINT, {
       method: 'POST', headers: { 'content-type': 'application/json' },
@@ -2781,7 +2818,13 @@ function planBuild(raw, defCh, src) {
     scaleChecks: (raw.scale_checks || []).slice(0, 4).map(c =>
       ({ how: String(c.how || '').slice(0, 40), v: Number(c.px_per_m) || 0 })).filter(c => c.v > 0),
     img: src.url, imgW: src.w, imgH: src.h,
-    hasText: src.items.length > 0, pages: src.pages || 1
+    hasText: src.items.length > 0, pages: src.pages || 1,
+    // 注記から拾った工事内容。室が取れない図面でもここは取れる
+    scope: (raw.scope || []).map(s => ({
+      n: String(s.n || '').slice(0, 40),
+      q: Math.max(1, Number(s.q) || 1),
+      note: String(s.note || '').slice(0, 60)
+    })).filter(s => s.n)
   };
   planRooms = (raw.rooms || []).map(r => {
     const rects = (r.rects || [])
@@ -2842,10 +2885,33 @@ function planOverlay() {
     </div></div>`;
 }
 
+// 注記から拾った工事内容。室が取れない図面でもここだけは取れることが多い。
+function planScopeBox() {
+  const sc = (planMeta && planMeta.scope) || [];
+  if (!sc.length) return '';
+  return `<div style="margin:12px 0">
+    <div style="font-size:12px;font-weight:700;margin-bottom:6px">図面に書かれていた工事の中身　${sc.length}件</div>
+    <div style="border:1px solid var(--rule);border-radius:4px;background:var(--surface);padding:4px 12px">
+      ${sc.map(s => `<div style="padding:6px 0;border-bottom:1px solid var(--rule);font-size:13px;line-height:1.6">
+        ${esc(s.n)}${s.q > 1 ? `　<b>×${s.q}</b>` : ''}
+        ${s.note ? `<span style="color:var(--ink-sub);font-size:11.5px">　${esc(s.note)}</span>` : ''}
+      </div>`).join('')}
+    </div>
+    <div style="font-size:11.5px;color:var(--ink-sub);margin-top:5px;line-height:1.6">
+      注記・引き出し線から拾ったものです。見積に入れ忘れやすい項目が多いので、ひと通り確認してください。
+    </div></div>`;
+}
+
 function planRender() {
   const el = document.getElementById('plan-result');
+  // 室が1つも取れなくても、工事内容が取れていれば見せる価値がある
   if (!planRooms || !planRooms.length) {
-    el.innerHTML = '<div class="empty-state">室を読み取れませんでした。<br>平面図のページを指定するか、解像度を上げてお試しください</div>';
+    const sc = planScopeBox();
+    el.innerHTML = sc
+      ? `<div style="padding:12px 0 0;font-size:13px;line-height:1.8">室の寸法は読み取れませんでしたが、<b>工事の中身は拾えました</b>。<br>数量は手で入れてください。</div>` + sc
+      : '<div class="empty-state">室を読み取れませんでした。<br>平面図のページを指定するか、解像度を上げてお試しください</div>';
+    document.getElementById('plan-foot').style.display = sc ? 'flex' : 'none';
+    if (sc) { planRooms = planRooms || []; planUpdateTotal(); }
     return;
   }
   const sum = planRooms.filter(r => r.on).reduce((s, r) => s + r.area, 0);
@@ -2915,42 +2981,56 @@ function planRender() {
 
   el.innerHTML = head + planOverlay() + scaleBox + areaBox +
     (ng.length ? `<div style="font-size:12px;color:var(--red);font-weight:700;margin-bottom:8px">要確認 ${ng.length}室　重なり表示で形を確かめてください</div>` : '') +
-    rows;
+    rows + planScopeBox();
   document.getElementById('plan-foot').style.display = 'flex';
   planUpdateTotal();
 }
 function planToggle(i, on) { planRooms[i].on = on; planRender(); }
 function planUpdateTotal() {
-  const sel = planRooms.filter(r => r.on);
+  const sel = (planRooms || []).filter(r => r.on);
+  const nSc = ((planMeta && planMeta.scope) || []).length;
+  if (!sel.length) {
+    document.getElementById('plan-total').innerHTML = nSc ? `工事内容 ${nSc}件（数量なし）` : '';
+    return;
+  }
   const area = sel.reduce((s, r) => s + r.area, 0);
   const wall = sel.reduce((s, r) => s + r.wall, 0);
   const peri = sel.reduce((s, r) => s + r.peri, 0);
   document.getElementById('plan-total').innerHTML =
-    `${sel.length}室　床 ${area.toFixed(2)}㎡　壁 ${wall.toFixed(1)}㎡　巾木 ${peri.toFixed(1)}m`;
+    `${sel.length}室　床 ${area.toFixed(2)}㎡　壁 ${wall.toFixed(1)}㎡　巾木 ${peri.toFixed(1)}m` +
+    (nSc ? `　／　工事内容 ${nSc}件` : '');
 }
 
 // 拾った数量を文章にしてAI見積へ渡す。数量が文中にあるので「仮定」ではなく「指定」になる。
 function planToAi() {
   const sel = (planRooms || []).filter(r => r.on);
-  if (!sel.length) { showPastToast('室が選ばれていません'); return; }
-  const area = sel.reduce((s, r) => s + r.area, 0);
-  const wall = sel.reduce((s, r) => s + r.wall, 0);
-  const peri = sel.reduce((s, r) => s + r.peri, 0);
-  const nOp  = sel.reduce((s, r) => s + r.openings.reduce((t, o) => t + o.q, 0), 0);
-  const lines = sel.map(r => `  ${r.name}　床${r.area.toFixed(2)}㎡　壁${r.wall.toFixed(1)}㎡　巾木${r.peri.toFixed(1)}m　天井高${r.ch}`).join('\n');
-  const txt =
-`平面図から拾った数量です。この数量をそのまま使ってください。
+  const sc  = (planMeta && planMeta.scope) || [];
+  if (!sel.length && !sc.length) { showPastToast('渡せるものがありません'); return; }
 
-合計　床 ${area.toFixed(2)}㎡　壁 ${wall.toFixed(1)}㎡（開口控除済み）　巾木 ${peri.toFixed(1)}m${nOp ? `　建具 ${nOp}箇所` : ''}
+  const parts = ['平面図から読み取った内容です。'];
+  if (sel.length) {
+    const area = sel.reduce((s, r) => s + r.area, 0);
+    const wall = sel.reduce((s, r) => s + r.wall, 0);
+    const peri = sel.reduce((s, r) => s + r.peri, 0);
+    const nOp  = sel.reduce((s, r) => s + r.openings.reduce((t, o) => t + o.q, 0), 0);
+    parts.push('', '【数量】この数量をそのまま使ってください',
+      `合計　床 ${area.toFixed(2)}㎡　壁 ${wall.toFixed(1)}㎡（開口控除済み）　巾木 ${peri.toFixed(1)}m${nOp ? `　建具 ${nOp}箇所` : ''}`,
+      '室別',
+      sel.map(r => `  ${r.name}　床${r.area.toFixed(2)}㎡　壁${r.wall.toFixed(1)}㎡　巾木${r.peri.toFixed(1)}m　天井高${r.ch}`).join('\n'));
+  }
+  if (sc.length) {
+    parts.push('', '【図面の注記に書かれていた工事の中身】これらを明細に入れてください',
+      sc.map(s => `  ${s.n}${s.q > 1 ? ` ×${s.q}` : ''}${s.note ? `（${s.note}）` : ''}`).join('\n'));
+  }
+  if (!sel.length) parts.push('', '※ 数量は図面から読み取れませんでした。一般的な規模を仮定して構いません。');
+  parts.push('', 'これらにもとづいて内装工事の見積明細を作ってください。');
 
-室別
-${lines}
-
-この数量にもとづいて内装工事の見積明細を作ってください。`;
   closePlan();
   openAiEst();
-  document.getElementById('ai-q').value = txt;
-  showPastToast(`${sel.length}室ぶんの数量をAI見積に渡しました。工事内容を書き足して送信してください`);
+  document.getElementById('ai-q').value = parts.join('\n');
+  showPastToast(sel.length
+    ? `${sel.length}室ぶんの数量と工事内容 ${sc.length}件をAI見積に渡しました`
+    : `工事内容 ${sc.length}件をAI見積に渡しました。数量は書き足してください`);
 }
 
 // ===== AI見積もり補助 =====
