@@ -20,7 +20,7 @@ const MAX_IMAGES  = 3;         // 1回に送れる図面の枚数
 const MAX_IMG_B64 = 5_000_000; // 画像1枚のbase64長（約3.7MB）
 // 上から順に試す。先頭が使えない（提供終了・権限なし）ときは次に落ちる
 const MODELS      = ['claude-sonnet-5-5', 'claude-haiku-4-5-20251001'];
-const MAX_TOKENS  = 4000;
+const MAX_TOKENS  = 8000;      // 図面の読み取りは室・注記・根拠を返すので長くなる
 const MAX_RETRY   = 3;         // 混雑（429/529）時の再試行回数
 
 const json = (obj, status, headers) =>

@@ -2629,6 +2629,11 @@ function planSetStatus(msg, kind) {
   if (!msg) { el.style.display = 'none'; return; }
   el.style.display = 'block';
   el.textContent = msg;
+  // 原因の手がかり（AIの返事）が入るので、改行を保って左寄せで出す
+  const multi = String(msg).includes('\n');
+  el.style.whiteSpace = multi ? 'pre-wrap' : 'normal';
+  el.style.textAlign  = multi ? 'left' : 'center';
+  el.style.fontFamily = multi ? 'ui-monospace,monospace' : 'inherit';
   el.style.background = kind === 'err' ? 'var(--orange-soft)' : 'var(--accent-soft)';
   el.style.color = kind === 'err' ? 'var(--ink)' : 'var(--accent)';
 }
@@ -2793,11 +2798,7 @@ rects に外形の矩形を入れ、name を "店舗全体" などにしてよ�
       let detail = ''; try { detail = (await res.json()).error || ''; } catch (e) {}
       throw new Error(detail || `AIに接続できませんでした（${res.status}）`);
     }
-    const data = await res.json();
-    const text = (data.content || []).map(c => c.text || '').join('');
-    const m = text.match(/\{[\s\S]*\}/);
-    if (!m) throw new Error('図面を読み取れませんでした。別のページや解像度でお試しください');
-    planBuild(JSON.parse(m[0]), defCh, src);
+    planBuild(planParse(await res.json()), defCh, src);
     planSetStatus('');
     planRender();
   } catch (e) {
@@ -2805,6 +2806,65 @@ rects に外形の矩形を入れ、name を "店舗全体" などにしてよ�
   } finally {
     btn.disabled = false;
   }
+}
+
+// AIの返事をJSONにする。失敗したときは「何が返ってきたか」を必ず見せる。
+// 原因が分からないまま「読み取れませんでした」とだけ出すと、直しようがない。
+function planParse(data) {
+  const text = (data.content || []).map(c => c.text || '').join('');
+  const cut  = data.stop_reason === 'max_tokens';   // 途中で切れた
+  const m = text.match(/\{[\s\S]*\}/);
+  if (m) {
+    try { return JSON.parse(m[0]); } catch (e) { /* 下で詳しく出す */ }
+  }
+  // 途中で切れたJSONを救う。
+  // 文字列の外で値が終わった位置を全部覚えておき、後ろから順に「そこで打ち切って閉じる」を試す。
+  // 一番うしろで成立した場所が、読めたところまでの最大になる。
+  const head = text.indexOf('{');
+  if (head >= 0) {
+    const frag = text.slice(head);
+    const cands = [];
+    const stack = [];
+    let inStr = false, esc = false;
+    for (let i = 0; i < frag.length; i++) {
+      const c = frag[i];
+      if (esc) { esc = false; continue; }
+      if (c === '\\') { esc = true; continue; }
+      if (c === '"') { inStr = !inStr; if (!inStr) cands.push({ i: i + 1, st: [...stack] }); continue; }
+      if (inStr) continue;
+      if (c === '{' || c === '[') stack.push(c === '{' ? '}' : ']');
+      else if (c === '}' || c === ']') { stack.pop(); cands.push({ i: i + 1, st: [...stack] }); }
+      else if (/[0-9]/.test(c)) cands.push({ i: i + 1, st: [...stack] });
+    }
+    for (let k = cands.length - 1, tried = 0; k >= 0 && tried < 400; k--, tried++) {
+      const body = frag.slice(0, cands[k].i).replace(/[,\s]*$/, '');
+      const close = [...cands[k].st].reverse().join('');
+      try {
+        const got = JSON.parse(body + close);
+        if (got && typeof got === 'object') return planDropTail(got);
+      } catch (e) {}
+    }
+  }
+  const peek = text.trim().slice(0, 200) || '（空の返事）';
+  throw new Error(
+    (cut ? '回答が長すぎて途中で切れました。図面のページを絞るか、解像度を下げてお試しください。'
+         : '図面を読み取れませんでした。') +
+    `\n\nAIからの返事（先頭200字）:\n${peek}`);
+}
+
+// 途中で切れた回答を救ったときは、最後の1件が中途半端になっている。
+// 半端なものを残すと「寸法が読めない室」に見えてしまうので捨て、捨てたことを控えておく。
+function planDropTail(o) {
+  let dropped = 0;
+  for (const key of ['rooms', 'scope']) {
+    const a = o[key];
+    if (!Array.isArray(a) || !a.length) continue;
+    const last = a[a.length - 1];
+    const broken = key === 'rooms' ? !('rects' in last) : !('q' in last) && !('note' in last);
+    if (broken) { a.pop(); dropped++; }
+  }
+  o.__cut = true; o.__dropped = dropped;
+  return o;
 }
 
 // AIが読んだ座標から、面積・外周・壁面積を計算する。計算はすべてここ。
@@ -2819,6 +2879,7 @@ function planBuild(raw, defCh, src) {
       ({ how: String(c.how || '').slice(0, 40), v: Number(c.px_per_m) || 0 })).filter(c => c.v > 0),
     img: src.url, imgW: src.w, imgH: src.h,
     hasText: src.items.length > 0, pages: src.pages || 1,
+    cut: !!raw.__cut, dropped: raw.__dropped || 0,
     // 注記から拾った工事内容。室が取れない図面でもここは取れる
     scope: (raw.scope || []).map(s => ({
       n: String(s.n || '').slice(0, 40),
@@ -2949,6 +3010,11 @@ function planRender() {
       図面に延床面積の記載が無いため、面積の照合はできていません</div>`;
   }
 
+  const cutBox = planMeta.cut
+    ? `<div style="background:var(--orange-soft);border:1px solid var(--rule);border-radius:4px;padding:10px 12px;margin:10px 0;font-size:12.5px;line-height:1.7">
+        <b>AIの回答が途中で切れました。</b>読み取れたところまでを出しています${planMeta.dropped ? `（最後の${planMeta.dropped}件は中途半端だったので捨てました）` : ''}。<br>
+        拾い漏れている可能性があります。図面と見比べてください。</div>` : '';
+
   const head = `<div style="padding:12px 0 0">
     <div style="font-size:14px;font-weight:700">${esc(planMeta.title || '平面図')}</div>
     <div style="font-size:11.5px;color:var(--ink-sub);margin-top:3px">
@@ -2979,7 +3045,7 @@ function planRender() {
     </label>`;
   }).join('');
 
-  el.innerHTML = head + planOverlay() + scaleBox + areaBox +
+  el.innerHTML = head + cutBox + planOverlay() + scaleBox + areaBox +
     (ng.length ? `<div style="font-size:12px;color:var(--red);font-weight:700;margin-bottom:8px">要確認 ${ng.length}室　重なり表示で形を確かめてください</div>` : '') +
     rows + planScopeBox();
   document.getElementById('plan-foot').style.display = 'flex';
