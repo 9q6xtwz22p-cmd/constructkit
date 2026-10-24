@@ -994,6 +994,21 @@ const loadTesseract = () => loadLib('ocr');
     </div>
   </div>
 
+  <!-- 端末の名前 -->
+  <div class="card">
+    <div class="card-header"><h2>この端末の名前</h2></div>
+    <div class="card-body">
+      <div style="font-size:12.5px;color:var(--ink-sub);line-height:1.8;margin-bottom:10px">
+        AI見積・図面読み取り・見積の取り込みを使ったとき、<b style="color:var(--ink)">いつ・どの端末が・何をしたか</b>が記録されます。<br>
+        工事内容や金額は記録されません。名前を入れておくと、管理者が誰の利用か分かります。
+      </div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="dev-name-input" placeholder="例）松本のPC" maxlength="24" style="flex:1">
+        <button class="btn-sm accent" onclick="setDevName(document.getElementById('dev-name-input').value)">保存</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 過去の見積を取り込む -->
   <div class="card">
     <div class="card-header"><h2>過去の見積を取り込む</h2></div>
@@ -1215,7 +1230,9 @@ const loadTesseract = () => loadLib('ocr');
       <div id="plan-status" style="display:none;font-size:12px;text-align:center;padding:7px;margin-top:8px;border-radius:4px;line-height:1.6"></div>
       <div style="font-size:10.5px;color:var(--ink-sub);margin-top:7px;line-height:1.6">
         平面図の<b>室名と寸法</b>を読み取って、床面積・周長・壁面積を室ごとに出します。計算はツール側で行うので、AIが数字を取り違えても金額には影響しません。<br>
-        <b>CADから出したPDF</b>が一番正確です。写真やスキャンでも読めますが要確認が増えます。
+        <b>CADから出したPDF</b>が一番正確です。縮尺と縦書き寸法の向きを文字データから計算で割り出すため、
+        写真やスキャンよりも精度がはっきり上がります。<br>
+        読み取ったあとに出る<b>3つの照合</b>（縮尺・外形・記載面積）を必ず見てください。拾い漏れはここに出ます。
       </div>
     </div>
 
@@ -1369,8 +1386,15 @@ const loadTesseract = () => loadLib('ocr');
           　室名と寸法を読み取って、室ごとの<strong>床面積・周長・壁面積</strong>を算出します。<br>
           　・<strong>CADから出したPDF</strong>が一番正確です（文字データを直接読むため）。写真やスキャンでも読めますが要確認が増えます<br>
           　・<strong>計算はツール側で行います。</strong>AIには寸法を読ませるだけなので、桁を間違えることがありません<br>
+          　・<strong>縮尺はAIに測らせず、こちらで計算します。</strong>寸法の文字と図面上の距離を突き合わせ、
+          複数の組が一致するかで裏を取ります（ここを目測させると面積が大きく外れます）<br>
+          　・<strong>縦書きの寸法は向きを直します。</strong>CADのPDFは縦書き数字が逆順で出ることがあり、
+          8815 が 5188 になります。先頭の0と、縮尺・合計との一致で正しい向きを決めます<br>
           　・使った寸法値が各室に表示されます。図面と見比べる手間が減ります<br>
-          　・図面に延床面積の記載があれば<strong>自動で検算</strong>します。5%以上ズレたら警告が出ます<br>
+          　・読み取り後に<strong>3つの照合</strong>が出ます。<strong>拾い漏れはここで気づけます</strong><br>
+          　　<strong>縮尺</strong>…根拠が何組一致したか　／
+          <strong>外形</strong>…図面の全体寸法に対して何%拾えたか　／
+          <strong>記載面積</strong>…延床面積の記載があれば突き合わせ<br>
           　・「この数量で見積を作る」でAI見積に渡ると、<strong>数量が「仮定」ではなくなります</strong>（赤いバッジが消えます）<br>
           　※ LGSの本数やボードの枚数までは出ません。そこは実績単価で一式として拾ってください<br>
           <br>
@@ -2479,7 +2503,7 @@ ${text}
 
   const res = await fetch(AI_ENDPOINT, {
     method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ prompt })
+    body: JSON.stringify({ prompt, kind: 'import', dev: devName() })
   });
   if (!res.ok) {
     let d = ''; try { d = (await res.json()).error || ''; } catch (e) {}
@@ -2672,14 +2696,151 @@ function planTextItem(it) {
   const [a, b] = it.transform;                     // 変換行列から文字の向きを出す
   const deg = Math.round(Math.atan2(b, a) * 180 / Math.PI);
   const vertical = Math.abs(Math.abs(deg) - 90) < 20;
-  const o = { s, x: Math.round(it.transform[4]), y: Math.round(it.transform[5]) };
+  const x = it.transform[4], y = it.transform[5];
+  // 中心の座標も持つ。寸法値は自分の区間の中央に置かれるので、
+  // 縮尺を出すときは文字の左端ではなく中心どうしの距離で測る必要がある。
+  const len = Math.hypot(a, b) || 1;
+  const half = (Number(it.width) || 0) / 2;
+  const o = { s, x: Math.round(x), y: Math.round(y),
+              cx: x + a / len * half, cy: y + b / len * half };
   // 数字だけ（寸法値）で縦向きなら、逆順の可能性を併記する。
-  // 文字を勝手に書き換えず「どちらかである」と伝えて、AIに前後関係で選ばせる。
+  // どちらが正しいかは planFixVertical で決める。
   if (vertical && /^[0-9０-９*×.,\-]+$/.test(s) && s.length > 1) {
     const rev = [...s].reverse().join('');
     if (rev !== s) { o.rev = rev; o.v = true; }
   } else if (vertical) { o.v = true; }
   return o;
+}
+
+// ---- 寸法値かどうか ----
+// 数字とカンマだけで書かれた3〜5桁を寸法とみなす。
+// 「CH=2,700」「FL+200」のような注記を拾わないよう、元の文字の形で先に弾く。
+function planDimValue(s) {
+  const t = String(s || '').trim();
+  if (!/^[0-9０-９,.，．]+$/.test(t)) return 0;
+  const d = t.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+             .replace(/[^0-9]/g, '');
+  if (!/^[0-9]{3,5}$/.test(d)) return 0;
+  const v = parseInt(d, 10);
+  return (v >= 200 && v <= 50000) ? v : 0;
+}
+
+// ---- 縮尺を計算で出す ----
+// ここが精度の肝。縮尺をAIに目測させると外す（実測46.6に対し半分しか拾えなかった）。
+// 寸法値は自分の区間の中央に書かれるので、同じ寸法線に並んだ隣どうしの中心間距離は
+// 「手前の値÷2 ＋ 次の値÷2」mm にあたる。これを図面中から集めて中央値を取る。
+// 1組ずつ見るので、関係ない数字が1つ混ざっても中央値はずれない。
+function planScaleFromText(items) {
+  const dims = items.filter(it => !it.v && planDimValue(it.s))
+                    .map(it => ({ cx: it.cx, cy: it.cy, v: planDimValue(it.s) }));
+  const rows = [];
+  dims.sort((a, b) => a.cy - b.cy).forEach(it => {
+    const r = rows.find(r => Math.abs(r[0].cy - it.cy) <= 3);
+    if (r) r.push(it); else rows.push([it]);
+  });
+  const pairs = [];
+  rows.forEach(r => {
+    if (r.length < 2) return;
+    r.sort((a, b) => a.cx - b.cx);
+    for (let i = 1; i < r.length; i++) {
+      const mm = (r[i - 1].v + r[i].v) / 2, pt = r[i].cx - r[i - 1].cx;
+      if (mm > 300 && pt > 10) pairs.push({ r: pt / (mm / 1000), a: r[i - 1].v, b: r[i].v });
+    }
+  });
+  if (pairs.length < 2) return null;
+  const sorted = pairs.map(p => p.r).sort((a, b) => a - b);
+  const med = sorted.length % 2 ? sorted[(sorted.length - 1) / 2]
+                                : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
+  // 中央値から3%以内に収まった組だけを根拠として採る
+  const good = pairs.filter(p => Math.abs(p.r / med - 1) <= 0.03);
+  if (good.length < 2) return null;
+  const avg = good.reduce((s, p) => s + p.r, 0) / good.length;
+  const rs = good.map(p => p.r);
+  return {
+    ptPerM: avg,
+    n: good.length, total: pairs.length,
+    spread: +((Math.max(...rs) - Math.min(...rs)) / avg * 100).toFixed(1),
+    checks: good.slice(0, 3).map(p => `寸法 ${p.a}と${p.b} → ${p.r.toFixed(1)}pt/m`)
+  };
+}
+
+// ---- 縦書きの逆順を直す ----
+// 2つの決め手で判定する。推測はしない。
+//  1. 先頭が0の寸法は存在しない。「0272」は必ず逆順なので 2720 と確定できる。
+//  2. 同じ寸法線に並んだ2つは、中心間距離が分かれば和が分かる。
+//     計算済みの縮尺と照らして、合う組み合わせを選ぶ。
+// どちらでも決まらないものは両方を並べたままAIに渡す。
+function planFixVertical(items, ptPerM) {
+  const lead0 = s => /^0[0-9]/.test(String(s).replace(/[^0-9*×.,\-]/g, ''));
+  let fixed = 0;
+  // 1. 先頭ゼロ
+  items.forEach(it => {
+    if (!it.rev) return;
+    if (lead0(it.s) && !lead0(it.rev)) { it.s = it.rev; delete it.rev; it.fix = '先頭0'; fixed++; }
+  });
+  // 2. 縮尺と突き合わせ。
+  //    1で確定した値は「動かない目印」として一緒に並べる。
+  //    片方が確定していれば、もう片方は引き算で決まるので精度が上がる。
+  if (ptPerM > 0) {
+    const cand = it => {
+      const set = new Set();
+      [it.s, it.rev].forEach(t => { const v = planDimValue(t); if (v) set.add(v); });
+      return [...set];
+    };
+    const cols = [];
+    items.filter(it => it.v && cand(it).length)
+         .sort((a, b) => a.cx - b.cx)
+         .forEach(it => {
+           const c = cols.find(c => Math.abs(c[0].cx - it.cx) <= 3);
+           if (c) c.push(it); else cols.push([it]);
+         });
+    cols.forEach(c => {
+      c.sort((a, b) => a.cy - b.cy);
+      for (let i = 1; i < c.length; i++) {
+        const gap = Math.abs(c[i].cy - c[i - 1].cy);
+        const want = gap / ptPerM * 1000 * 2;            // 2つの値の和
+        if (!(want > 600)) continue;
+        let best = null;
+        cand(c[i - 1]).forEach(va => cand(c[i]).forEach(vb => {
+          const e = Math.abs(va + vb - want) / want;
+          if (!best || e < best.e) best = { e, va, vb };
+        }));
+        if (!best || best.e > 0.08) continue;            // 合わないなら触らない
+        [[c[i - 1], best.va], [c[i], best.vb]].forEach(([it, v]) => {
+          if (!it.rev) return;
+          it.s = planDimValue(it.s) === v ? it.s : it.rev;
+          delete it.rev; it.fix = '縮尺一致'; fixed++;
+        });
+      }
+    });
+  }
+  // 3. 全体寸法。並んだ寸法の合計と一致する側を採る。
+  //    （実例: 2720 + 6095 = 8815。「5188」は 8815 の逆順と確定できる）
+  const done = [];
+  items.filter(it => !it.rev && it.v && planDimValue(it.s))
+       .sort((a, b) => a.cx - b.cx)
+       .forEach(it => {
+         const c = done.find(c => Math.abs(c[0].cx - it.cx) <= 3);
+         if (c) c.push(it); else done.push([it]);
+       });
+  const sums = [];
+  done.forEach(c => {
+    c.sort((a, b) => a.cy - b.cy);
+    const v = c.map(it => planDimValue(it.s));
+    for (let i = 0; i < v.length; i++)
+      for (let j = i + 2, s = v[i] + v[i + 1]; j <= v.length; s += v[j++]) sums.push(s);
+  });
+  items.forEach(it => {
+    if (!it.rev) return;
+    const a = planDimValue(it.s), b = planDimValue(it.rev);
+    if (!a || !b) return;
+    // 合計との一致は厳しく見る（0.5%）。緩めると別の組み合わせにも当たってしまう。
+    const hit = v => sums.some(s => Math.abs(v - s) / s <= 0.005);
+    const ha = hit(a), hb = hit(b);
+    if (ha === hb) return;                               // どちらも合う／どちらも合わないなら触らない
+    it.s = ha ? it.s : it.rev; delete it.rev; it.fix = '合計一致'; fixed++;
+  });
+  return fixed;
 }
 
 // ---- 図面を開く ----
@@ -2700,8 +2861,10 @@ async function planReadPdf(file) {
   const cv = document.createElement('canvas');
   cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
   await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+  // rs は pt → px の倍率。文字座標はpt、画像はpxなので縮尺の換算に必要。
   return { items, b64: cv.toDataURL('image/png').split(',')[1], media: 'image/png',
-           pages: doc.numPages, w: cv.width, h: cv.height, url: cv.toDataURL('image/png') };
+           pages: doc.numPages, w: cv.width, h: cv.height, rs: scale,
+           url: cv.toDataURL('image/png') };
 }
 function planReadImage(file) {
   return new Promise((res, rej) => {
@@ -2732,14 +2895,34 @@ async function runPlan() {
     planSetStatus('AIに室の形と寸法を読み取らせています…');
     const defCh = parseInt(document.getElementById('plan-ch').value) || 2400;
 
+    // 縮尺はこちらで計算する。AIに目測させると外すため。
+    const sc = src.items.length ? planScaleFromText(src.items) : null;
+    const nFix  = src.items.length ? planFixVertical(src.items, sc ? sc.ptPerM : 0) : 0;
     const nVert = src.items.filter(it => it.rev).length;
+    const pxPerM = sc ? sc.ptPerM * (src.rs || 1) : 0;
+
     const textBlock = src.items.length
       ? '# 図面から抽出した文字（座標つき。x右・y上、単位pt）\n' +
         '縦＝縦向きに書かれた文字。' +
-        (nVert ? 'CAD出力のPDFでは縦書きの数字が逆順で出ることがあるため、そういう値は「5188 または 8815」と両方を並べてあります。図面を見て正しいほうを選んでください。\n' : '\n') +
+        (nFix ? `縦書きの数字はCAD出力で逆順になることがあるため、${nFix}個を向きの判定（先頭が0／縮尺との一致）で直してあります。直した値には「直」と付けてあります。\n` : '\n') +
+        (nVert ? '判定できなかったものは「5188 または 8815」と両方並べてあります。図面を見て正しいほうを選んでください。\n' : '') +
         src.items.slice(0, 600).map(it =>
-          `${it.x},${it.y}\t${it.rev ? `${it.s} または ${it.rev}` : it.s}${it.v ? '\t縦' : ''}`).join('\n')
+          `${it.x},${it.y}\t${it.rev ? `${it.s} または ${it.rev}` : it.s}` +
+          `${it.v ? '\t縦' : ''}${it.fix ? '\t直' : ''}`).join('\n')
       : '（文字データを取り出せませんでした。画像だけを見て読み取ってください）';
+
+    const scaleBlock = pxPerM
+      ? `# 縮尺（計算済み。これを使うこと）
+- この図面は **1m = ${pxPerM.toFixed(1)}px** です。寸法の文字と図面上の距離から計算しました
+  （${sc.n}組の寸法が ±${sc.spread}% で一致）。
+- px_per_m には ${pxPerM.toFixed(1)} をそのまま入れてください。自分で測り直さないこと。
+- origin_px（建物の北西角が画像のどこにあるか [x, y] px）だけ読み取ってください。
+- scale_checks は空配列 [] でよい。`
+      : `# 縮尺（重なり表示に使う）
+- px_per_m … 画像1px が実寸何mか。図面の寸法値と画像上の長さから求める。
+- origin_px … 原点（建物の北西角）が画像のどこにあるか [x, y]（px）。
+- scale_checks … 縮尺の根拠を**2つ以上**。例 [{"how":"上の寸法 4730","px_per_m":78.2},{"how":"右の寸法 3530","px_per_m":77.9}]
+  2つの値が食い違うなら、読み違いの可能性が高い。正直に両方書くこと。`;
 
     const prompt = `添付は内装工事の平面図です。室の形と寸法を読み取ってください。画像サイズは ${src.w} × ${src.h} px です。
 
@@ -2758,11 +2941,7 @@ ${textBlock}
 - 自信がなければ sure を false。**推測で数字を作らないこと。**
 - 読み取れない室は rects を空にして sure を false、ev に理由を書く。
 
-# 縮尺（重なり表示に使う）
-- px_per_m … 画像1px が実寸何mか。図面の寸法値と画像上の長さから求める。
-- origin_px … 原点（建物の北西角）が画像のどこにあるか [x, y]（px）。
-- scale_checks … 縮尺の根拠を**2つ以上**。例 [{"how":"上の寸法 4730","px_per_m":78.2},{"how":"右の寸法 3530","px_per_m":77.9}]
-  2つの値が食い違うなら、読み違いの可能性が高い。正直に両方書くこと。
+${scaleBlock}
 
 # 工事の中身（これも必ず拾う）
 図面の注記・引き出し線・凡例に書かれた**やることの指示**を scope に列挙する。店舗や小規模の内装では、
@@ -2793,13 +2972,14 @@ rects に外形の矩形を入れ、name を "店舗全体" などにしてよ�
     const res = await fetch(AI_ENDPOINT, {
       method: 'POST', headers: { 'content-type': 'application/json' },
       // prefill で回答を「{」から始めさせる。前置きや思考文を挟む余地をなくす。
-      body: JSON.stringify({ prompt, prefill: '{', images: [{ media_type: src.media, data: src.b64 }] })
+      body: JSON.stringify({ prompt, prefill: '{', kind: 'plan', dev: devName(),
+                             images: [{ media_type: src.media, data: src.b64 }] })
     });
     if (!res.ok) {
       let detail = ''; try { detail = (await res.json()).error || ''; } catch (e) {}
       throw new Error(detail || `AIに接続できませんでした（${res.status}）`);
     }
-    planBuild(planParse(await res.json(), '{'), defCh, src);
+    planBuild(planParse(await res.json(), '{'), defCh, src, sc, pxPerM);
     planSetStatus('');
     planRender();
   } catch (e) {
@@ -2876,17 +3056,26 @@ function planDropTail(o) {
 }
 
 // AIが読んだ座標から、面積・外周・壁面積を計算する。計算はすべてここ。
-function planBuild(raw, defCh, src) {
+function planBuild(raw, defCh, src, sc, pxPerM) {
   planMeta = {
     title: String(raw.title || '').slice(0, 60),
     scale: String(raw.scale || '').slice(0, 20),
     statedArea: Number(raw.total) || 0,
-    pxPerM: Number(raw.px_per_m) || 0,
+    // 計算で出た縮尺を優先する。AIの目測より確か。
+    pxPerM: pxPerM || Number(raw.px_per_m) || 0,
+    calcScale: pxPerM ? { n: sc.n, total: sc.total, spread: sc.spread, checks: sc.checks } : null,
     origin: Array.isArray(raw.origin_px) ? raw.origin_px.map(Number) : null,
-    scaleChecks: (raw.scale_checks || []).slice(0, 4).map(c =>
+    scaleChecks: pxPerM ? [] : (raw.scale_checks || []).slice(0, 4).map(c =>
       ({ how: String(c.how || '').slice(0, 40), v: Number(c.px_per_m) || 0 })).filter(c => c.v > 0),
     img: src.url, imgW: src.w, imgH: src.h,
     hasText: src.items.length > 0, pages: src.pages || 1,
+    // 外形の裏取り。横と縦で一番大きい寸法は、たいてい建物の全体寸法。
+    // 拾えた面積がこれを大きく下回っていたら、室を取りこぼしている。
+    env: (() => {
+      const mx = f => src.items.filter(f).reduce((m, it) => Math.max(m, planDimValue(it.s) || 0), 0);
+      const w = mx(it => !it.v), h = mx(it => it.v);
+      return (w >= 1000 && h >= 1000) ? { w, h, area: +(w * h / 1e6).toFixed(2) } : null;
+    })(),
     cut: !!raw.__cut, dropped: raw.__dropped || 0,
     // 注記から拾った工事内容。室が取れない図面でもここは取れる
     scope: (raw.scope || []).map(s => ({
@@ -2927,20 +3116,33 @@ function planOverlay() {
   const m = planMeta;
   if (!m || !m.img || !m.pxPerM || !m.origin) return '';
   const toPx = (mm) => mm / 1000 * m.pxPerM;
-  const shapes = planRooms.filter(r => r.on).map((r, i) => {
+  const fs = Math.max(13, m.imgW / 60);
+  const on = planRooms.filter(r => r.on);
+  const boxes = on.map(r => {
     const col = r.sure ? 'rgba(28,79,124,.22)' : 'rgba(155,50,38,.26)';
     const line = r.sure ? '#1c4f7c' : '#9b3226';
-    const rects = r.rects.map(([x0, y0, x1, y1]) =>
+    return r.rects.map(([x0, y0, x1, y1]) =>
       `<rect x="${(m.origin[0] + toPx(x0)).toFixed(1)}" y="${(m.origin[1] + toPx(y0)).toFixed(1)}"
              width="${toPx(x1 - x0).toFixed(1)}" height="${toPx(y1 - y0).toFixed(1)}"
              fill="${col}" stroke="${line}" stroke-width="2"/>`).join('');
+  }).join('');
+  // 室名が重なると読めなくなるので、置いた場所を覚えておいて近いものは下にずらす。
+  const placed = [];
+  const labels = on.map(r => {
     const c = r.rects[0];
-    const cx = m.origin[0] + toPx((c[0] + c[2]) / 2);
-    const cy = m.origin[1] + toPx((c[1] + c[3]) / 2);
-    return rects + `<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" font-size="${Math.max(13, m.imgW/60).toFixed(0)}"
-        fill="${line}" text-anchor="middle" font-weight="700"
+    const x = m.origin[0] + toPx((c[0] + c[2]) / 2);
+    let y = m.origin[1] + toPx((c[1] + c[3]) / 2);
+    for (let i = 0; i < 12; i++) {
+      const hit = placed.some(p => Math.abs(p.x - x) < fs * 4 && Math.abs(p.y - y) < fs * 1.2);
+      if (!hit) break;
+      y += fs * 1.3;
+    }
+    placed.push({ x, y });
+    return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${fs.toFixed(0)}"
+        fill="${r.sure ? '#1c4f7c' : '#9b3226'}" text-anchor="middle" font-weight="700"
         paint-order="stroke" stroke="#fff" stroke-width="4">${esc(r.name)}</text>`;
   }).join('');
+  const shapes = boxes + labels;
   return `<div style="margin:12px 0">
     <div style="font-size:12px;font-weight:700;margin-bottom:6px">読み取った形を元の図面に重ねたもの</div>
     <div style="border:1px solid var(--rule);background:#fff;overflow:auto;max-height:420px">
@@ -2986,10 +3188,18 @@ function planRender() {
   const sum = planRooms.filter(r => r.on).reduce((s, r) => s + r.area, 0);
   const ng = planRooms.filter(r => !r.sure);
 
-  // 検算1：縮尺の根拠が2つ以上あるか、食い違っていないか
+  // 検算1：縮尺。計算で出せたならその根拠を、出せなければAIの申告を照合する
   let scaleBox = '';
   const cks = planMeta.scaleChecks || [];
-  if (cks.length >= 2) {
+  const cal = planMeta.calcScale;
+  if (cal) {
+    const okay = cal.spread <= 2;
+    scaleBox = `<div style="background:${okay ? 'var(--green-soft)' : 'var(--red-soft)'};border:1px solid var(--rule);border-radius:4px;padding:10px 12px;margin:10px 0;font-size:12.5px;line-height:1.7">
+      <b>縮尺を計算で出しました</b>（AIの目測ではありません）<br>
+      ${cal.checks.map(c => esc(c)).join('　／　')}<br>
+      ${cal.n}組が ±${cal.spread}% で一致　${okay ? '' : '<b style="color:var(--red)">ばらつきが大きいです。寸法の読み違いが疑われます</b>'}
+    </div>`;
+  } else if (cks.length >= 2) {
     const vs = cks.map(c => c.v);
     const spread = (Math.max(...vs) - Math.min(...vs)) / (vs.reduce((a, b) => a + b, 0) / vs.length) * 100;
     const okay = spread <= 2;
@@ -3016,6 +3226,22 @@ function planRender() {
   } else {
     areaBox = `<div style="background:var(--head);border:1px solid var(--rule);border-radius:4px;padding:10px 12px;margin:10px 0;font-size:12.5px">
       図面に延床面積の記載が無いため、面積の照合はできていません</div>`;
+  }
+
+  // 検算3：外形との照合。これが「店舗の半分しか拾えていない」を見つける検算。
+  let envBox = '';
+  const env = planMeta.env;
+  if (env && sum > 0) {
+    const ratio = sum / env.area * 100;
+    const okay = ratio >= 75;           // 壁厚・通路ぶんがあるので100%にはならない
+    const over = ratio > 115;
+    envBox = `<div style="background:${okay && !over ? 'var(--green-soft)' : 'var(--red-soft)'};border:1px solid var(--rule);border-radius:4px;padding:10px 12px;margin:10px 0;font-size:12.5px;line-height:1.7">
+      <b>外形との照合</b>　図面の全体寸法 ${commas(env.w)} × ${commas(env.h)} = ${env.area.toFixed(2)}㎡ ／
+      拾えた床 ${sum.toFixed(2)}㎡（${ratio.toFixed(0)}%）<br>
+      ${over ? '<b style="color:var(--red)">外形より広くなっています。室が重なって二重に数えている可能性があります</b>'
+       : okay ? '妥当な範囲です'
+       : '<b style="color:var(--red)">外形に対して狭すぎます。拾えていない室がありそうです</b>'}
+    </div>`;
   }
 
   const cutBox = planMeta.cut
@@ -3053,7 +3279,7 @@ function planRender() {
     </label>`;
   }).join('');
 
-  el.innerHTML = head + cutBox + planOverlay() + scaleBox + areaBox +
+  el.innerHTML = head + cutBox + planOverlay() + scaleBox + envBox + areaBox +
     (ng.length ? `<div style="font-size:12px;color:var(--red);font-weight:700;margin-bottom:8px">要確認 ${ng.length}室　重なり表示で形を確かめてください</div>` : '') +
     rows + planScopeBox();
   document.getElementById('plan-foot').style.display = 'flex';
@@ -3113,6 +3339,17 @@ function planToAi() {
 // APIキーはこのファイルには持たない。中継のWorkerだけが持っていて、ブラウザには降りてこない。
 // Worker側の中身とモデル指定は worker/worker.js
 const AI_ENDPOINT = 'https://matomeru-genba-ai.9q6xtwz22p.workers.dev';
+// 利用履歴につける端末名。誰が使ったか分かるようにするためのもので、
+// 送るのはこの名前だけ。工事内容や金額はサーバーに送らない。
+function devName() {
+  let v = localStorage.getItem('ck_dev');
+  if (!v) { v = '端末' + Math.random().toString(36).slice(2, 6).toUpperCase(); localStorage.setItem('ck_dev', v); }
+  return v;
+}
+function setDevName(v) {
+  v = String(v || '').trim().slice(0, 24);
+  if (v) { localStorage.setItem('ck_dev', v); showPastToast('端末名を「' + v + '」にしました'); }
+}
 try { localStorage.removeItem('ck_ai_key'); } catch (e) {}   // 旧版で端末に残ったキーを消す
 function openAiEst() {
   document.getElementById('ai-modal').classList.add('open');
@@ -3304,7 +3541,7 @@ opの使い分け：
     const res = await fetch(AI_ENDPOINT, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ prompt })
+      body: JSON.stringify({ prompt, kind: 'ai', dev: devName() })
     });
     if (!res.ok) {
       // Worker側が日本語の理由を返すので、それをそのまま見せる
@@ -5575,6 +5812,7 @@ function enableNotifications() {
 window.onload=()=>{
   initBrand();
   applyPriceOverrides();   // 取り込みで更新した単価を同梱マスタに当て直す
+  const dn = document.getElementById('dev-name-input'); if (dn) dn.value = devName();
   load();            // 端末内のデータで先に表示する（ログインの返事は待たない）
   refreshAll();
   checkBackupReminder();
